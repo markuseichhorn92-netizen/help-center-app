@@ -49,20 +49,52 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [fetchingEmails, setFetchingEmails] = useState(false);
+  const [emailFetchResult, setEmailFetchResult] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadTickets = async () => {
-      try {
-        const fetchedTickets = await fetchTickets();
-        setTickets(fetchedTickets);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+    const initLoad = async () => {
+      await loadTickets();
+      setLoading(false);
     };
-    loadTickets();
+    initLoad();
   }, []);
+
+  const loadTickets = async () => {
+    try {
+      const fetchedTickets = await fetchTickets();
+      setTickets(fetchedTickets);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleFetchEmails = async () => {
+    setFetchingEmails(true);
+    setEmailFetchResult(null);
+    try {
+      const res = await fetch('/api/admin/fetch-emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEmailFetchResult(`${data.processed} neue E-Mail(s) verarbeitet`);
+        if (data.processed > 0) {
+          await loadTickets();
+        }
+      } else {
+        setEmailFetchResult('Fehler: ' + (data.errors?.join(', ') || data.error || 'Unbekannt'));
+      }
+    } catch (err: any) {
+      setEmailFetchResult('Fehler: ' + err.message);
+    } finally {
+      setFetchingEmails(false);
+      setTimeout(() => setEmailFetchResult(null), 5000);
+    }
+  };
 
   const filteredTickets = filterStatus === "all"
     ? tickets
@@ -120,6 +152,35 @@ export default function TicketsPage() {
             <h1 className="text-3xl font-bold text-apple-gray-600 tracking-tight">Support Tickets</h1>
           </div>
           <p className="text-apple-gray-400 ml-8">Verwalte Kundenanfragen</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {emailFetchResult && (
+            <span className={`text-sm ${emailFetchResult.startsWith('Fehler') ? 'text-red-500' : 'text-green-600'}`}>
+              {emailFetchResult}
+            </span>
+          )}
+          <button
+            onClick={handleFetchEmails}
+            disabled={fetchingEmails}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-apple-gray-200 text-apple-gray-600 font-medium rounded-full hover:bg-apple-gray-50 transition-colors disabled:opacity-50"
+          >
+            {fetchingEmails ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Abrufen...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                E-Mails abrufen
+              </>
+            )}
+          </button>
         </div>
       </div>
 
