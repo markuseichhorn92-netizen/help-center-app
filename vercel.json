@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/fetch-emails?secret=fitinn-cron-2024-secret",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

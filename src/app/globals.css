@@ -1,0 +1,221 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+/* Theme configuration for Tailwind v4 */
+@theme {
+  --font-family-sans: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+
+  /* FIT INN Brand colors */
+  --color-brand: #0a4958;
+  --color-brand-dark: #073440;
+  --color-brand-light: #cfe5ea;
+  --color-accent: #ffb54f;
+  --color-accent-dark: #e69d35;
+
+  /* Apple gray palette */
+  --color-apple-gray-50: #FBFBFD;
+  --color-apple-gray-100: #F5F5F7;
+  --color-apple-gray-200: #E8E8ED;
+  --color-apple-gray-300: #D2D2D7;
+  --color-apple-gray-400: #86868B;
+  --color-apple-gray-500: #6E6E73;
+  --color-apple-gray-600: #1D1D1F;
+
+  /* Custom shadows */
+  --shadow-apple: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-apple-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-apple-xl: 0 12px 40px rgba(0, 0, 0, 0.15);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.1);
+
+  /* Custom border radius */
+  --radius-apple: 12px;
+  --radius-apple-lg: 18px;
+  --radius-apple-xl: 22px;
+}
+
+:root {
+  --color-brand: #0a4958;
+  --color-brand-dark: #073440;
+  --color-brand-light: #cfe5ea;
+  --color-accent: #ffb54f;
+}
+
+body {
+  background-color: #FBFBFD;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  color: #1D1D1F;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background-color: rgba(10, 73, 88, 0.2);
+  color: #1D1D1F;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.transition-apple {
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.card-hover {
+  transition: all 0.3s ease-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+}
+
+.quill-editor-container .ql-toolbar {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  border-color: #E8E8ED;
+  border-bottom: 0;
+  background: #F5F5F7;
+}
+
+.quill-editor-container .ql-container {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-color: #E8E8ED;
+  min-height: 280px;
+  font-size: 1rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.quill-editor-container .ql-editor {
+  padding: 1.25rem;
+  line-height: 1.7;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  background-color: #0a4958;
+  color: white;
+  font-weight: 600;
+  border-radius: 9999px;
+  box-shadow: 0 4px 12px rgba(10, 73, 88, 0.2);
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.btn-primary:hover {
+  background-color: #073440;
+  box-shadow: 0 8px 24px rgba(10, 73, 88, 0.3);
+}
+
+.btn-primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(10, 73, 88, 0.3);
+}
+
+.btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  background-color: #ffb54f;
+  color: #0a4958;
+  font-weight: 600;
+  border-radius: 9999px;
+  box-shadow: 0 4px 12px rgba(255, 181, 79, 0.3);
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.btn-accent:hover {
+  background-color: #e69d35;
+  box-shadow: 0 8px 24px rgba(255, 181, 79, 0.4);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  background-color: #cfe5ea;
+  color: #0a4958;
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.btn-secondary:hover {
+  background-color: #b8d8df;
+}
+
+.input-apple {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  font-size: 1rem;
+  background-color: white;
+  border: 1px solid #E8E8ED;
+  border-radius: 18px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.input-apple::placeholder {
+  color: #86868B;
+}
+
+.input-apple:focus {
+  outline: none;
+  border-color: #0a4958;
+  box-shadow: 0 0 0 4px rgba(10, 73, 88, 0.1);
+}
+
+.bg-hero-gradient {
+  background: linear-gradient(180deg, #cfe5ea 0%, #FBFBFD 100%);
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.stagger-item:nth-child(1) { animation-delay: 0.05s; }
+.stagger-item:nth-child(2) { animation-delay: 0.1s; }
+.stagger-item:nth-child(3) { animation-delay: 0.15s; }
+.stagger-item:nth-child(4) { animation-delay: 0.2s; }
+.stagger-item:nth-child(5) { animation-delay: 0.25s; }
+.stagger-item:nth-child(6) { animation-delay: 0.3s; }

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "1",
+    "title": "Welcome to the Help Center",
+    "content": "<p>This is the first article in your new help center. You can edit or delete it from the admin panel.</p>",
+    "published": true,
+    "createdAt": "2026-01-25T10:00:00Z",
+    "updatedAt": "2026-01-25T10:00:00Z"
+  },
+  {
+    "id": "2",
+    "title": "How to use the Admin Panel",
+    "content": "<p>Navigate to the <code>/admin</code> path to access the administration panel. Here you can manage your articles.</p>",
+    "published": true,
+    "createdAt": "2026-01-25T10:05:00Z",
+    "updatedAt": "2026-01-25T10:05:00Z"
+  }
+]
