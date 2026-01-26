@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reorderCategories } from '@/lib/categories';
 
-function isAuthenticated(req: NextRequest): boolean {
-  const basicAuth = req.headers.get('authorization');
-  if (!basicAuth || !basicAuth.startsWith('Basic ')) {
-    return false;
-  }
-  const credentials = Buffer.from(basicAuth.split(' ')[1], 'base64').toString();
-  const [user, pass] = credentials.split(':');
-  return user === process.env.ADMIN_USER && pass === process.env.ADMIN_PASS;
-}
-
 // POST reorder categories
 export async function POST(req: NextRequest) {
-  if (!isAuthenticated(req)) {
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

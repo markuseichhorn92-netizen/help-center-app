@@ -2,26 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getKnowledgeContext } from "@/lib/knowledge-base";
 
-// Check authentication
-function isAuthenticated(request: NextRequest): boolean {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader || !authHeader.startsWith("Basic ")) {
-    return false;
-  }
-
-  const base64Credentials = authHeader.split(" ")[1];
-  const credentials = atob(base64Credentials);
-  const [username, password] = credentials.split(":");
-
-  return (
-    username === process.env.ADMIN_USER && password === process.env.ADMIN_PASS
-  );
-}
-
 // POST /api/admin/ai - Generate article content with AI
 export async function POST(request: NextRequest) {
-  if (!isAuthenticated(request)) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const sessionCookie = request.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {

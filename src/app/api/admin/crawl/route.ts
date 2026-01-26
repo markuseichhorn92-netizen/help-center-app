@@ -2,28 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { crawlUrls, crawlSitemap, crawlWebsite } from '@/lib/crawler';
 import { getAllKnowledgeEntries, deleteKnowledgeEntry } from '@/lib/knowledge-base';
 
-// Helper function to check authentication
-function isAuthenticated(req: NextRequest): boolean {
-  const basicAuth = req.headers.get('authorization');
-  if (!basicAuth) {
-    return false;
-  }
-  const authValue = basicAuth.split(' ')[1];
-  const [user, password] = Buffer.from(authValue, 'base64').toString().split(':');
-
-  const ADMIN_USER = process.env.ADMIN_USER;
-  const ADMIN_PASS = process.env.ADMIN_PASS;
-
-  return user === ADMIN_USER && password === ADMIN_PASS;
-}
-
 // POST - Manual crawl
 export async function POST(req: NextRequest) {
-  if (!isAuthenticated(req)) {
-    return new NextResponse('Authentication Required', {
-      status: 401,
-      headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' },
-    });
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -83,11 +66,9 @@ export async function POST(req: NextRequest) {
 
 // GET - Get all knowledge entries
 export async function GET(req: NextRequest) {
-  if (!isAuthenticated(req)) {
-    return new NextResponse('Authentication Required', {
-      status: 401,
-      headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' },
-    });
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
@@ -101,11 +82,9 @@ export async function GET(req: NextRequest) {
 
 // DELETE - Delete knowledge entry
 export async function DELETE(req: NextRequest) {
-  if (!isAuthenticated(req)) {
-    return new NextResponse('Authentication Required', {
-      status: 401,
-      headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' },
-    });
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {

@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCategoryById, updateCategory, deleteCategory } from '@/lib/categories';
 
-function isAuthenticated(req: NextRequest): boolean {
-  const basicAuth = req.headers.get('authorization');
-  if (!basicAuth || !basicAuth.startsWith('Basic ')) {
-    return false;
-  }
-  const credentials = Buffer.from(basicAuth.split(' ')[1], 'base64').toString();
-  const [user, pass] = credentials.split(':');
-  return user === process.env.ADMIN_USER && pass === process.env.ADMIN_PASS;
-}
-
 // GET single category
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAuthenticated(req)) {
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -46,7 +37,8 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAuthenticated(req)) {
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -83,7 +75,8 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!isAuthenticated(req)) {
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
