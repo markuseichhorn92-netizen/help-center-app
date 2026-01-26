@@ -10,15 +10,25 @@ interface AnalyticsSummary {
   viewsToday: number;
   viewsThisWeek: number;
   viewsThisMonth: number;
+  helpful: number;
+  notHelpful: number;
+  totalFeedback: number;
+  helpfulPercent: number;
+}
+
+interface FeedbackTotals {
+  totalHelpful: number;
+  totalNotHelpful: number;
+  totalVotes: number;
+  overallHelpfulPercent: number;
 }
 
 interface AnalyticsData {
   articles: AnalyticsSummary[];
   totalViews: number;
   popular: { articleId: string; views: number }[];
+  feedback: FeedbackTotals;
 }
-
-const authHeader = `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`;
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
@@ -30,7 +40,7 @@ export default function AnalyticsPage() {
     const loadAnalytics = async () => {
       try {
         const res = await fetch('/api/admin/analytics', {
-          headers: { 'Authorization': authHeader }
+          credentials: 'same-origin'
         });
         if (!res.ok) throw new Error('Failed to fetch analytics');
         const analyticsData = await res.json();
@@ -101,12 +111,12 @@ export default function AnalyticsPage() {
             </Link>
             <h1 className="text-3xl font-bold text-apple-gray-600 tracking-tight">Analytics</h1>
           </div>
-          <p className="text-apple-gray-400 mt-1 pl-8">Besucherzahlen deiner Artikel</p>
+          <p className="text-apple-gray-400 mt-1 pl-8">Besucherzahlen & Feedback deiner Artikel</p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Stats Cards - Views */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-brand/10 rounded-apple flex items-center justify-center">
@@ -173,6 +183,85 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
+      {/* Stats Cards - Feedback */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-100 rounded-apple flex items-center justify-center">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm text-apple-gray-400">Hilfreich</p>
+              <p className="text-2xl font-bold text-emerald-600">{data?.feedback?.totalHelpful || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 rounded-apple flex items-center justify-center">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm text-apple-gray-400">Nicht hilfreich</p>
+              <p className="text-2xl font-bold text-red-600">{data?.feedback?.totalNotHelpful || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-apple flex items-center justify-center">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm text-apple-gray-400">Gesamt Abstimmungen</p>
+              <p className="text-2xl font-bold text-apple-gray-600">{data?.feedback?.totalVotes || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-apple flex items-center justify-center ${
+              (data?.feedback?.overallHelpfulPercent || 0) >= 70
+                ? 'bg-emerald-100'
+                : (data?.feedback?.overallHelpfulPercent || 0) >= 50
+                  ? 'bg-amber-100'
+                  : 'bg-red-100'
+            }`}>
+              <svg className={`w-5 h-5 ${
+                (data?.feedback?.overallHelpfulPercent || 0) >= 70
+                  ? 'text-emerald-600'
+                  : (data?.feedback?.overallHelpfulPercent || 0) >= 50
+                    ? 'text-amber-600'
+                    : 'text-red-600'
+              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm text-apple-gray-400">Zufriedenheitsrate</p>
+              <p className={`text-2xl font-bold ${
+                (data?.feedback?.overallHelpfulPercent || 0) >= 70
+                  ? 'text-emerald-600'
+                  : (data?.feedback?.overallHelpfulPercent || 0) >= 50
+                    ? 'text-amber-600'
+                    : 'text-red-600'
+              }`}>
+                {data?.feedback?.totalVotes ? `${data.feedback.overallHelpfulPercent}%` : '–'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Time Filter */}
       <div className="flex gap-2 mb-6">
         {[
@@ -230,6 +319,9 @@ export default function AnalyticsPage() {
                   <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
                     Gesamt
                   </th>
+                  <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
+                    Feedback
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-apple-gray-100">
@@ -266,6 +358,31 @@ export default function AnalyticsPage() {
                       <span className="text-sm font-semibold text-apple-gray-600">
                         {article.totalViews.toLocaleString()}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {article.totalFeedback > 0 ? (
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-emerald-600 font-medium" title="Hilfreich">
+                              👍 {article.helpful}
+                            </span>
+                            <span className="text-red-500 font-medium" title="Nicht hilfreich">
+                              👎 {article.notHelpful}
+                            </span>
+                          </div>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            article.helpfulPercent >= 70
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : article.helpfulPercent >= 50
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-red-100 text-red-700'
+                          }`}>
+                            {article.helpfulPercent}%
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-apple-gray-300">–</span>
+                      )}
                     </td>
                   </tr>
                 ))}
