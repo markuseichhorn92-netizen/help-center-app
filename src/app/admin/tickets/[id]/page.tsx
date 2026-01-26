@@ -136,7 +136,46 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     loadData();
-  }, [id]);
+    
+    // Auto-refresh messages every 5 seconds
+    const interval = setInterval(async () => {
+      try {
+        const messagesRes = await fetch(`/api/admin/tickets/${id}/messages`, {
+          headers: { Authorization: getAuthHeader() }
+        });
+        
+        if (messagesRes.ok) {
+          const messagesData = await messagesRes.json();
+          
+          // Check if there are new messages
+          if (messagesData.length > messages.length) {
+            const unreadCustomerMessages = messagesData.filter(
+              (msg: TicketMessage) => msg.sender === 'customer' && !msg.isRead
+            );
+            
+            if (unreadCustomerMessages.length > 0) {
+              await fetch(`/api/admin/tickets/${id}/read`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: getAuthHeader()
+                },
+                body: JSON.stringify({
+                  messageIds: unreadCustomerMessages.map((m: TicketMessage) => m.id)
+                })
+              });
+            }
+            
+            setMessages(messagesData);
+          }
+        }
+      } catch (err) {
+        console.error('Auto-refresh messages failed:', err);
+      }
+    }, 5000); // 5 seconds
+    
+    return () => clearInterval(interval);
+  }, [id, messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -159,6 +198,13 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       const updatedTicket = await res.json();
       setTicket(updatedTicket);
+      
+      // Navigate back to ticket list to show updated sorting
+      if (newStatus === 'closed' || newStatus === 'resolved') {
+        setTimeout(() => {
+          window.location.href = '/admin/tickets';
+        }, 300);
+      }
     } catch (err: any) {
       alert(err.message);
     }

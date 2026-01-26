@@ -61,6 +61,7 @@ export default function TicketsPage() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [newItemsAvailable, setNewItemsAvailable] = useState(false);
 
   // Fetch emails in background (without blocking UI)
   const fetchEmailsInBackground = async () => {
@@ -96,6 +97,21 @@ export default function TicketsPage() {
     const ticketInterval = setInterval(async () => {
       try {
         const fetchedTickets = await fetchTickets();
+        
+        // Check if there are new tickets or updates
+        const hasNewItems = fetchedTickets.length > tickets.length || 
+          fetchedTickets.some((ft, idx) => {
+            const existingTicket = tickets[idx];
+            return existingTicket && (
+              ft.updatedAt !== existingTicket.updatedAt ||
+              (ft.unreadCount || 0) > (existingTicket.unreadCount || 0)
+            );
+          });
+        
+        if (hasNewItems) {
+          setNewItemsAvailable(true);
+        }
+        
         setTickets(fetchedTickets);
         setLastRefresh(new Date());
       } catch (err) {
@@ -115,13 +131,14 @@ export default function TicketsPage() {
       clearInterval(ticketInterval);
       clearInterval(emailInterval);
     };
-  }, [autoRefresh]);
+  }, [autoRefresh, tickets.length]);
 
   const loadTickets = async () => {
     try {
       const fetchedTickets = await fetchTickets();
       setTickets(fetchedTickets);
       setLastRefresh(new Date());
+      setNewItemsAvailable(false); // Reset notification
     } catch (err: any) {
       setError(err.message);
     }
@@ -228,23 +245,37 @@ export default function TicketsPage() {
     }
   };
 
-  const filteredTickets = tickets.filter(t => {
-    // Status filter
-    if (filterStatus !== "all" && t.status !== filterStatus) {
-      return false;
-    }
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        t.ticketNumber.toLowerCase().includes(query) ||
-        t.subject.toLowerCase().includes(query) ||
-        t.customerName.toLowerCase().includes(query) ||
-        t.customerEmail.toLowerCase().includes(query)
-      );
-    }
-    return true;
-  });
+  const filteredTickets = tickets
+    .filter(t => {
+      // Status filter
+      if (filterStatus !== "all" && t.status !== filterStatus) {
+        return false;
+      }
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          t.ticketNumber.toLowerCase().includes(query) ||
+          t.subject.toLowerCase().includes(query) ||
+          t.customerName.toLowerCase().includes(query) ||
+          t.customerEmail.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      // Sort by status priority first (open > in_progress > resolved > closed)
+      const statusOrder = { open: 0, in_progress: 1, resolved: 2, closed: 3 };
+      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+      if (statusDiff !== 0) return statusDiff;
+      
+      // Then by unreadCount (descending)
+      const unreadDiff = (b.unreadCount || 0) - (a.unreadCount || 0);
+      if (unreadDiff !== 0) return unreadDiff;
+      
+      // Finally by updatedAt (newest first)
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 
   // Pagination
   const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
@@ -366,6 +397,24 @@ export default function TicketsPage() {
           </div>
         ))}
       </div>
+
+      {/* New Items Notification */}
+      {newItemsAvailable && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-apple-lg p-4 flex items-center justify-between animate-fade-in">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium text-blue-700">Neue Nachrichten oder Updates verfügbar</span>
+          </div>
+          <button
+            onClick={loadTickets}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-full hover:bg-blue-700 transition-colors"
+          >
+            Aktualisieren
+          </button>
+        </div>
+      )}
 
       {/* Search and Controls */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
