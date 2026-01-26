@@ -1,7 +1,14 @@
 import { Resend } from 'resend';
 
-// Initialize Resend client
-export const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-initialize Resend client to avoid build-time errors
+let resendClient: Resend | null = null;
+
+function getResend(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 // Support email configuration
 export const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de';
@@ -15,7 +22,7 @@ export async function sendTicketConfirmation(
   subject: string
 ): Promise<boolean> {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
       to: customerEmail,
       subject: `[${ticketNumber}] Ihre Anfrage: ${subject}`,
@@ -88,7 +95,7 @@ export async function sendTicketReply(
       headers['References'] = messageId;
     }
 
-    const result = await resend.emails.send({
+    const result = await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
       to: customerEmail,
       subject: `Re: [${ticketNumber}] ${subject}`,
