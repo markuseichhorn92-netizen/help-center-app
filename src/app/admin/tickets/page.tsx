@@ -54,6 +54,9 @@ export default function TicketsPage() {
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   useEffect(() => {
     const initLoad = async () => {
@@ -63,10 +66,28 @@ export default function TicketsPage() {
     initLoad();
   }, []);
 
+  // Auto-refresh alle 15 Sekunden
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const fetchedTickets = await fetchTickets();
+        setTickets(fetchedTickets);
+        setLastRefresh(new Date());
+      } catch (err) {
+        console.error('Auto-refresh failed:', err);
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
+
   const loadTickets = async () => {
     try {
       const fetchedTickets = await fetchTickets();
       setTickets(fetchedTickets);
+      setLastRefresh(new Date());
     } catch (err: any) {
       setError(err.message);
     }
@@ -153,9 +174,23 @@ export default function TicketsPage() {
     }
   };
 
-  const filteredTickets = filterStatus === "all"
-    ? tickets
-    : tickets.filter(t => t.status === filterStatus);
+  const filteredTickets = tickets.filter(t => {
+    // Status filter
+    if (filterStatus !== "all" && t.status !== filterStatus) {
+      return false;
+    }
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        t.ticketNumber.toLowerCase().includes(query) ||
+        t.subject.toLowerCase().includes(query) ||
+        t.customerName.toLowerCase().includes(query) ||
+        t.customerEmail.toLowerCase().includes(query)
+      );
+    }
+    return true;
+  });
 
   const stats = {
     total: tickets.length,
@@ -266,6 +301,58 @@ export default function TicketsPage() {
             <p className={`text-2xl font-bold ${stat.color.split(' ')[1]}`}>{stat.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Search and Controls */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        {/* Search */}
+        <div className="relative flex-1">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Suche nach Ticket-Nr., Betreff, Name oder E-Mail..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-apple-gray-200 rounded-full text-apple-gray-600 placeholder-apple-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-apple-gray-400 hover:text-apple-gray-600"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Auto-Refresh Toggle */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => loadTickets()}
+            className="p-2.5 bg-white border border-apple-gray-200 rounded-full hover:bg-apple-gray-50 transition-colors"
+            title="Jetzt aktualisieren"
+          >
+            <svg className="w-5 h-5 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2"
+            />
+            <span className="text-sm text-apple-gray-500">Auto-Refresh</span>
+          </label>
+          <span className="text-xs text-apple-gray-400">
+            {lastRefresh.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+        </div>
       </div>
 
       {/* Filter */}
