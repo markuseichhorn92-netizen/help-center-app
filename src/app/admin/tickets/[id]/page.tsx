@@ -67,38 +67,46 @@ function MessageStatusIcon({ message }: { message: TicketMessage }) {
   if (!status || status === 'sent') {
     // Single checkmark - sent
     return (
-      <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Gesendet">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-      </svg>
+      <span title="Gesendet">
+        <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </span>
     );
   }
   
   if (status === 'delivered') {
     // Double checkmark - delivered
     return (
-      <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Zugestellt">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13l4 4L22 7" />
-      </svg>
+      <span title="Zugestellt">
+        <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13l4 4L22 7" />
+        </svg>
+      </span>
     );
   }
   
   if (status === 'read') {
     // Double checkmark blue - read
     return (
-      <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Gelesen">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13l4 4L22 7" />
-      </svg>
+      <span title="Gelesen">
+        <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13l4 4L22 7" />
+        </svg>
+      </span>
     );
   }
   
   if (status === 'failed') {
     // Red X - failed
     return (
-      <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title={`Fehler: ${failureReason || 'Unbekannt'}`}>
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
+      <span title={`Fehler: ${failureReason || 'Unbekannt'}`}>
+        <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </span>
     );
   }
   
