@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { action, topic, content, instruction } = await request.json();
+    const body = await request.json();
+    const { action, topic, content, instruction, customerMessage, customerName, ticketSubject, tone } = body;
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
@@ -122,8 +123,6 @@ Gib nur den bearbeiteten Text zurück, ohne Erklärungen.`;
 
     } else if (action === "ticket_reply") {
       // Generate a ticket reply based on customer message
-      const { customerMessage, customerName, ticketSubject } = await request.json().catch(() => ({}));
-
       if (!customerMessage) {
         return NextResponse.json(
           { message: "Bitte geben Sie die Kundennachricht an." },
@@ -166,8 +165,6 @@ Gib nur den korrigierten Text zurück, ohne Erklärungen.`;
 
     } else if (action === "ticket_rewrite") {
       // Rewrite text in a different tone
-      const { tone } = await request.json().catch(() => ({}));
-
       if (!content) {
         return NextResponse.json(
           { message: "Bitte geben Sie den umzuschreibenden Text an." },

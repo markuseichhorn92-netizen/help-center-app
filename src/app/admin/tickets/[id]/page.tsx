@@ -223,12 +223,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         }),
       });
 
-      if (!res.ok) throw new Error("KI-Fehler");
-
       const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "KI-Fehler");
+      }
+
       setReplyContent(data.content);
-    } catch (err) {
-      alert("Fehler bei der KI-Korrektur");
+    } catch (err: any) {
+      alert("Fehler bei der KI-Korrektur: " + (err.message || "Unbekannter Fehler"));
     } finally {
       setAiLoading(false);
     }
