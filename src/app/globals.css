@@ -506,3 +506,67 @@ html {
 .container-padding {
   @apply px-4 sm:px-6 lg:px-8;
 }
+
+/* Ticket Message Content Styles */
+.ticket-message-content {
+  line-height: 1.6;
+}
+
+.ticket-message-content p {
+  margin-bottom: 0.5rem;
+}
+
+.ticket-message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.ticket-message-content a {
+  text-decoration: underline;
+  word-break: break-word;
+}
+
+.ticket-message-content ul,
+.ticket-message-content ol {
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+
+.ticket-message-content li {
+  margin: 0.25rem 0;
+}
+
+.ticket-message-content strong,
+.ticket-message-content b {
+  font-weight: 600;
+}
+
+.ticket-message-content em,
+.ticket-message-content i {
+  font-style: italic;
+}
+
+/* Admin message (white text on dark bg) */
+.ticket-message-admin {
+  color: white;
+}
+
+.ticket-message-admin a {
+  color: #93c5fd;
+}
+
+.ticket-message-admin a:hover {
+  color: #bfdbfe;
+}
+
+/* Customer message (dark text on light bg) */
+.ticket-message-customer {
+  color: #1D1D1F;
+}
+
+.ticket-message-customer a {
+  color: #0a4958;
+}
+
+.ticket-message-customer a:hover {
+  color: #073440;
+}

@@ -21,6 +21,19 @@ export const SUPPORT_NAME = 'FIT INN Support';
 export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://hilfe.fit-inn-trier.de';
 export const LOGO_URL = `${BASE_URL}/logo-white.svg`;
 
+// Helper function to format content for email
+// If content already contains HTML tags, use as-is; otherwise convert newlines to <br>
+function formatEmailContent(content: string | undefined | null): string {
+  const str = String(content || '');
+  // Check if content contains HTML tags (e.g., <p>, <br>, <ul>, <li>, etc.)
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(str);
+  if (hasHtmlTags) {
+    return str;
+  }
+  // Plain text: convert newlines to <br>
+  return str.replace(/\n/g, '<br>');
+}
+
 // Send ticket confirmation to customer
 export async function sendTicketConfirmation(
   customerEmail: string,
@@ -56,8 +69,8 @@ export async function sendTicketConfirmation(
             .ticket-number p { margin: 0 0 8px; color: #86868B; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
             .ticket-number span { font-size: 28px; font-weight: 700; color: #0a4958; font-family: monospace; }
             .footer { text-align: center; color: #86868B; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E8E8ED; }
-            a { color: #0a4958; text-decoration: none; }
-            a:hover { text-decoration: underline; }
+            a { color: #0a4958; text-decoration: underline; word-break: break-word; }
+            a:hover { color: #073440; }
           </style>
         </head>
         <body>
@@ -160,7 +173,13 @@ export async function sendTicketReply(
             .header h2 { color: white; margin: 12px 0 0; font-size: 20px; font-weight: 600; }
             .content-wrapper { background: #FBFBFD; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #E8E8ED; border-top: none; }
             .greeting { margin-bottom: 20px; }
-            .reply-content { background: white; padding: 20px; border-radius: 12px; border: 1px solid #E8E8ED; margin: 20px 0; white-space: pre-wrap; }
+            .reply-content { background: white; padding: 20px; border-radius: 12px; border: 1px solid #E8E8ED; margin: 20px 0; line-height: 1.7; }
+            .reply-content p { margin: 0 0 12px 0; }
+            .reply-content p:last-child { margin-bottom: 0; }
+            .reply-content a { color: #0a4958; text-decoration: underline; }
+            .reply-content ul, .reply-content ol { padding-left: 20px; margin: 12px 0; }
+            .reply-content li { margin: 4px 0; }
+            .reply-content strong, .reply-content b { font-weight: 600; }
             .conversation-history { margin-top: 30px; padding-top: 30px; border-top: 2px solid #E8E8ED; }
             .conversation-title { color: #0a4958; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px; }
             .message { margin-bottom: 20px; padding: 15px; border-radius: 12px; border: 1px solid #E8E8ED; }
@@ -170,10 +189,15 @@ export async function sendTicketReply(
             .message-sender { font-weight: 600; color: #0a4958; font-size: 14px; }
             .message-customer .message-sender { color: #1D1D1F; }
             .message-date { color: #86868B; font-size: 12px; }
-            .message-content { color: #1D1D1F; white-space: pre-wrap; line-height: 1.6; }
+            .message-content { color: #1D1D1F; line-height: 1.6; }
+            .message-content p { margin: 0 0 8px 0; }
+            .message-content p:last-child { margin-bottom: 0; }
+            .message-content a { color: #0a4958; text-decoration: underline; }
+            .message-content ul, .message-content ol { padding-left: 18px; margin: 8px 0; }
+            .message-content li { margin: 2px 0; }
             .footer { color: #86868B; font-size: 12px; border-top: 1px solid #E8E8ED; padding-top: 20px; margin-top: 30px; text-align: center; }
-            a { color: #0a4958; text-decoration: none; }
-            a:hover { text-decoration: underline; }
+            a { color: #0a4958; text-decoration: underline; word-break: break-word; }
+            a:hover { color: #073440; }
           </style>
         </head>
         <body>
@@ -192,7 +216,7 @@ export async function sendTicketReply(
               </div>
 
               <div class="reply-content">
-                ${String(replyContent || '').replace(/\n/g, '<br>')}
+                ${formatEmailContent(replyContent)}
               </div>
 
               <p>Mit freundlichen Grüßen,<br>Ihr FIT INN Support Team</p>
@@ -215,7 +239,7 @@ export async function sendTicketReply(
                           <span class="message-sender">${msg.senderName}</span>
                           <span class="message-date">${date}</span>
                         </div>
-                        <div class="message-content">${String(msg.content || '').replace(/\n/g, '<br>')}</div>
+                        <div class="message-content">${formatEmailContent(msg.content)}</div>
                       </div>
                     `;
                   }).join('')}

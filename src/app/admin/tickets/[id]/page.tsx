@@ -630,7 +630,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                           <MessageStatusIcon message={msg} />
                         )}
                       </div>
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <div
+                        className={`ticket-message-content ${
+                          msg.sender === "admin"
+                            ? "ticket-message-admin"
+                            : "ticket-message-customer"
+                        }`}
+                        dangerouslySetInnerHTML={{ __html: msg.content }}
+                      />
                     {/* Attachments */}
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-white/20">
