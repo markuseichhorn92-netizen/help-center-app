@@ -83,13 +83,21 @@ export default function TicketsPage() {
         }
       });
       const data = await res.json();
-      if (data.success) {
+      console.log('Email fetch result:', data);
+      if (data.debug) {
+        console.log('Debug info:', data.debug.join('\n'));
+      }
+      if (data.success && data.errors?.length === 0) {
         setEmailFetchResult(`${data.processed} neue E-Mail(s) verarbeitet`);
         if (data.processed > 0) {
           await loadTickets();
         }
       } else {
-        setEmailFetchResult('Fehler: ' + (data.errors?.join(', ') || data.error || 'Unbekannt'));
+        const errorMsg = data.errors?.join(', ') || data.error || 'Unbekannt';
+        setEmailFetchResult('Fehler: ' + errorMsg);
+        if (data.debug) {
+          alert('Debug Info:\n\n' + data.debug.join('\n'));
+        }
       }
     } catch (err: any) {
       setEmailFetchResult('Fehler: ' + err.message);

@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
     const result = await fetchAndProcessEmails();
 
     return NextResponse.json({
-      success: true,
+      success: result.errors.length === 0,
       processed: result.processed,
       errors: result.errors,
+      debug: result.debug,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false,
       error: error.message,
+      stack: error.stack,
     }, { status: 500 });
   }
 }

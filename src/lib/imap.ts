@@ -48,11 +48,15 @@ function parseEmailAddress(address: { name?: string; address?: string } | string
   };
 }
 
-export async function fetchAndProcessEmails(): Promise<{ processed: number; errors: string[] }> {
+export async function fetchAndProcessEmails(): Promise<{ processed: number; errors: string[]; debug: string[] }> {
   const config = getIMAPConfig();
+  const debug: string[] = [];
+
+  debug.push(`IMAP Config: host=${config.host}, port=${config.port}, secure=${config.secure}, user=${config.auth.user ? '***' : 'MISSING'}, pass=${config.auth.pass ? '***' : 'MISSING'}`);
 
   if (!config.host || !config.auth.user || !config.auth.pass) {
-    return { processed: 0, errors: ['IMAP nicht konfiguriert'] };
+    debug.push('IMAP nicht konfiguriert - fehlende Umgebungsvariablen');
+    return { processed: 0, errors: ['IMAP nicht konfiguriert'], debug };
   }
 
   const client = new ImapFlow({
@@ -63,13 +67,17 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
     logger: false,
   });
 
-  const results = { processed: 0, errors: [] as string[] };
+  const results = { processed: 0, errors: [] as string[], debug };
 
   try {
+    debug.push('Verbinde mit IMAP-Server...');
     await client.connect();
+    debug.push('IMAP-Verbindung hergestellt');
 
     // Open INBOX
+    debug.push('Öffne INBOX...');
     const lock = await client.getMailboxLock('INBOX');
+    debug.push('INBOX geöffnet');
 
     try {
       // Only fetch emails from start date onwards (prevents processing old emails)
@@ -77,13 +85,17 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
         ? new Date(process.env.IMAP_START_DATE)
         : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Default: 30 Tage zurück
 
+      debug.push(`Suche nach ungelesenen E-Mails seit ${startDate.toISOString()}...`);
+
       // Search for unseen messages since start date
       const messages = await client.search({
         seen: false,
         since: startDate
       });
 
-      console.log(`IMAP: Found ${messages ? (messages as number[]).length : 0} unseen messages since ${startDate.toISOString()}`);
+      const messageCount = messages ? (messages as number[]).length : 0;
+      debug.push(`Gefunden: ${messageCount} ungelesene E-Mails`);
+      console.log(`IMAP: Found ${messageCount} unseen messages since ${startDate.toISOString()}`);
 
       if (!messages || messages.length === 0) {
         return results;
@@ -183,8 +195,12 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
       lock.release();
     }
 
+    debug.push('Logout vom IMAP-Server...');
     await client.logout();
+    debug.push('IMAP-Verbindung geschlossen');
   } catch (error: any) {
+    debug.push(`IMAP Fehler: ${error.message}`);
+    debug.push(`Stack: ${error.stack}`);
     results.errors.push(`IMAP Fehler: ${error.message}`);
   }
 
