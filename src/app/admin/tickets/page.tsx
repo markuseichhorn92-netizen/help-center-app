@@ -58,6 +58,8 @@ export default function TicketsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const initLoad = async () => {
@@ -142,10 +144,23 @@ export default function TicketsPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedTickets.size === filteredTickets.length) {
-      setSelectedTickets(new Set());
+    const visibleIds = paginatedTickets.map((t) => t.id);
+    const allVisibleSelected = visibleIds.every(id => selectedTickets.has(id));
+
+    if (allVisibleSelected) {
+      // Deselect all visible
+      setSelectedTickets(prev => {
+        const next = new Set(prev);
+        visibleIds.forEach(id => next.delete(id));
+        return next;
+      });
     } else {
-      setSelectedTickets(new Set(filteredTickets.map((t) => t.id)));
+      // Select all visible
+      setSelectedTickets(prev => {
+        const next = new Set(prev);
+        visibleIds.forEach(id => next.add(id));
+        return next;
+      });
     }
   };
 
@@ -199,6 +214,16 @@ export default function TicketsPage() {
     }
     return true;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedTickets = filteredTickets.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchQuery, itemsPerPage]);
 
   const stats = {
     total: tickets.length,
@@ -388,7 +413,7 @@ export default function TicketsPage() {
 
       {/* Tickets Table */}
       <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
-        {filteredTickets.length === 0 ? (
+        {paginatedTickets.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-16 h-16 bg-apple-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -408,7 +433,7 @@ export default function TicketsPage() {
                   <th className="px-4 py-4 text-left">
                     <input
                       type="checkbox"
-                      checked={filteredTickets.length > 0 && selectedTickets.size === filteredTickets.length}
+                      checked={paginatedTickets.length > 0 && paginatedTickets.every(t => selectedTickets.has(t.id))}
                       onChange={toggleSelectAll}
                       className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2 cursor-pointer"
                     />
@@ -431,7 +456,7 @@ export default function TicketsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-apple-gray-100">
-                {filteredTickets.map((ticket, index) => (
+                {paginatedTickets.map((ticket, index) => (
                   <tr
                     key={ticket.id}
                     className={`hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''}`}
@@ -491,21 +516,89 @@ export default function TicketsPage() {
         )}
       </div>
 
-      {/* Footer Stats */}
+      {/* Footer with Pagination */}
       {filteredTickets.length > 0 && (
-        <div className="mt-6 flex items-center justify-between text-sm text-apple-gray-400">
-          <span>
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          {/* Info */}
+          <div className="text-sm text-apple-gray-400">
             {selectedTickets.size > 0 && (
               <span className="text-brand font-medium">{selectedTickets.size} ausgewählt · </span>
             )}
-            {filteredTickets.length} {filteredTickets.length === 1 ? 'Ticket' : 'Tickets'} angezeigt
-          </span>
+            {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredTickets.length)} von {filteredTickets.length} Tickets
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center gap-4">
+            {/* Items per page */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-apple-gray-400">Pro Seite:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="px-2 py-1 bg-white border border-apple-gray-200 rounded-lg text-sm text-apple-gray-600 focus:outline-none focus:ring-2 focus:ring-brand/20"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+
+            {/* Page Navigation */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Erste Seite"
+              >
+                <svg className="w-4 h-4 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Vorherige Seite"
+              >
+                <svg className="w-4 h-4 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+
+              <span className="px-3 py-1 text-sm text-apple-gray-600">
+                Seite {currentPage} von {totalPages || 1}
+              </span>
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Nächste Seite"
+              >
+                <svg className="w-4 h-4 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Letzte Seite"
+              >
+                <svg className="w-4 h-4 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 animate-fade-in pt-20">
           <div className="bg-white rounded-apple-xl shadow-2xl p-6 max-w-md mx-4 w-full">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
