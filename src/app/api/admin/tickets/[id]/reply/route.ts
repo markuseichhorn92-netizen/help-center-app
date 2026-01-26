@@ -48,6 +48,10 @@ export async function POST(
     const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
 
     // Send email
+    console.log('Sending email to:', ticket.customerEmail);
+    console.log('RESEND_API_KEY configured:', !!process.env.RESEND_API_KEY);
+    console.log('SUPPORT_EMAIL:', process.env.SUPPORT_EMAIL);
+
     const emailResult = await sendTicketReply(
       ticket.customerEmail,
       ticket.customerName,
@@ -56,6 +60,8 @@ export async function POST(
       content,
       lastMessage?.emailMessageId
     );
+
+    console.log('Email result:', emailResult);
 
     // Create message in database
     const message = await createMessage({
@@ -70,9 +76,13 @@ export async function POST(
     return NextResponse.json({
       message,
       emailSent: emailResult.success,
+      emailError: emailResult.error,
     }, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send reply:', error);
-    return NextResponse.json({ message: 'Fehler beim Senden der Antwort.' }, { status: 500 });
+    return NextResponse.json({
+      message: 'Fehler beim Senden der Antwort.',
+      error: error.message
+    }, { status: 500 });
   }
 }

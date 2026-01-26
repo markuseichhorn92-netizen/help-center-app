@@ -159,10 +159,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         }),
       });
 
-      if (!res.ok) throw new Error("Fehler beim Senden");
+      const data = await res.json();
 
-      const newMessage = await res.json();
-      setMessages([...messages, newMessage.message || newMessage]);
+      if (!res.ok) throw new Error(data.message || "Fehler beim Senden");
+
+      if (data.emailError) {
+        alert(`Nachricht gespeichert, aber E-Mail-Versand fehlgeschlagen: ${data.emailError}`);
+      }
+
+      setMessages([...messages, data.message || data]);
       setReplyContent("");
     } catch (err: any) {
       alert(err.message);

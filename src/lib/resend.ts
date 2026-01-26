@@ -5,7 +5,11 @@ let resendClient: Resend | null = null;
 
 function getResend(): Resend {
   if (!resendClient) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.error('RESEND_API_KEY is not configured!');
+    }
+    resendClient = new Resend(apiKey);
   }
   return resendClient;
 }
@@ -85,8 +89,11 @@ export async function sendTicketReply(
   subject: string,
   replyContent: string,
   messageId?: string
-): Promise<{ success: boolean; messageId?: string }> {
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
+    if (!process.env.RESEND_API_KEY) {
+      return { success: false, error: 'RESEND_API_KEY nicht konfiguriert' };
+    }
     const headers: Record<string, string> = {};
 
     // Add threading headers if we have a previous message ID
@@ -141,9 +148,9 @@ export async function sendTicketReply(
     });
 
     return { success: true, messageId: result.data?.id };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to send ticket reply:', error);
-    return { success: false };
+    return { success: false, error: error.message || 'Unbekannter Fehler' };
   }
 }
 
