@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTicket, createMessage, getTicketMessages } from '@/lib/tickets';
+import { getTicket, createMessage, getTicketMessages, Attachment } from '@/lib/tickets';
 import { sendTicketReply } from '@/lib/resend';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
@@ -38,7 +38,11 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { content, senderName, attachments } = body;
+    const { content, senderName, attachments }: { 
+      content: string; 
+      senderName?: string; 
+      attachments?: Attachment[] 
+    } = body;
 
     if (!content) {
       return NextResponse.json({ message: 'Nachricht darf nicht leer sein.' }, { status: 400 });
