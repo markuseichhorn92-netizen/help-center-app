@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { action, topic, content, instruction, customerMessage, customerName, ticketSubject, tone } = body;
+    const { action, topic, content, instruction, customerMessage, customerName, ticketSubject, tone, conversationHistory, ticketInfo } = body;
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
@@ -195,6 +195,7 @@ Gib nur den umgeschriebenen Text zurück, ohne Erklärungen.`;
 
     } else if (action === "ticket_custom") {
       // Custom instruction for ticket reply - can work with or without existing content
+      // Now includes full conversation history for context-aware responses
       if (!instruction) {
         return NextResponse.json(
           { message: "Bitte geben Sie eine Anweisung an." },
@@ -202,20 +203,74 @@ Gib nur den umgeschriebenen Text zurück, ohne Erklärungen.`;
         );
       }
 
+      // Format conversation history for context
+      let conversationContext = "";
+      if (conversationHistory && Array.isArray(conversationHistory) && conversationHistory.length > 0) {
+        const formattedMessages = conversationHistory
+          .slice(-10) // Last 10 messages for context
+          .map((msg: { sender: string; senderName: string; content: string; createdAt: string }) => {
+            const role = msg.sender === 'customer' ? 'KUNDE' : 'SUPPORT';
+            // Strip HTML tags for cleaner context
+            const cleanContent = msg.content.replace(/<[^>]*>/g, '').trim();
+            return `[${role}] ${msg.senderName}: ${cleanContent}`;
+          })
+          .join('\n\n');
+
+        conversationContext = `
+--- BISHERIGER GESPRÄCHSVERLAUF ---
+${formattedMessages}
+--- ENDE GESPRÄCHSVERLAUF ---`;
+      }
+
+      // Format ticket info
+      let ticketContext = "";
+      if (ticketInfo) {
+        ticketContext = `
+--- TICKET-INFORMATIONEN ---
+Ticket-Nr: ${ticketInfo.ticketNumber || 'Unbekannt'}
+Betreff: ${ticketInfo.subject || 'Kein Betreff'}
+Kunde: ${ticketInfo.customerName || 'Unbekannt'}
+E-Mail: ${ticketInfo.customerEmail || 'Unbekannt'}
+Status: ${ticketInfo.status || 'Unbekannt'}
+--- ENDE TICKET-INFORMATIONEN ---`;
+      }
+
       if (content && content.trim()) {
         // Modify existing text based on instruction
-        systemPrompt = `Du bist ein Kundenservice-Textexperte für ein Fitnessstudio.
+        systemPrompt = `Du bist ein Kundenservice-Textexperte für FIT INN, ein Fitnessstudio in Trier.
 Bearbeite den Text nach der gegebenen Anweisung.
-Gib nur den bearbeiteten Text zurück, ohne Erklärungen.`;
 
-        userPrompt = `Anweisung: ${instruction}\n\nText:\n${content}`;
+Du hast Zugriff auf den bisherigen Gesprächsverlauf und die Ticket-Informationen, um den Kontext zu verstehen.
+Nutze diese Informationen, um eine passende und kontextbezogene Antwort zu formulieren.
+
+Gib nur den bearbeiteten Text zurück, ohne Erklärungen.
+
+KRITISCH WICHTIG - ANTI-HALLUZINATION:
+- ERFINDE KEINE spezifischen Informationen wie Öffnungszeiten, Preise, Kurse oder Kontaktdaten
+- Bei Unsicherheit auf Website oder direkten Kontakt verweisen
+
+${knowledgeContext}`;
+
+        userPrompt = `${ticketContext}
+${conversationContext}
+
+ANWEISUNG: ${instruction}
+
+AKTUELLER TEXT ZUM BEARBEITEN:
+${content}`;
       } else {
         // Generate new text based on instruction (no existing content)
         systemPrompt = `Du bist ein freundlicher Kundenservice-Mitarbeiter für FIT INN, ein Fitnessstudio in Trier.
 Schreibe eine Kundenservice-Antwort basierend auf der gegebenen Anweisung.
+
+Du hast Zugriff auf den bisherigen Gesprächsverlauf und die Ticket-Informationen.
+Nutze diese Informationen, um eine passende, kontextbezogene und logische Antwort zu formulieren.
+Beziehe dich auf das, was der Kunde geschrieben hat, und antworte entsprechend.
+
 Deine Antwort sollte:
 - Freundlich und professionell sein
 - Direkt und lösungsorientiert
+- Auf den Kontext des Gesprächs eingehen
 - Nicht zu lang (max 150 Wörter)
 Gib nur den Text zurück, ohne Erklärungen.
 
@@ -225,7 +280,12 @@ KRITISCH WICHTIG - ANTI-HALLUZINATION:
 
 ${knowledgeContext}`;
 
-        userPrompt = `Schreibe eine Kundenservice-Antwort basierend auf folgender Anweisung:\n\n${instruction}`;
+        userPrompt = `${ticketContext}
+${conversationContext}
+
+ANWEISUNG: ${instruction}
+
+Schreibe eine passende Kundenservice-Antwort basierend auf dem Kontext und der Anweisung.`;
       }
 
     } else {

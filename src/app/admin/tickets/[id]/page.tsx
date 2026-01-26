@@ -501,6 +501,21 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           action: "ticket_custom",
           content: replyContent || "", // Can be empty - API will generate new text
           instruction: customInstruction,
+          // Include conversation history for context-aware responses
+          conversationHistory: messages.map(m => ({
+            sender: m.sender,
+            senderName: m.senderName,
+            content: m.content,
+            createdAt: m.createdAt,
+          })),
+          // Include ticket info
+          ticketInfo: ticket ? {
+            ticketNumber: ticket.ticketNumber,
+            subject: ticket.subject,
+            customerName: ticket.customerName,
+            customerEmail: ticket.customerEmail,
+            status: ticket.status,
+          } : undefined,
         }),
       });
 
@@ -1051,58 +1066,126 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Custom AI Instruction - Mobile-First Slide-Up Panel */}
+      {/* Custom AI Instruction - App-Style Full Sheet */}
       {showCustomModal && (
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/50 z-50 animate-fade-in"
+            className="fixed inset-0 bg-black/60 z-50 animate-fade-in backdrop-blur-sm"
             onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
           />
-          {/* Panel - slides up from bottom on mobile, centered on desktop */}
-          <div className="fixed inset-x-0 bottom-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-lg sm:w-full sm:mx-4">
-            <div className="bg-white rounded-t-2xl sm:rounded-apple-xl shadow-2xl animate-slide-up sm:animate-fade-in">
-              {/* Handle bar for mobile */}
-              <div className="flex justify-center pt-3 pb-1 sm:hidden">
-                <div className="w-10 h-1 bg-apple-gray-300 rounded-full"></div>
-              </div>
+          {/* Panel - Full sheet on mobile, modal on desktop */}
+          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-xl sm:w-full sm:mx-4 sm:max-h-[80vh]">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl animate-slide-up sm:animate-fade-in flex flex-col max-h-[90vh] sm:max-h-[80vh]">
+              {/* Header */}
+              <div className="flex-shrink-0 border-b border-apple-gray-100">
+                {/* Handle bar for mobile */}
+                <div className="flex justify-center pt-3 sm:hidden">
+                  <div className="w-12 h-1.5 bg-apple-gray-200 rounded-full"></div>
+                </div>
 
-              <div className="p-5 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-apple-gray-600">Eigene KI-Anweisung</h3>
+                <div className="flex items-center justify-between px-5 py-4 sm:px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-brand flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-apple-gray-600">KI-Assistent</h3>
+                      <p className="text-xs text-apple-gray-400">Kontextbezogene Antworten</p>
+                    </div>
+                  </div>
                   <button
                     type="button"
                     onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
-                    className="p-2 -mr-2 text-apple-gray-400 hover:text-apple-gray-600 transition-colors"
+                    className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center text-apple-gray-500 hover:bg-apple-gray-200 transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
+              </div>
 
-                <p className="text-sm text-apple-gray-400 mb-4">
-                  {replyContent.trim()
-                    ? "Beschreibe, wie die KI deinen Text bearbeiten soll."
-                    : "Beschreibe, was die KI für dich schreiben soll."}
-                </p>
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6">
+                {/* Conversation Context Preview */}
+                {messages.length > 0 && (
+                  <div className="mb-5">
+                    <p className="text-xs font-medium text-apple-gray-400 uppercase tracking-wider mb-2">Kontext</p>
+                    <div className="bg-apple-gray-50 rounded-xl p-3 space-y-2 max-h-32 overflow-y-auto">
+                      {messages.slice(-3).map((msg, idx) => (
+                        <div key={idx} className="flex items-start gap-2">
+                          <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold ${
+                            msg.sender === 'customer' ? 'bg-blue-100 text-blue-600' : 'bg-brand/10 text-brand'
+                          }`}>
+                            {msg.sender === 'customer' ? 'K' : 'S'}
+                          </div>
+                          <p className="text-xs text-apple-gray-500 line-clamp-2" dangerouslySetInnerHTML={{
+                            __html: msg.content.replace(/<[^>]*>/g, '').substring(0, 100) + (msg.content.length > 100 ? '...' : '')
+                          }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                <textarea
-                  value={customInstruction}
-                  onChange={(e) => setCustomInstruction(e.target.value)}
-                  placeholder={replyContent.trim()
-                    ? "z.B. 'Füge eine Entschuldigung hinzu' oder 'Mache den Text freundlicher'"
-                    : "z.B. 'Schreibe eine Absage für heute' oder 'Antworte, dass wir das prüfen werden'"}
-                  rows={3}
-                  autoFocus
-                  className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all mb-4 resize-none text-base"
-                />
+                {/* Quick Actions */}
+                <div className="mb-5">
+                  <p className="text-xs font-medium text-apple-gray-400 uppercase tracking-wider mb-2">Schnellaktionen</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: "Freundlich antworten", icon: "😊" },
+                      { label: "Entschuldigung hinzufügen", icon: "🙏" },
+                      { label: "Weiterleitung erklären", icon: "➡️" },
+                      { label: "Um Geduld bitten", icon: "⏳" },
+                    ].map((action, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCustomInstruction(action.label)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-full border transition-all ${
+                          customInstruction === action.label
+                            ? 'border-brand bg-brand/5 text-brand'
+                            : 'border-apple-gray-200 text-apple-gray-600 hover:border-apple-gray-300 hover:bg-apple-gray-50'
+                        }`}
+                      >
+                        <span>{action.icon}</span>
+                        <span>{action.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
+                {/* Custom Instruction Input */}
+                <div>
+                  <p className="text-xs font-medium text-apple-gray-400 uppercase tracking-wider mb-2">
+                    {replyContent.trim() ? "Text bearbeiten" : "Neue Antwort erstellen"}
+                  </p>
+                  <textarea
+                    value={customInstruction}
+                    onChange={(e) => setCustomInstruction(e.target.value)}
+                    placeholder={replyContent.trim()
+                      ? "Beschreibe, wie der Text geändert werden soll..."
+                      : "Beschreibe, was du antworten möchtest..."}
+                    rows={4}
+                    autoFocus
+                    className="w-full px-4 py-3 rounded-xl border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all resize-none text-base bg-white"
+                  />
+                  <p className="mt-2 text-xs text-apple-gray-400">
+                    Die KI kennt den gesamten Gesprächsverlauf und kann kontextbezogen antworten.
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="flex-shrink-0 border-t border-apple-gray-100 px-5 py-4 sm:px-6 bg-apple-gray-50/50">
                 <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
-                    className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-apple-gray-600 font-medium rounded-full hover:bg-apple-gray-100 transition-colors"
+                    className="flex-1 sm:flex-none px-5 py-3 text-apple-gray-600 font-medium rounded-xl border border-apple-gray-200 hover:bg-white transition-colors"
                   >
                     Abbrechen
                   </button>
@@ -1110,9 +1193,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     type="button"
                     onClick={handleAiCustom}
                     disabled={!customInstruction.trim()}
-                    className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors disabled:opacity-50"
+                    className="flex-[2] sm:flex-1 px-5 py-3 bg-gradient-to-r from-brand to-brand-dark text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-brand/25 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
                   >
-                    {replyContent.trim() ? "Anwenden" : "Generieren"}
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    {replyContent.trim() ? "Text bearbeiten" : "Antwort generieren"}
                   </button>
                 </div>
               </div>
