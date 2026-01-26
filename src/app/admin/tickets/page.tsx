@@ -14,6 +14,7 @@ interface Ticket {
   createdAt: string;
   updatedAt: string;
   assignedTo?: string;
+  unreadCount?: number;
 }
 
 const statusConfig = {
@@ -323,7 +324,7 @@ export default function TicketsPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-              {selectedTickets.size} löschen
+              <span className="hidden sm:inline">{selectedTickets.size} löschen</span>
             </button>
           )}
           <button
@@ -337,14 +338,14 @@ export default function TicketsPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Abrufen...
+                <span className="hidden sm:inline">Abrufen...</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                E-Mails abrufen
+                <span className="hidden sm:inline">E-Mails abrufen</span>
               </>
             )}
           </button>
@@ -441,7 +442,7 @@ export default function TicketsPage() {
         ))}
       </div>
 
-      {/* Tickets Table */}
+      {/* Tickets Table / Cards */}
       <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
         {paginatedTickets.length === 0 ? (
           <div className="text-center py-16">
@@ -456,93 +457,164 @@ export default function TicketsPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-apple-gray-50 border-b border-apple-gray-100">
-                  <th className="px-4 py-4 text-left">
-                    <input
-                      type="checkbox"
-                      checked={paginatedTickets.length > 0 && paginatedTickets.every(t => selectedTickets.has(t.id))}
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2 cursor-pointer"
-                    />
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Ticket
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Kunde
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Priorität
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Erstellt
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-apple-gray-100">
-                {paginatedTickets.map((ticket, index) => (
-                  <tr
-                    key={ticket.id}
-                    className={`hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''}`}
-                  >
-                    <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-apple-gray-50 border-b border-apple-gray-100">
+                    <th className="px-4 py-4 text-left">
+                      <input
+                        type="checkbox"
+                        checked={paginatedTickets.length > 0 && paginatedTickets.every(t => selectedTickets.has(t.id))}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2 cursor-pointer"
+                      />
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
+                      Ticket
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
+                      Kunde
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
+                      Priorität
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
+                      Erstellt
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-apple-gray-100">
+                  {paginatedTickets.map((ticket, index) => (
+                    <tr
+                      key={ticket.id}
+                      className={`hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''}`}
+                    >
+                      <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedTickets.has(ticket.id)}
+                          onChange={() => toggleSelectTicket(ticket.id)}
+                          className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-mono text-apple-gray-400">
+                              {ticket.ticketNumber}
+                            </span>
+                            {ticket.unreadCount && ticket.unreadCount > 0 && (
+                              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
+                                {ticket.unreadCount > 99 ? '99+' : ticket.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-base font-medium text-apple-gray-600">
+                            {ticket.subject}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-apple-gray-600">
+                            {ticket.customerName}
+                          </span>
+                          <span className="text-xs text-apple-gray-400">
+                            {ticket.customerEmail}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
+                        <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${statusConfig[ticket.status].color}`}>
+                          {statusConfig[ticket.status].label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
+                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${priorityConfig[ticket.priority].color}`}>
+                          {priorityConfig[ticket.priority].label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5 text-sm text-apple-gray-400" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
+                        {new Date(ticket.createdAt).toLocaleDateString('de-DE', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden divide-y divide-apple-gray-100">
+              {paginatedTickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}
+                  className={`p-4 hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={selectedTickets.has(ticket.id)}
                         onChange={() => toggleSelectTicket(ticket.id)}
-                        className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2 cursor-pointer"
+                        className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2 cursor-pointer mt-1"
                       />
-                    </td>
-                    <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
-                      <div className="flex flex-col">
-                        <span className="text-xs font-mono text-apple-gray-400 mb-1">
-                          {ticket.ticketNumber}
-                        </span>
-                        <span className="text-base font-medium text-apple-gray-600">
-                          {ticket.subject}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-mono text-apple-gray-400">
+                              {ticket.ticketNumber}
+                            </span>
+                            {ticket.unreadCount && ticket.unreadCount > 0 && (
+                              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
+                                {ticket.unreadCount > 99 ? '99+' : ticket.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-base font-medium text-apple-gray-600 block truncate">
+                            {ticket.subject}
+                          </span>
+                        </div>
+                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ring-1 ring-inset flex-shrink-0 ${statusConfig[ticket.status].color}`}>
+                          {statusConfig[ticket.status].label}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
-                      <div className="flex flex-col">
+                      <div className="flex items-center gap-2 mb-2">
                         <span className="text-sm font-medium text-apple-gray-600">
                           {ticket.customerName}
                         </span>
-                        <span className="text-xs text-apple-gray-400">
-                          {ticket.customerEmail}
+                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded flex-shrink-0 ${priorityConfig[ticket.priority].color}`}>
+                          {priorityConfig[ticket.priority].label}
                         </span>
                       </div>
-                    </td>
-                    <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
-                      <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${statusConfig[ticket.status].color}`}>
-                        {statusConfig[ticket.status].label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
-                      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${priorityConfig[ticket.priority].color}`}>
-                        {priorityConfig[ticket.priority].label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-sm text-apple-gray-400" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
-                      {new Date(ticket.createdAt).toLocaleDateString('de-DE', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <p className="text-xs text-apple-gray-400">
+                        {new Date(ticket.createdAt).toLocaleDateString('de-DE', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
@@ -561,7 +633,7 @@ export default function TicketsPage() {
           <div className="flex items-center gap-4">
             {/* Items per page */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-apple-gray-400">Pro Seite:</span>
+              <span className="hidden sm:inline text-sm text-apple-gray-400">Pro Seite:</span>
               <select
                 value={itemsPerPage}
                 onChange={(e) => setItemsPerPage(Number(e.target.value))}

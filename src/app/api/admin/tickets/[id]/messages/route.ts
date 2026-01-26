@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTicket, getTicketMessages, createMessage } from '@/lib/tickets';
+import { createClient } from '@vercel/kv';
+
+const kv = createClient({
+  url: process.env.KV_REST_API_URL || '',
+  token: process.env.KV_REST_API_TOKEN || '',
+});
 
 // Helper function to check authentication
 function isAuthenticated(req: NextRequest): boolean {
@@ -36,7 +42,18 @@ export async function GET(
     }
 
     const messages = await getTicketMessages(id);
-    return NextResponse.json(messages);
+    
+    // Get read message IDs
+    const readMessageIds: string[] = await kv.smembers(`ticket:${id}:read`);
+    const readSet = new Set(readMessageIds);
+    
+    // Add isRead flag to each message
+    const messagesWithReadStatus = messages.map(msg => ({
+      ...msg,
+      isRead: readSet.has(msg.id) || msg.sender === 'admin', // Admin messages are always considered "read"
+    }));
+
+    return NextResponse.json(messagesWithReadStatus);
   } catch (error) {
     console.error('Failed to get messages:', error);
     return NextResponse.json({ message: 'Fehler beim Laden der Nachrichten.' }, { status: 500 });

@@ -157,7 +157,7 @@ export default function SupportPage() {
               <label className="block text-sm font-medium text-apple-gray-600 mb-2">
                 Priorität
               </label>
-              <div className="flex gap-4">
+              <div className="flex gap-4 flex-wrap">
                 {[
                   { value: "low", label: "Niedrig", color: "bg-gray-100 text-gray-600 ring-gray-300" },
                   { value: "medium", label: "Normal", color: "bg-blue-50 text-blue-600 ring-blue-300" },
@@ -165,7 +165,7 @@ export default function SupportPage() {
                 ].map((option) => (
                   <label
                     key={option.value}
-                    className={`flex-1 text-center px-4 py-2 rounded-apple-lg cursor-pointer transition-all duration-200 ring-1 ring-inset ${
+                    className={`flex-1 min-w-[120px] text-center px-4 py-2 rounded-apple-lg cursor-pointer transition-all duration-200 ring-1 ring-inset ${
                       formData.priority === option.value
                         ? option.color + " ring-2"
                         : "bg-apple-gray-50 text-apple-gray-500 ring-apple-gray-200 hover:bg-apple-gray-100"

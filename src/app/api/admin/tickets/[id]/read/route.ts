@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllTicketsWithUnreadCount } from '@/lib/tickets';
+import { markMessagesAsRead } from '@/lib/tickets';
 
 // Helper function to check authentication
 function isAuthenticated(req: NextRequest): boolean {
@@ -16,7 +16,10 @@ function isAuthenticated(req: NextRequest): boolean {
   return user === ADMIN_USER && password === ADMIN_PASS;
 }
 
-export async function GET(req: NextRequest) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   if (!isAuthenticated(req)) {
     return new NextResponse('Authentication Required', {
       status: 401,
@@ -25,10 +28,16 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const tickets = await getAllTicketsWithUnreadCount();
-    return NextResponse.json(tickets);
+    const { id } = await params;
+    const body = await req.json();
+    const { messageIds } = body;
+
+    // Mark messages as read (if messageIds provided, mark only those; otherwise mark all customer messages)
+    await markMessagesAsRead(id, messageIds);
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to load tickets:', error);
-    return NextResponse.json({ message: 'Fehler beim Laden der Tickets.' }, { status: 500 });
+    console.error('Failed to mark messages as read:', error);
+    return NextResponse.json({ message: 'Fehler beim Markieren der Nachrichten.' }, { status: 500 });
   }
 }

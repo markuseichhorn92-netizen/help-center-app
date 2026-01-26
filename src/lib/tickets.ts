@@ -159,6 +159,8 @@ export async function deleteTicket(id: string): Promise<boolean> {
     ...messageIds.map(msgId => kv.del(`message:${msgId}`)),
     // Delete message index
     kv.del(`ticket:${id}:messages`),
+    // Delete read status
+    kv.del(`ticket:${id}:read`),
     // Remove from email index
     kv.srem(`tickets:email:${ticket.customerEmail.toLowerCase()}`, id),
     // Delete ticket
@@ -245,6 +247,71 @@ export async function getTicketMessages(ticketId: string): Promise<TicketMessage
   return messages
     .filter((m): m is TicketMessage => m !== null && Object.keys(m).length > 0)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+// Get count of unread messages (customer messages that haven't been read)
+export async function getUnreadMessageCount(ticketId: string): Promise<number> {
+  const messageIds: string[] = await kv.smembers(`ticket:${ticketId}:messages`);
+  if (messageIds.length === 0) {
+    return 0;
+  }
+
+  const readMessageIds: string[] = await kv.smembers(`ticket:${ticketId}:read`);
+  const readSet = new Set(readMessageIds);
+
+  // Count customer messages that are not read
+  let unreadCount = 0;
+  for (const messageId of messageIds) {
+    if (!readSet.has(messageId)) {
+      const message = await kv.hgetall(`message:${messageId}`);
+      if (message && (message as unknown as TicketMessage).sender === 'customer') {
+        unreadCount++;
+      }
+    }
+  }
+
+  return unreadCount;
+}
+
+// Mark messages as read
+export async function markMessagesAsRead(ticketId: string, messageIds?: string[]): Promise<void> {
+  if (messageIds && messageIds.length > 0) {
+    // Mark specific messages as read
+    await Promise.all(
+      messageIds.map(id => kv.sadd(`ticket:${ticketId}:read`, id))
+    );
+  } else {
+    // Mark all customer messages in this ticket as read
+    const allMessageIds: string[] = await kv.smembers(`ticket:${ticketId}:messages`);
+    const customerMessageIds: string[] = [];
+
+    for (const messageId of allMessageIds) {
+      const message = await kv.hgetall(`message:${messageId}`);
+      if (message && (message as unknown as TicketMessage).sender === 'customer') {
+        customerMessageIds.push(messageId);
+      }
+    }
+
+    if (customerMessageIds.length > 0) {
+      await Promise.all(
+        customerMessageIds.map(id => kv.sadd(`ticket:${ticketId}:read`, id))
+      );
+    }
+  }
+}
+
+// Get unread message count for all tickets (for list view)
+export async function getAllTicketsWithUnreadCount(): Promise<Array<Ticket & { unreadCount: number }>> {
+  const tickets = await getAllTickets();
+  
+  const ticketsWithUnread = await Promise.all(
+    tickets.map(async (ticket) => {
+      const unreadCount = await getUnreadMessageCount(ticket.id);
+      return { ...ticket, unreadCount };
+    })
+  );
+
+  return ticketsWithUnread;
 }
 
 // Find ticket by email (for incoming email processing)

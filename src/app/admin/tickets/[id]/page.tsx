@@ -33,6 +33,7 @@ interface TicketMessage {
   senderEmail: string;
   createdAt: string;
   attachments?: Attachment[];
+  isRead?: boolean;
 }
 
 const statusConfig = {
@@ -69,6 +70,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [textareaRows, setTextareaRows] = useState(4);
+
+  useEffect(() => {
+    const updateRows = () => {
+      setTextareaRows(window.innerWidth < 640 ? 3 : 4);
+    };
+    updateRows();
+    window.addEventListener('resize', updateRows);
+    return () => window.removeEventListener('resize', updateRows);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -89,7 +100,33 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       const messagesData = await messagesRes.json();
 
       setTicket(ticketData);
-      setMessages(messagesData);
+      
+      // Mark all customer messages as read when opening the ticket
+      const unreadCustomerMessages = messagesData.filter(
+        (msg: TicketMessage) => msg.sender === 'customer' && !msg.isRead
+      );
+      
+      if (unreadCustomerMessages.length > 0) {
+        await fetch(`/api/admin/tickets/${id}/read`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: getAuthHeader()
+          },
+          body: JSON.stringify({
+            messageIds: unreadCustomerMessages.map((m: TicketMessage) => m.id)
+          })
+        });
+        
+        // Update messages to mark them as read
+        const updatedMessages = messagesData.map((msg: TicketMessage) => ({
+          ...msg,
+          isRead: msg.sender === 'admin' || unreadCustomerMessages.some((m: TicketMessage) => m.id === msg.id) ? true : msg.isRead
+        }));
+        setMessages(updatedMessages);
+      } else {
+        setMessages(messagesData);
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -449,32 +486,41 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
             {/* Messages */}
             <div className="max-h-[500px] overflow-y-auto p-6 space-y-4">
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}
-                >
+              {messages.map((msg) => {
+                const isUnread = msg.sender === "customer" && !msg.isRead;
+                return (
                   <div
-                    className={`max-w-[80%] rounded-apple-lg p-4 ${
-                      msg.sender === "admin"
-                        ? "bg-brand text-white"
-                        : "bg-apple-gray-100 text-apple-gray-600"
-                    }`}
+                    key={msg.id}
+                    className={`flex ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-sm font-medium ${msg.sender === "admin" ? "text-white/90" : "text-apple-gray-500"}`}>
-                        {msg.senderName}
-                      </span>
-                      <span className={`text-xs ${msg.sender === "admin" ? "text-white/60" : "text-apple-gray-400"}`}>
-                        {new Date(msg.createdAt).toLocaleString("de-DE", {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <div
+                      className={`max-w-[80%] rounded-apple-lg p-4 relative ${
+                        msg.sender === "admin"
+                          ? "bg-brand text-white"
+                          : isUnread
+                          ? "bg-blue-50 text-apple-gray-600 ring-2 ring-blue-200"
+                          : "bg-apple-gray-100 text-apple-gray-600"
+                      }`}
+                    >
+                      {isUnread && (
+                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-red-500 rounded-full">
+                          Neu
+                        </span>
+                      )}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-sm font-medium ${msg.sender === "admin" ? "text-white/90" : "text-apple-gray-500"}`}>
+                          {msg.senderName}
+                        </span>
+                        <span className={`text-xs ${msg.sender === "admin" ? "text-white/60" : "text-apple-gray-400"}`}>
+                          {new Date(msg.createdAt).toLocaleString("de-DE", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
                     {/* Attachments */}
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-white/20">
@@ -508,7 +554,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
 
@@ -517,93 +564,185 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               <form onSubmit={handleSendReply}>
                 {/* AI Tools Bar */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <span className="text-xs text-apple-gray-400 font-medium">KI-Assistent:</span>
+                  <span className="text-xs text-apple-gray-400 font-medium hidden sm:inline">KI-Assistent:</span>
 
-                  <button
-                    type="button"
-                    onClick={handleAiGenerate}
-                    disabled={aiLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-700 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Antwort generieren
-                  </button>
+                  {/* Desktop: Individual Buttons */}
+                  <div className="hidden sm:flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleAiGenerate}
+                      disabled={aiLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-700 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Antwort generieren
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={handleAiCorrect}
-                    disabled={aiLoading || !replyContent.trim()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Korrigieren
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleAiCorrect}
+                      disabled={aiLoading || !replyContent.trim()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Korrigieren
+                    </button>
 
-                  {/* Rewrite Dropdown */}
-                  <div className="relative">
+                    {/* Rewrite Dropdown */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowAiMenu(!showAiMenu)}
+                        disabled={aiLoading || !replyContent.trim()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Umschreiben
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {showAiMenu && (
+                        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-apple-gray-200 py-1 z-10 min-w-[160px]">
+                          <button
+                            type="button"
+                            onClick={() => handleAiRewrite("formal")}
+                            className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                          >
+                            Formeller
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAiRewrite("friendly")}
+                            className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                          >
+                            Freundlicher
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAiRewrite("short")}
+                            className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                          >
+                            Kürzer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleAiRewrite("detailed")}
+                            className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                          >
+                            Ausführlicher
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomModal(true)}
+                      disabled={aiLoading || !replyContent.trim()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Eigene Anweisung
+                    </button>
+                  </div>
+
+                  {/* Mobile: Dropdown Menu */}
+                  <div className="sm:hidden relative">
                     <button
                       type="button"
                       onClick={() => setShowAiMenu(!showAiMenu)}
-                      disabled={aiLoading || !replyContent.trim()}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50"
+                      disabled={aiLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-700 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
-                      Umschreiben
+                      KI-Assistent
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                       </svg>
                     </button>
                     {showAiMenu && (
-                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-apple-gray-200 py-1 z-10 min-w-[160px]">
+                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-apple-gray-200 py-1 z-10 min-w-[180px]">
+                        <button
+                          type="button"
+                          onClick={handleAiGenerate}
+                          disabled={aiLoading}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          Antwort generieren
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleAiCorrect}
+                          disabled={aiLoading || !replyContent.trim()}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Korrigieren
+                        </button>
+                        <div className="border-t border-apple-gray-100 my-1"></div>
                         <button
                           type="button"
                           onClick={() => handleAiRewrite("formal")}
-                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                          disabled={aiLoading || !replyContent.trim()}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50 disabled:opacity-50"
                         >
-                          Formeller
+                          Formeller umschreiben
                         </button>
                         <button
                           type="button"
                           onClick={() => handleAiRewrite("friendly")}
-                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                          disabled={aiLoading || !replyContent.trim()}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50 disabled:opacity-50"
                         >
-                          Freundlicher
+                          Freundlicher umschreiben
                         </button>
                         <button
                           type="button"
                           onClick={() => handleAiRewrite("short")}
-                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                          disabled={aiLoading || !replyContent.trim()}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50 disabled:opacity-50"
                         >
-                          Kürzer
+                          Kürzer umschreiben
                         </button>
                         <button
                           type="button"
                           onClick={() => handleAiRewrite("detailed")}
-                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                          disabled={aiLoading || !replyContent.trim()}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50 disabled:opacity-50"
                         >
-                          Ausführlicher
+                          Ausführlicher umschreiben
+                        </button>
+                        <div className="border-t border-apple-gray-100 my-1"></div>
+                        <button
+                          type="button"
+                          onClick={() => { setShowCustomModal(true); setShowAiMenu(false); }}
+                          disabled={aiLoading || !replyContent.trim()}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50 disabled:opacity-50 flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Eigene Anweisung
                         </button>
                       </div>
                     )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomModal(true)}
-                    disabled={aiLoading || !replyContent.trim()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors disabled:opacity-50"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Eigene Anweisung
-                  </button>
 
                   {aiLoading && (
                     <span className="inline-flex items-center gap-2 text-xs text-purple-600">
@@ -611,7 +750,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      KI arbeitet...
+                      <span className="hidden sm:inline">KI arbeitet...</span>
                     </span>
                   )}
                 </div>
@@ -620,7 +759,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
                   placeholder="Antwort schreiben..."
-                  rows={4}
+                  rows={textareaRows}
                   className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all duration-200 resize-none"
                 />
 
