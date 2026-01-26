@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server';
-
-// Default categories for the help center
-const defaultCategories = [
-  { id: 'mitgliedschaft', name: 'Mitgliedschaft', icon: 'card', description: 'Verträge, Kündigung & Beitrag' },
-  { id: 'training', name: 'Training', icon: 'dumbbell', description: 'Kurse, Geräte & Trainingsplan' },
-  { id: 'studio', name: 'Studio', icon: 'building', description: 'Öffnungszeiten, Ausstattung & Standort' },
-  { id: 'konto', name: 'Mein Konto', icon: 'user', description: 'Login, Profil & Einstellungen' },
-  { id: 'sonstiges', name: 'Sonstiges', icon: 'more', description: 'Weitere Themen & Fragen' },
-];
+import { getAllCategories, migrateDefaultCategories, categoriesExist } from '@/lib/categories';
 
 export async function GET() {
-  // Return default categories
-  // In the future, this could be extended to load custom categories from KV
-  return NextResponse.json(defaultCategories);
+  try {
+    // Check if categories exist, if not migrate defaults
+    const exists = await categoriesExist();
+    if (!exists) {
+      await migrateDefaultCategories();
+    }
+
+    const categories = await getAllCategories();
+    return NextResponse.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch categories' },
+      { status: 500 }
+    );
+  }
 }

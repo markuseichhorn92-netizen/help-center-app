@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from "next/link";
+import SearchAutocomplete from '@/components/SearchAutocomplete';
 
 interface Category {
   id: string;
@@ -152,19 +153,11 @@ export default function Home() {
               Finde Antworten auf deine Fragen im FIT INN Hilfe-Center.
             </p>
 
-            {/* Search Input */}
-            <div className="mt-10 max-w-xl mx-auto relative">
-              <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <input
-                type="text"
+            {/* Search Input with Autocomplete */}
+            <div className="mt-10 max-w-xl mx-auto">
+              <SearchAutocomplete
                 placeholder="Suche nach Artikeln..."
-                className="w-full pl-14 pr-6 py-4 text-base bg-white border-0 rounded-2xl shadow-apple-lg transition-all duration-300 placeholder:text-apple-gray-400 focus:outline-none focus:ring-4 focus:ring-brand/20 focus:shadow-apple-xl"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onSearch={(query) => setSearchQuery(query)}
               />
             </div>
           </div>

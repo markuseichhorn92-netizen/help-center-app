@@ -3,12 +3,16 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import FeedbackWidget from '@/components/FeedbackWidget';
+import RelatedArticles from '@/components/RelatedArticles';
+import ContactCTA from '@/components/ContactCTA';
 
 interface Article {
   id: string;
   title: string;
   content: string;
   published: boolean;
+  category?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -92,6 +96,24 @@ export default function ArticlePage() {
 
     fetchArticle();
   }, [id]);
+
+  // Track view (rate-limited via localStorage)
+  useEffect(() => {
+    if (!id || !article) return;
+
+    // Rate limit: only track once per article per session
+    const viewedKey = `viewed_${id}`;
+    const lastViewed = localStorage.getItem(viewedKey);
+    const now = Date.now();
+
+    // Only track if not viewed in the last 30 minutes
+    if (!lastViewed || now - parseInt(lastViewed) > 30 * 60 * 1000) {
+      fetch(`/api/articles/${id}/view`, { method: 'POST' }).catch(() => {
+        // Silently fail - analytics shouldn't break the page
+      });
+      localStorage.setItem(viewedKey, now.toString());
+    }
+  }, [id, article]);
 
   // Process content and extract TOC
   const { processedHtml, toc } = useMemo(() => {
@@ -283,6 +305,22 @@ export default function ArticlePage() {
                            prose-li:marker:text-apple-gray-400"
                 dangerouslySetInnerHTML={{ __html: processedHtml }}
               />
+            </div>
+
+            {/* Feedback Widget */}
+            <div className="mt-8">
+              <FeedbackWidget articleId={id} />
+            </div>
+
+            {/* Related Articles */}
+            <RelatedArticles
+              currentArticleId={id}
+              category={article.category}
+            />
+
+            {/* Contact CTA */}
+            <div className="mt-8">
+              <ContactCTA articleId={id} articleTitle={article.title} />
             </div>
 
             {/* Bottom Navigation */}
