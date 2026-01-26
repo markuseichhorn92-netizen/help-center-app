@@ -233,9 +233,10 @@ Gib nur den umgeschriebenen Text zurück, ohne Erklärungen.`;
           .slice(-10) // Last 10 messages for context
           .map((msg: { sender: string; senderName: string; content: string; createdAt: string }) => {
             const role = msg.sender === 'customer' ? 'KUNDE' : 'SUPPORT';
-            // Strip HTML tags for cleaner context
-            const cleanContent = msg.content.replace(/<[^>]*>/g, '').trim();
-            return `[${role}] ${msg.senderName}: ${cleanContent}`;
+            // Strip HTML tags for cleaner context - with null check
+            const cleanContent = (msg.content || '').replace(/<[^>]*>/g, '').trim();
+            const senderName = msg.senderName || (msg.sender === 'customer' ? 'Kunde' : 'Support');
+            return `[${role}] ${senderName}: ${cleanContent}`;
           })
           .join('\n\n');
 
