@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef, use } from "react";
+import RichTextEditor from "@/components/editor/RichTextEditor";
 
 interface Ticket {
   id: string;
@@ -864,12 +865,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   )}
                 </div>
 
-                <textarea
+                <RichTextEditor
                   value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
+                  onChange={setReplyContent}
+                  variant="ticket"
                   placeholder="Antwort schreiben..."
-                  rows={textareaRows}
-                  className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all duration-200 resize-none"
                 />
 
                 {/* Attachments Preview */}

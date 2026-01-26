@@ -3,10 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import "react-quill-new/dist/quill.snow.css";
-
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+import RichTextEditor from "@/components/editor/RichTextEditor";
 
 interface Article {
   id: string;
@@ -338,9 +335,28 @@ export default function EditArticlePage() {
             </div>
           )}
 
-          <div className="quill-editor-container">
-            <ReactQuill theme="snow" value={content} onChange={setContent} />
-          </div>
+          <RichTextEditor
+            value={content}
+            onChange={setContent}
+            variant="article"
+            placeholder="Schreibe deinen Artikel hier..."
+            onImageUpload={async (file) => {
+              const formData = new FormData();
+              formData.append("file", file);
+              const res = await fetch("/api/admin/upload", {
+                method: "POST",
+                headers: {
+                  Authorization: `Basic ${btoa(
+                    `${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`
+                  )}`,
+                },
+                body: formData,
+              });
+              const data = await res.json();
+              if (!res.ok) throw new Error(data.error);
+              return data.url;
+            }}
+          />
         </div>
 
         {/* Publish Card */}
