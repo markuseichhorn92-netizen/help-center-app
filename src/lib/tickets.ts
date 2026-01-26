@@ -41,6 +41,11 @@ export interface TicketMessage {
   whatsappMessageId?: string;
   channel?: 'email' | 'whatsapp' | 'web';
   attachments?: Attachment[];
+  // Delivery status tracking
+  status?: 'sent' | 'delivered' | 'read' | 'failed';
+  deliveredAt?: string;
+  readAt?: string;
+  failureReason?: string;
 }
 
 // Helper: Generate ticket number
@@ -229,6 +234,7 @@ export async function createMessage(data: {
     senderName: data.senderName,
     senderEmail: data.senderEmail,
     createdAt: now,
+    status: 'sent', // Initial status
     ...(data.emailMessageId && { emailMessageId: data.emailMessageId }),
     ...(data.whatsappMessageId && { whatsappMessageId: data.whatsappMessageId }),
     ...(data.channel && { channel: data.channel }),
@@ -247,6 +253,63 @@ export async function createMessage(data: {
   await kv.hset(`ticket:${data.ticketId}`, { updatedAt: now });
 
   return message;
+}
+
+// Update message delivery status
+export async function updateMessageStatus(
+  messageId: string,
+  status: 'sent' | 'delivered' | 'read' | 'failed',
+  additionalData?: { deliveredAt?: string; readAt?: string; failureReason?: string }
+): Promise<boolean> {
+  try {
+    const message = await kv.hgetall(`message:${messageId}`);
+    if (!message || Object.keys(message).length === 0) {
+      return false;
+    }
+
+    const updates: Record<string, string> = { status };
+    
+    if (additionalData?.deliveredAt) {
+      updates.deliveredAt = additionalData.deliveredAt;
+    }
+    if (additionalData?.readAt) {
+      updates.readAt = additionalData.readAt;
+    }
+    if (additionalData?.failureReason) {
+      updates.failureReason = additionalData.failureReason;
+    }
+
+    await kv.hmset(`message:${messageId}`, updates);
+    return true;
+  } catch (err) {
+    console.error('Failed to update message status:', err);
+    return false;
+  }
+}
+
+// Find message by email or WhatsApp message ID
+export async function findMessageByExternalId(
+  externalId: string,
+  type: 'email' | 'whatsapp'
+): Promise<TicketMessage | null> {
+  const allTicketIds: string[] = await kv.smembers('tickets:ids');
+  
+  for (const ticketId of allTicketIds) {
+    const messageIds: string[] = await kv.smembers(`ticket:${ticketId}:messages`);
+    
+    for (const messageId of messageIds) {
+      const message = await kv.hgetall(`message:${messageId}`) as unknown as TicketMessage;
+      
+      if (type === 'email' && message.emailMessageId === externalId) {
+        return message;
+      }
+      if (type === 'whatsapp' && message.whatsappMessageId === externalId) {
+        return message;
+      }
+    }
+  }
+  
+  return null;
 }
 
 export async function getTicketMessages(ticketId: string): Promise<TicketMessage[]> {

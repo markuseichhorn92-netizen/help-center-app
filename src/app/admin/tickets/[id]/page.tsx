@@ -34,6 +34,11 @@ interface TicketMessage {
   createdAt: string;
   attachments?: Attachment[];
   isRead?: boolean;
+  channel?: 'email' | 'whatsapp' | 'web';
+  status?: 'sent' | 'delivered' | 'read' | 'failed';
+  deliveredAt?: string;
+  readAt?: string;
+  failureReason?: string;
 }
 
 const statusConfig = {
@@ -51,6 +56,53 @@ const priorityConfig = {
 
 function getAuthHeader() {
   return `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`;
+}
+
+// Status icon component for messages
+function MessageStatusIcon({ message }: { message: TicketMessage }) {
+  if (message.sender === 'customer') return null; // Only show for admin messages
+  
+  const { status, failureReason } = message;
+  
+  if (!status || status === 'sent') {
+    // Single checkmark - sent
+    return (
+      <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Gesendet">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+      </svg>
+    );
+  }
+  
+  if (status === 'delivered') {
+    // Double checkmark - delivered
+    return (
+      <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Zugestellt">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13l4 4L22 7" />
+      </svg>
+    );
+  }
+  
+  if (status === 'read') {
+    // Double checkmark blue - read
+    return (
+      <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title="Gelesen">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13l4 4L22 7" />
+      </svg>
+    );
+  }
+  
+  if (status === 'failed') {
+    // Red X - failed
+    return (
+      <svg className="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" title={`Fehler: ${failureReason || 'Unbekannt'}`}>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    );
+  }
+  
+  return null;
 }
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -565,6 +617,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                             minute: "2-digit",
                           })}
                         </span>
+                        {msg.sender === "admin" && (
+                          <MessageStatusIcon message={msg} />
+                        )}
                       </div>
                       <p className="whitespace-pre-wrap">{msg.content}</p>
                     {/* Attachments */}
