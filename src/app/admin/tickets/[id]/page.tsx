@@ -486,7 +486,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   };
 
   const handleAiCustom = async () => {
-    if (!replyContent.trim() || !customInstruction.trim()) return;
+    if (!customInstruction.trim()) return;
 
     setAiLoading(true);
     setShowCustomModal(false);
@@ -499,18 +499,21 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         },
         body: JSON.stringify({
           action: "ticket_custom",
-          content: replyContent,
+          content: replyContent || "", // Can be empty - API will generate new text
           instruction: customInstruction,
         }),
       });
 
-      if (!res.ok) throw new Error("KI-Fehler");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "KI-Fehler");
+      }
 
       const data = await res.json();
       setReplyContent(data.content);
       setCustomInstruction("");
-    } catch (err) {
-      alert("Fehler bei der KI-Bearbeitung");
+    } catch (err: any) {
+      alert("Fehler bei der KI-Bearbeitung: " + (err.message || "Unbekannter Fehler"));
     } finally {
       setAiLoading(false);
     }
@@ -770,7 +773,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     <button
                       type="button"
                       onClick={() => setShowCustomModal(true)}
-                      disabled={aiLoading || !replyContent.trim()}
+                      disabled={aiLoading}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors disabled:opacity-50"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -857,7 +860,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         <button
                           type="button"
                           onClick={() => { setShowCustomModal(true); setShowAiMenu(false); }}
-                          disabled={aiLoading || !replyContent.trim()}
+                          disabled={aiLoading}
                           className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50 disabled:opacity-50 flex items-center gap-2"
                         >
                           <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1048,40 +1051,74 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Custom AI Instruction Modal */}
+      {/* Custom AI Instruction - Mobile-First Slide-Up Panel */}
       {showCustomModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 pt-20">
-          <div className="bg-white rounded-apple-xl shadow-2xl p-6 max-w-lg mx-4 w-full">
-            <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">Eigene KI-Anweisung</h3>
-            <p className="text-sm text-apple-gray-400 mb-4">
-              Beschreibe, wie die KI deinen Text bearbeiten soll.
-            </p>
-            <textarea
-              value={customInstruction}
-              onChange={(e) => setCustomInstruction(e.target.value)}
-              placeholder="z.B. 'Füge eine Entschuldigung hinzu' oder 'Erkläre die Öffnungszeiten genauer'"
-              rows={3}
-              className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all mb-4 resize-none"
-            />
-            <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
-                className="px-4 py-2 text-apple-gray-600 font-medium rounded-full hover:bg-apple-gray-100 transition-colors"
-              >
-                Abbrechen
-              </button>
-              <button
-                type="button"
-                onClick={handleAiCustom}
-                disabled={!customInstruction.trim()}
-                className="px-4 py-2 bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors disabled:opacity-50"
-              >
-                Anwenden
-              </button>
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 z-50 animate-fade-in"
+            onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
+          />
+          {/* Panel - slides up from bottom on mobile, centered on desktop */}
+          <div className="fixed inset-x-0 bottom-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-lg sm:w-full sm:mx-4">
+            <div className="bg-white rounded-t-2xl sm:rounded-apple-xl shadow-2xl animate-slide-up sm:animate-fade-in">
+              {/* Handle bar for mobile */}
+              <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                <div className="w-10 h-1 bg-apple-gray-300 rounded-full"></div>
+              </div>
+
+              <div className="p-5 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-apple-gray-600">Eigene KI-Anweisung</h3>
+                  <button
+                    type="button"
+                    onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
+                    className="p-2 -mr-2 text-apple-gray-400 hover:text-apple-gray-600 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <p className="text-sm text-apple-gray-400 mb-4">
+                  {replyContent.trim()
+                    ? "Beschreibe, wie die KI deinen Text bearbeiten soll."
+                    : "Beschreibe, was die KI für dich schreiben soll."}
+                </p>
+
+                <textarea
+                  value={customInstruction}
+                  onChange={(e) => setCustomInstruction(e.target.value)}
+                  placeholder={replyContent.trim()
+                    ? "z.B. 'Füge eine Entschuldigung hinzu' oder 'Mache den Text freundlicher'"
+                    : "z.B. 'Schreibe eine Absage für heute' oder 'Antworte, dass wir das prüfen werden'"}
+                  rows={3}
+                  autoFocus
+                  className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all mb-4 resize-none text-base"
+                />
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
+                    className="flex-1 sm:flex-none px-4 py-3 sm:py-2 text-apple-gray-600 font-medium rounded-full hover:bg-apple-gray-100 transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAiCustom}
+                    disabled={!customInstruction.trim()}
+                    className="flex-1 sm:flex-none px-4 py-3 sm:py-2 bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors disabled:opacity-50"
+                  >
+                    {replyContent.trim() ? "Anwenden" : "Generieren"}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Click outside to close AI menu */}

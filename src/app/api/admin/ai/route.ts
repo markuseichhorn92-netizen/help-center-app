@@ -194,19 +194,39 @@ Gib nur den umgeschriebenen Text zurück, ohne Erklärungen.`;
       userPrompt = `Schreibe folgenden Text ${toneDesc} um:\n\n${content}`;
 
     } else if (action === "ticket_custom") {
-      // Custom instruction for ticket reply
-      if (!content || !instruction) {
+      // Custom instruction for ticket reply - can work with or without existing content
+      if (!instruction) {
         return NextResponse.json(
-          { message: "Bitte geben Sie Text und Anweisung an." },
+          { message: "Bitte geben Sie eine Anweisung an." },
           { status: 400 }
         );
       }
 
-      systemPrompt = `Du bist ein Kundenservice-Textexperte für ein Fitnessstudio.
+      if (content && content.trim()) {
+        // Modify existing text based on instruction
+        systemPrompt = `Du bist ein Kundenservice-Textexperte für ein Fitnessstudio.
 Bearbeite den Text nach der gegebenen Anweisung.
 Gib nur den bearbeiteten Text zurück, ohne Erklärungen.`;
 
-      userPrompt = `Anweisung: ${instruction}\n\nText:\n${content}`;
+        userPrompt = `Anweisung: ${instruction}\n\nText:\n${content}`;
+      } else {
+        // Generate new text based on instruction (no existing content)
+        systemPrompt = `Du bist ein freundlicher Kundenservice-Mitarbeiter für FIT INN, ein Fitnessstudio in Trier.
+Schreibe eine Kundenservice-Antwort basierend auf der gegebenen Anweisung.
+Deine Antwort sollte:
+- Freundlich und professionell sein
+- Direkt und lösungsorientiert
+- Nicht zu lang (max 150 Wörter)
+Gib nur den Text zurück, ohne Erklärungen.
+
+KRITISCH WICHTIG - ANTI-HALLUZINATION:
+- ERFINDE KEINE spezifischen Informationen wie Öffnungszeiten, Preise, Kurse oder Kontaktdaten
+- Bei Unsicherheit auf Website oder direkten Kontakt verweisen
+
+${knowledgeContext}`;
+
+        userPrompt = `Schreibe eine Kundenservice-Antwort basierend auf folgender Anweisung:\n\n${instruction}`;
+      }
 
     } else {
       return NextResponse.json(

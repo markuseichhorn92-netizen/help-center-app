@@ -301,7 +301,12 @@ export default function TicketsPage() {
   const filteredTickets = tickets
     .filter(t => {
       // Status filter
-      if (filterStatus !== "all" && t.status !== filterStatus) {
+      if (filterStatus === "all") {
+        // "Alle" shows only active tickets (not closed or resolved)
+        if (t.status === "closed" || t.status === "resolved") {
+          return false;
+        }
+      } else if (t.status !== filterStatus) {
         return false;
       }
       // Search filter
