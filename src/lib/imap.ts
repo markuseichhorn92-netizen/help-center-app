@@ -81,13 +81,14 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
 
     try {
       // Only fetch emails from start date onwards (prevents processing old emails)
-      // Default: Start of today (midnight) - only process new emails
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Default: Start of yesterday (midnight) - process emails from last 24h+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
 
       const startDate = process.env.IMAP_START_DATE
         ? new Date(process.env.IMAP_START_DATE)
-        : today;
+        : yesterday;
 
       debug.push(`Suche nach ungelesenen E-Mails seit ${startDate.toISOString()}...`);
 

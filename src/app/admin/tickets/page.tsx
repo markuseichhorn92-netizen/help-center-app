@@ -54,6 +54,7 @@ export default function TicketsPage() {
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteProgress, setDeleteProgress] = useState({ current: 0, total: 0 });
   const [searchQuery, setSearchQuery] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -151,26 +152,33 @@ export default function TicketsPage() {
   const handleDeleteSelected = async () => {
     if (selectedTickets.size === 0) return;
 
-    setDeleting(true);
-    try {
-      const res = await fetch('/api/admin/tickets/batch', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
-        },
-        body: JSON.stringify({ ids: Array.from(selectedTickets) })
-      });
+    const ticketIds = Array.from(selectedTickets);
+    const total = ticketIds.length;
 
-      if (res.ok) {
-        setSelectedTickets(new Set());
-        await loadTickets();
+    setDeleting(true);
+    setDeleteProgress({ current: 0, total });
+
+    try {
+      // Lösche Tickets einzeln für Fortschrittsanzeige
+      for (let i = 0; i < ticketIds.length; i++) {
+        const id = ticketIds[i];
+        await fetch(`/api/admin/tickets/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
+          }
+        });
+        setDeleteProgress({ current: i + 1, total });
       }
+
+      setSelectedTickets(new Set());
+      await loadTickets();
     } catch (err: any) {
       console.error('Delete error:', err);
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
+      setDeleteProgress({ current: 0, total: 0 });
     }
   };
 
@@ -498,45 +506,57 @@ export default function TicketsPage() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
-          <div className="bg-white rounded-apple-xl shadow-2xl p-6 max-w-md mx-4">
+          <div className="bg-white rounded-apple-xl shadow-2xl p-6 max-w-md mx-4 w-full">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
                 <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-apple-gray-600">Tickets löschen?</h3>
+                <h3 className="text-lg font-semibold text-apple-gray-600">
+                  {deleting ? 'Lösche Tickets...' : 'Tickets löschen?'}
+                </h3>
                 <p className="text-sm text-apple-gray-400">
-                  {selectedTickets.size} {selectedTickets.size === 1 ? 'Ticket wird' : 'Tickets werden'} unwiderruflich gelöscht.
+                  {deleting
+                    ? `${deleteProgress.current} von ${deleteProgress.total} gelöscht`
+                    : `${selectedTickets.size} ${selectedTickets.size === 1 ? 'Ticket wird' : 'Tickets werden'} unwiderruflich gelöscht.`
+                  }
                 </p>
               </div>
             </div>
+
+            {/* Progress Bar */}
+            {deleting && deleteProgress.total > 0 && (
+              <div className="mb-4">
+                <div className="w-full bg-apple-gray-200 rounded-full h-3 overflow-hidden">
+                  <div
+                    className="bg-red-500 h-3 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${(deleteProgress.current / deleteProgress.total) * 100}%` }}
+                  />
+                </div>
+                <p className="text-center text-sm text-apple-gray-500 mt-2">
+                  {Math.round((deleteProgress.current / deleteProgress.total) * 100)}%
+                </p>
+              </div>
+            )}
+
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={deleting}
-                className="px-4 py-2 text-apple-gray-600 font-medium rounded-full hover:bg-apple-gray-100 transition-colors"
+                className="px-4 py-2 text-apple-gray-600 font-medium rounded-full hover:bg-apple-gray-100 transition-colors disabled:opacity-50"
               >
-                Abbrechen
+                {deleting ? 'Bitte warten...' : 'Abbrechen'}
               </button>
-              <button
-                onClick={handleDeleteSelected}
-                disabled={deleting}
-                className="px-4 py-2 bg-red-500 text-white font-medium rounded-full hover:bg-red-600 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                {deleting ? (
-                  <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Löschen...
-                  </>
-                ) : (
-                  'Endgültig löschen'
-                )}
-              </button>
+              {!deleting && (
+                <button
+                  onClick={handleDeleteSelected}
+                  className="px-4 py-2 bg-red-500 text-white font-medium rounded-full hover:bg-red-600 transition-colors"
+                >
+                  Endgültig löschen
+                </button>
+              )}
             </div>
           </div>
         </div>
