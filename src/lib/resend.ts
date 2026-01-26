@@ -19,7 +19,8 @@ function getResend(): Resend {
 export const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de';
 export const SUPPORT_NAME = 'FIT INN Support';
 export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://hilfe.fit-inn-trier.de';
-export const LOGO_URL = `${BASE_URL}/logo-white.svg`;
+// Use Sanity CDN hosted PNG for email compatibility (SVG not supported by most email clients)
+export const LOGO_URL = 'https://cdn.sanity.io/images/6qiktmvm/production/e33b949b11d3aa8b60befb3f5f537803a8c48700-2917x486.png';
 
 // Helper function to format content for email
 // If content already contains HTML tags, use as-is; otherwise convert newlines to <br>
@@ -60,8 +61,8 @@ export async function sendTicketConfirmation(
             body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1D1D1F; margin: 0; padding: 0; background-color: #FBFBFD; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #0a4958 0%, #073440 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
-            .header-logo { margin-bottom: 15px; }
-            .header-logo img { height: 40px; width: auto; }
+            .header-logo { margin-bottom: 15px; background: white; display: inline-block; padding: 10px 20px; border-radius: 8px; }
+            .header-logo img { height: 35px; width: auto; display: block; }
             .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
             .header p { margin: 10px 0 0; opacity: 0.9; }
             .content { background: #FBFBFD; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #E8E8ED; border-top: none; }
@@ -167,8 +168,8 @@ export async function sendTicketReply(
             body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1D1D1F; margin: 0; padding: 0; background-color: #FBFBFD; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { background: linear-gradient(135deg, #0a4958 0%, #073440 100%); color: white; padding: 25px 30px; border-radius: 12px 12px 0 0; }
-            .header-logo { margin-bottom: 15px; }
-            .header-logo img { height: 40px; width: auto; }
+            .header-logo { margin-bottom: 15px; background: white; display: inline-block; padding: 10px 20px; border-radius: 8px; }
+            .header-logo img { height: 35px; width: auto; display: block; }
             .ticket-badge { display: inline-block; background: rgba(255, 255, 255, 0.2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-family: monospace; font-weight: 600; }
             .header h2 { color: white; margin: 12px 0 0; font-size: 20px; font-weight: 600; }
             .content-wrapper { background: #FBFBFD; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #E8E8ED; border-top: none; }

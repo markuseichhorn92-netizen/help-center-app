@@ -65,11 +65,6 @@ export default function RootLayout({
                       Datenschutz
                     </Link>
                   </li>
-                  <li>
-                    <a href="https://fit-inn-trier.de/agb" target="_blank" rel="noopener noreferrer" className="text-white/70 text-sm hover:text-white transition-colors duration-200">
-                      AGB
-                    </a>
-                  </li>
                 </ul>
               </div>
 
