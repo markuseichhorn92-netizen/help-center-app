@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getKnowledgeContext } from "@/lib/knowledge-base";
 
 // Check authentication
 function isAuthenticated(request: NextRequest): boolean {
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
 
     let systemPrompt = "";
     let userPrompt = "";
+    
+    // Get knowledge base context
+    const knowledgeContext = await getKnowledgeContext();
 
     if (action === "generate") {
       // Generate a complete article from a topic
@@ -61,7 +65,11 @@ Deine Artikel sind:
 
 Formatiere den Inhalt als HTML für einen Rich-Text-Editor.
 Verwende KEINE <h1> Tags (der Titel wird separat angezeigt).
-Beginne direkt mit dem Inhalt, ohne den Titel zu wiederholen.`;
+Beginne direkt mit dem Inhalt, ohne den Titel zu wiederholen.
+
+WICHTIG: Nutze die folgenden Unternehmensinformationen um genaue und aktuelle Inhalte zu erstellen:
+
+${knowledgeContext}`;
 
       userPrompt = `Schreibe einen Hilfe-Artikel zum Thema: "${topic}"
 
@@ -139,7 +147,11 @@ Deine Antworten sind:
 - Nicht zu lang (max 150 Wörter)
 
 Beginne NICHT mit "Sehr geehrte/r" - verwende stattdessen den Vornamen oder "Hallo".
-Beende mit "Mit freundlichen Grüßen" oder ähnlich, aber OHNE Signatur (die wird automatisch hinzugefügt).`;
+Beende mit "Mit freundlichen Grüßen" oder ähnlich, aber OHNE Signatur (die wird automatisch hinzugefügt).
+
+WICHTIG: Nutze die folgenden Unternehmensinformationen um genaue und aktuelle Antworten zu geben:
+
+${knowledgeContext}`;
 
       userPrompt = `Kundenname: ${customerName || 'Kunde'}
 Betreff: ${ticketSubject || 'Anfrage'}

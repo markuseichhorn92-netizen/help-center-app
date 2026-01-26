@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/fetch-emails?secret=fitinn-cron-2024-secret",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/crawl",
+      "schedule": "0 */6 * * *"
     }
   ]
 }
