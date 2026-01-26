@@ -1116,18 +1116,22 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <div className="mb-5">
                     <p className="text-xs font-medium text-apple-gray-400 uppercase tracking-wider mb-2">Kontext</p>
                     <div className="bg-apple-gray-50 rounded-xl p-3 space-y-2 max-h-32 overflow-y-auto">
-                      {messages.slice(-3).map((msg, idx) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold ${
-                            msg.sender === 'customer' ? 'bg-blue-100 text-blue-600' : 'bg-brand/10 text-brand'
-                          }`}>
-                            {msg.sender === 'customer' ? 'K' : 'S'}
+                      {messages.slice(-3).map((msg, idx) => {
+                        const content = msg.content || '';
+                        const cleanContent = content.replace(/<[^>]*>/g, '').trim();
+                        return (
+                          <div key={msg.id || idx} className="flex items-start gap-2">
+                            <div className={`w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold ${
+                              msg.sender === 'customer' ? 'bg-blue-100 text-blue-600' : 'bg-brand/10 text-brand'
+                            }`}>
+                              {msg.sender === 'customer' ? 'K' : 'S'}
+                            </div>
+                            <p className="text-xs text-apple-gray-500 line-clamp-2">
+                              {cleanContent.substring(0, 100)}{cleanContent.length > 100 ? '...' : ''}
+                            </p>
                           </div>
-                          <p className="text-xs text-apple-gray-500 line-clamp-2" dangerouslySetInnerHTML={{
-                            __html: msg.content.replace(/<[^>]*>/g, '').substring(0, 100) + (msg.content.length > 100 ? '...' : '')
-                          }} />
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}

@@ -27,7 +27,8 @@ function LoginForm() {
       const data = await res.json();
 
       if (data.success) {
-        router.push(redirectTo);
+        // Hard redirect für zuverlässigeres Verhalten
+        window.location.href = redirectTo;
       } else {
         setError(data.error || 'Anmeldung fehlgeschlagen');
       }
