@@ -132,6 +132,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [textareaRows, setTextareaRows] = useState(4);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const prevMessagesCountRef = useRef(0);
 
   useEffect(() => {
     const updateRows = () => {
@@ -192,6 +194,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       setError(err.message);
     } finally {
       setLoading(false);
+      // Mark initial load as complete to enable auto-scroll for new messages only
+      setInitialLoadDone(true);
     }
   };
 
@@ -237,9 +241,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     return () => clearInterval(interval);
   }, [id]);
 
+  // Only scroll to bottom when NEW messages are added, not on initial load
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (initialLoadDone && messages.length > prevMessagesCountRef.current) {
+      // New message was added, scroll to it
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    prevMessagesCountRef.current = messages.length;
+  }, [messages, initialLoadDone]);
 
   const handleStatusChange = async (newStatus: Ticket["status"]) => {
     if (!ticket) return;
