@@ -51,6 +51,9 @@ export default function TicketsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [fetchingEmails, setFetchingEmails] = useState(false);
   const [emailFetchResult, setEmailFetchResult] = useState<string | null>(null);
+  const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const initLoad = async () => {
@@ -93,6 +96,52 @@ export default function TicketsPage() {
     } finally {
       setFetchingEmails(false);
       setTimeout(() => setEmailFetchResult(null), 5000);
+    }
+  };
+
+  const toggleSelectTicket = (id: string) => {
+    setSelectedTickets((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedTickets.size === filteredTickets.length) {
+      setSelectedTickets(new Set());
+    } else {
+      setSelectedTickets(new Set(filteredTickets.map((t) => t.id)));
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedTickets.size === 0) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/admin/tickets/batch', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
+        },
+        body: JSON.stringify({ ids: Array.from(selectedTickets) })
+      });
+
+      if (res.ok) {
+        setSelectedTickets(new Set());
+        await loadTickets();
+      }
+    } catch (err: any) {
+      console.error('Delete error:', err);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -159,6 +208,18 @@ export default function TicketsPage() {
               {emailFetchResult}
             </span>
           )}
+          {selectedTickets.size > 0 && (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white font-medium rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              {selectedTickets.size} löschen
+            </button>
+          )}
           <button
             onClick={handleFetchEmails}
             disabled={fetchingEmails}
@@ -210,7 +271,7 @@ export default function TicketsPage() {
         ].map((filter) => (
           <button
             key={filter.value}
-            onClick={() => setFilterStatus(filter.value)}
+            onClick={() => { setFilterStatus(filter.value); setSelectedTickets(new Set()); }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
               filterStatus === filter.value
                 ? "bg-brand text-white"
@@ -241,6 +302,14 @@ export default function TicketsPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-apple-gray-50 border-b border-apple-gray-100">
+                  <th className="px-4 py-4 text-left">
+                    <input
+                      type="checkbox"
+                      checked={filteredTickets.length > 0 && selectedTickets.size === filteredTickets.length}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
                     Ticket
                   </th>
@@ -262,10 +331,17 @@ export default function TicketsPage() {
                 {filteredTickets.map((ticket, index) => (
                   <tr
                     key={ticket.id}
-                    className="hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer"
-                    onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}
+                    className={`hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''}`}
                   >
-                    <td className="px-6 py-5">
+                    <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTickets.has(ticket.id)}
+                        onChange={() => toggleSelectTicket(ticket.id)}
+                        className="w-4 h-4 text-brand bg-white border-apple-gray-300 rounded focus:ring-brand focus:ring-2 cursor-pointer"
+                      />
+                    </td>
+                    <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
                       <div className="flex flex-col">
                         <span className="text-xs font-mono text-apple-gray-400 mb-1">
                           {ticket.ticketNumber}
@@ -275,7 +351,7 @@ export default function TicketsPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-apple-gray-600">
                           {ticket.customerName}
@@ -285,17 +361,17 @@ export default function TicketsPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
                       <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ring-1 ring-inset ${statusConfig[ticket.status].color}`}>
                         {statusConfig[ticket.status].label}
                       </span>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
                       <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${priorityConfig[ticket.priority].color}`}>
                         {priorityConfig[ticket.priority].label}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-sm text-apple-gray-400">
+                    <td className="px-6 py-5 text-sm text-apple-gray-400" onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}>
                       {new Date(ticket.createdAt).toLocaleDateString('de-DE', {
                         day: 'numeric',
                         month: 'short',
@@ -315,7 +391,59 @@ export default function TicketsPage() {
       {/* Footer Stats */}
       {filteredTickets.length > 0 && (
         <div className="mt-6 flex items-center justify-between text-sm text-apple-gray-400">
-          <span>{filteredTickets.length} {filteredTickets.length === 1 ? 'Ticket' : 'Tickets'} angezeigt</span>
+          <span>
+            {selectedTickets.size > 0 && (
+              <span className="text-brand font-medium">{selectedTickets.size} ausgewählt · </span>
+            )}
+            {filteredTickets.length} {filteredTickets.length === 1 ? 'Ticket' : 'Tickets'} angezeigt
+          </span>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-white rounded-apple-xl shadow-2xl p-6 max-w-md mx-4">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-apple-gray-600">Tickets löschen?</h3>
+                <p className="text-sm text-apple-gray-400">
+                  {selectedTickets.size} {selectedTickets.size === 1 ? 'Ticket wird' : 'Tickets werden'} unwiderruflich gelöscht.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="px-4 py-2 text-apple-gray-600 font-medium rounded-full hover:bg-apple-gray-100 transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleDeleteSelected}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-500 text-white font-medium rounded-full hover:bg-red-600 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Löschen...
+                  </>
+                ) : (
+                  'Endgültig löschen'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
