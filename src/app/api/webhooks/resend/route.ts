@@ -89,13 +89,13 @@ export async function POST(req: NextRequest) {
       priority: 'medium',
     });
 
-    // Send confirmation email
-    await sendTicketConfirmation(
-      senderEmail,
-      senderName,
-      ticket.ticketNumber,
-      subject
-    );
+    // Send confirmation email (temporarily disabled)
+    // await sendTicketConfirmation(
+    //   senderEmail,
+    //   senderName,
+    //   ticket.ticketNumber,
+    //   subject
+    // );
 
     console.log(`Created new ticket ${ticket.ticketNumber} from email`);
     return NextResponse.json({

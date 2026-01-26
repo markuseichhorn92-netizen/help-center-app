@@ -61,19 +61,38 @@ export default function TicketsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Fetch emails in background (without blocking UI)
+  const fetchEmailsInBackground = async () => {
+    try {
+      await fetch('/api/admin/fetch-emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
+        }
+      });
+    } catch (err) {
+      console.error('Background email fetch failed:', err);
+    }
+  };
+
   useEffect(() => {
     const initLoad = async () => {
+      // Load tickets first (fast)
       await loadTickets();
       setLoading(false);
+
+      // Then fetch emails in background
+      fetchEmailsInBackground().then(() => loadTickets());
     };
     initLoad();
   }, []);
 
-  // Auto-refresh alle 15 Sekunden
+  // Auto-refresh tickets every 10 seconds + fetch emails every 30 seconds
   useEffect(() => {
     if (!autoRefresh) return;
 
-    const interval = setInterval(async () => {
+    // Ticket refresh every 10 seconds
+    const ticketInterval = setInterval(async () => {
       try {
         const fetchedTickets = await fetchTickets();
         setTickets(fetchedTickets);
@@ -81,9 +100,20 @@ export default function TicketsPage() {
       } catch (err) {
         console.error('Auto-refresh failed:', err);
       }
-    }, 15000);
+    }, 10000);
 
-    return () => clearInterval(interval);
+    // Email fetch every 30 seconds
+    const emailInterval = setInterval(async () => {
+      await fetchEmailsInBackground();
+      const fetchedTickets = await fetchTickets();
+      setTickets(fetchedTickets);
+      setLastRefresh(new Date());
+    }, 30000);
+
+    return () => {
+      clearInterval(ticketInterval);
+      clearInterval(emailInterval);
+    };
   }, [autoRefresh]);
 
   const loadTickets = async () => {

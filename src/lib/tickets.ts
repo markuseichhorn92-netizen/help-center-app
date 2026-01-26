@@ -19,6 +19,14 @@ export interface Ticket {
   assignedTo?: string;
 }
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  url: string;
+  size: number;
+  contentType: string;
+}
+
 export interface TicketMessage {
   id: string;
   ticketId: string;
@@ -28,6 +36,7 @@ export interface TicketMessage {
   senderEmail: string;
   createdAt: string;
   emailMessageId?: string;
+  attachments?: Attachment[];
 }
 
 // Helper: Generate ticket number
@@ -43,6 +52,7 @@ export async function createTicket(data: {
   customerEmail: string;
   content: string;
   priority?: 'low' | 'medium' | 'high';
+  attachments?: Attachment[];
 }): Promise<{ ticket: Ticket; message: TicketMessage }> {
   const ticketId = crypto.randomUUID();
   const ticketNumber = await generateTicketNumber();
@@ -79,6 +89,7 @@ export async function createTicket(data: {
     sender: 'customer',
     senderName: data.customerName,
     senderEmail: data.customerEmail,
+    attachments: data.attachments,
   });
 
   return { ticket, message };
@@ -186,6 +197,7 @@ export async function createMessage(data: {
   senderName: string;
   senderEmail: string;
   emailMessageId?: string;
+  attachments?: Attachment[];
 }): Promise<TicketMessage> {
   const messageId = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -199,6 +211,7 @@ export async function createMessage(data: {
     senderEmail: data.senderEmail,
     createdAt: now,
     ...(data.emailMessageId && { emailMessageId: data.emailMessageId }),
+    ...(data.attachments && data.attachments.length > 0 && { attachments: data.attachments }),
   };
 
   // Filter out undefined/null values for Redis

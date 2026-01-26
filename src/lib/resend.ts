@@ -81,6 +81,11 @@ export async function sendTicketConfirmation(
   }
 }
 
+interface EmailAttachment {
+  filename: string;
+  url: string;
+}
+
 // Send reply to customer
 export async function sendTicketReply(
   customerEmail: string,
@@ -88,7 +93,8 @@ export async function sendTicketReply(
   ticketNumber: string,
   subject: string,
   replyContent: string,
-  messageId?: string
+  messageId?: string,
+  attachments?: EmailAttachment[]
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!process.env.RESEND_API_KEY) {
@@ -102,11 +108,18 @@ export async function sendTicketReply(
       headers['References'] = messageId;
     }
 
+    // Prepare attachments for Resend
+    const emailAttachments = attachments?.map(att => ({
+      filename: att.filename,
+      path: att.url,
+    })) || [];
+
     const result = await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
       to: customerEmail,
       subject: `Re: [${ticketNumber}] ${subject}`,
       headers,
+      attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
       html: `
         <!DOCTYPE html>
         <html>

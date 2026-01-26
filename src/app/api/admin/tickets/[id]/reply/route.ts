@@ -37,7 +37,7 @@ export async function POST(
     }
 
     const body = await req.json();
-    const { content, senderName } = body;
+    const { content, senderName, attachments } = body;
 
     if (!content) {
       return NextResponse.json({ message: 'Nachricht darf nicht leer sein.' }, { status: 400 });
@@ -58,7 +58,8 @@ export async function POST(
       ticket.ticketNumber,
       ticket.subject,
       content,
-      lastMessage?.emailMessageId
+      lastMessage?.emailMessageId,
+      attachments
     );
 
     console.log('Email result:', emailResult);
@@ -71,6 +72,7 @@ export async function POST(
       senderName: senderName || 'Support Team',
       senderEmail: process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
       emailMessageId: emailResult.messageId,
+      attachments: attachments || [],
     });
 
     return NextResponse.json({

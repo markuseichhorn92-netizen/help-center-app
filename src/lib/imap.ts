@@ -1,7 +1,14 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser, ParsedMail } from 'mailparser';
-import { createTicket, createMessage, findTicketByNumber } from './tickets';
+import { createClient } from '@vercel/kv';
+import { put } from '@vercel/blob';
+import { createTicket, createMessage, findTicketByNumber, Attachment } from './tickets';
 import { parseTicketNumberFromSubject, sendTicketConfirmation } from './resend';
+
+const kv = createClient({
+  url: process.env.KV_REST_API_URL || '',
+  token: process.env.KV_REST_API_TOKEN || '',
+});
 
 interface IMAPConfig {
   host: string;
@@ -23,6 +30,42 @@ function getIMAPConfig(): IMAPConfig {
       pass: process.env.IMAP_PASS || '',
     },
   };
+}
+
+// Process email attachments and upload to Vercel Blob
+async function processAttachments(parsed: ParsedMail): Promise<Attachment[]> {
+  const attachments: Attachment[] = [];
+
+  if (!parsed.attachments || parsed.attachments.length === 0) {
+    return attachments;
+  }
+
+  for (const att of parsed.attachments) {
+    try {
+      // Skip inline images and very large files (> 10MB)
+      if (att.contentDisposition === 'inline' || att.size > 10 * 1024 * 1024) {
+        continue;
+      }
+
+      const filename = att.filename || `attachment-${Date.now()}`;
+      const blob = await put(`attachments/${Date.now()}-${filename}`, att.content, {
+        access: 'public',
+        contentType: att.contentType || 'application/octet-stream',
+      });
+
+      attachments.push({
+        id: crypto.randomUUID(),
+        filename: filename,
+        url: blob.url,
+        size: att.size,
+        contentType: att.contentType || 'application/octet-stream',
+      });
+    } catch (error) {
+      console.error('Failed to upload attachment:', error);
+    }
+  }
+
+  return attachments;
 }
 
 // Extract name and email from address
@@ -90,11 +133,10 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
         ? new Date(process.env.IMAP_START_DATE)
         : yesterday;
 
-      debug.push(`Suche nach ungelesenen E-Mails seit ${startDate.toISOString()}...`);
+      debug.push(`Suche nach E-Mails seit ${startDate.toISOString()}...`);
 
-      // Search for unseen messages since start date
+      // Search for all messages since start date (not just unseen)
       const messages = await client.search({
-        seen: false,
         since: startDate
       });
 
@@ -108,6 +150,13 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
 
       for (const uid of messages as number[]) {
         try {
+          // Check if this email was already processed
+          const emailKey = `email:processed:${config.auth.user}:${uid}`;
+          const alreadyProcessed = await kv.get(emailKey);
+          if (alreadyProcessed) {
+            continue;
+          }
+
           // Fetch message
           const message = await client.fetchOne(uid, { source: true }) as { source?: Buffer } | false;
 
@@ -140,6 +189,10 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             continue;
           }
 
+          // Process attachments
+          const attachments = await processAttachments(parsed);
+          debug.push(`Anhänge gefunden: ${attachments.length}`);
+
           // Check if this is a reply to an existing ticket
           const ticketNumber = parseTicketNumberFromSubject(subject);
 
@@ -155,10 +208,16 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
                 senderName,
                 senderEmail,
                 emailMessageId: messageId,
+                attachments,
               });
 
               console.log(`Added reply to ticket ${ticketNumber} from ${senderEmail}`);
               results.processed++;
+
+              // Mark as processed in KV
+              const replyEmailKey = `email:processed:${config.auth.user}:${uid}`;
+              await kv.set(replyEmailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
+
               await client.messageFlagsAdd(uid, ['\\Seen']);
               continue;
             }
@@ -176,18 +235,22 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             customerEmail: senderEmail,
             content: content.trim(),
             priority: 'medium',
+            attachments,
           });
 
-          // Send confirmation
-          await sendTicketConfirmation(
-            senderEmail,
-            senderName,
-            ticket.ticketNumber,
-            cleanSubject
-          );
+          // Send confirmation (temporarily disabled)
+          // await sendTicketConfirmation(
+          //   senderEmail,
+          //   senderName,
+          //   ticket.ticketNumber,
+          //   cleanSubject
+          // );
 
           console.log(`Created ticket ${ticket.ticketNumber} from email by ${senderEmail}`);
           results.processed++;
+
+          // Mark as processed in KV (expires after 30 days)
+          await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
 
           // Mark as read
           await client.messageFlagsAdd(uid, ['\\Seen']);

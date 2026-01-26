@@ -16,6 +16,14 @@ interface Ticket {
   assignedTo?: string;
 }
 
+interface Attachment {
+  id: string;
+  filename: string;
+  url: string;
+  size: number;
+  contentType: string;
+}
+
 interface TicketMessage {
   id: string;
   ticketId: string;
@@ -24,6 +32,7 @@ interface TicketMessage {
   senderName: string;
   senderEmail: string;
   createdAt: string;
+  attachments?: Attachment[];
 }
 
 const statusConfig = {
@@ -56,6 +65,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [showAiMenu, setShowAiMenu] = useState(false);
   const [customInstruction, setCustomInstruction] = useState("");
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
@@ -156,6 +168,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         body: JSON.stringify({
           content: replyContent,
           senderName: "Support Team",
+          attachments: attachments,
         }),
       });
 
@@ -169,11 +182,59 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       setMessages([...messages, data.message || data]);
       setReplyContent("");
+      setAttachments([]);
     } catch (err: any) {
       alert(err.message);
     } finally {
       setSending(false);
     }
+  };
+
+  // File Upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/admin/upload', {
+          method: 'POST',
+          headers: {
+            Authorization: getAuthHeader(),
+          },
+          body: formData,
+        });
+
+        if (res.ok) {
+          const attachment = await res.json();
+          setAttachments(prev => [...prev, attachment]);
+        } else {
+          const data = await res.json();
+          alert(`Fehler beim Hochladen von ${file.name}: ${data.message}`);
+        }
+      }
+    } catch (err) {
+      alert('Fehler beim Hochladen');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
   // AI Functions
@@ -414,6 +475,37 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                       </span>
                     </div>
                     <p className="whitespace-pre-wrap">{msg.content}</p>
+                    {/* Attachments */}
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-white/20">
+                        <p className={`text-xs mb-2 ${msg.sender === "admin" ? "text-white/70" : "text-apple-gray-500"}`}>
+                          {msg.attachments.length} Anhang/Anhänge:
+                        </p>
+                        <div className="space-y-1">
+                          {msg.attachments.map((att) => (
+                            <a
+                              key={att.id}
+                              href={att.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-2 text-sm ${
+                                msg.sender === "admin"
+                                  ? "text-white/90 hover:text-white"
+                                  : "text-brand hover:text-brand-dark"
+                              }`}
+                            >
+                              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                              </svg>
+                              <span className="truncate">{att.filename}</span>
+                              <span className={`text-xs ${msg.sender === "admin" ? "text-white/50" : "text-apple-gray-400"}`}>
+                                ({formatFileSize(att.size)})
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -531,16 +623,75 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   rows={4}
                   className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all duration-200 resize-none"
                 />
+
+                {/* Attachments Preview */}
+                {attachments.length > 0 && (
+                  <div className="mt-3 p-3 bg-apple-gray-50 rounded-apple-lg">
+                    <p className="text-xs text-apple-gray-500 mb-2">{attachments.length} Anhang/Anhänge:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {attachments.map((att) => (
+                        <div
+                          key={att.id}
+                          className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-apple-gray-200 text-sm"
+                        >
+                          <svg className="w-4 h-4 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                          </svg>
+                          <span className="truncate max-w-[150px]">{att.filename}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(att.id)}
+                            className="text-apple-gray-400 hover:text-red-500"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between mt-3">
-                  <label className="flex items-center gap-2 text-sm text-apple-gray-500">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-sm text-apple-gray-500">
+                      <input
+                        type="checkbox"
+                        checked={sendEmail}
+                        onChange={(e) => setSendEmail(e.target.checked)}
+                        className="rounded border-apple-gray-300 text-brand focus:ring-brand"
+                      />
+                      Auch per E-Mail senden
+                    </label>
+
+                    {/* File Upload Button */}
                     <input
-                      type="checkbox"
-                      checked={sendEmail}
-                      onChange={(e) => setSendEmail(e.target.checked)}
-                      className="rounded border-apple-gray-300 text-brand focus:ring-brand"
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
                     />
-                    Auch per E-Mail senden
-                  </label>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-apple-gray-500 hover:text-apple-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      {uploading ? (
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      )}
+                      Datei anhängen
+                    </button>
+                  </div>
                   <button
                     type="submit"
                     disabled={sending || !replyContent.trim()}
