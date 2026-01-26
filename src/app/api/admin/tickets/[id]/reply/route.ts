@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTicket, createMessage, getTicketMessages, Attachment } from '@/lib/tickets';
+import { getTicket, createMessage, getTicketMessages, updateTicket, Attachment } from '@/lib/tickets';
 import { sendTicketReply } from '@/lib/resend';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
@@ -29,6 +29,12 @@ export async function POST(
 
     if (!content) {
       return NextResponse.json({ message: 'Nachricht darf nicht leer sein.' }, { status: 400 });
+    }
+
+    // Reopen ticket if closed or resolved when staff replies
+    if (ticket.status === 'closed' || ticket.status === 'resolved') {
+      await updateTicket(id, { status: 'in_progress' });
+      console.log(`Ticket ${ticket.ticketNumber} reopened to in_progress due to staff reply`);
     }
 
     // Get all messages for conversation history

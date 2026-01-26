@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTicket, getTicketMessages, createMessage } from '@/lib/tickets';
+import { getTicket, getTicketMessages, createMessage, updateTicket } from '@/lib/tickets';
 import { createClient } from '@vercel/kv';
 
 const kv = createClient({
@@ -65,6 +65,11 @@ export async function POST(
 
     if (!content) {
       return NextResponse.json({ message: 'Nachricht darf nicht leer sein.' }, { status: 400 });
+    }
+
+    // Reopen ticket if closed or resolved when staff adds a message
+    if (ticket.status === 'closed' || ticket.status === 'resolved') {
+      await updateTicket(id, { status: 'in_progress' });
     }
 
     const message = await createMessage({

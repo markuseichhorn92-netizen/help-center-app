@@ -301,7 +301,12 @@ export default function TicketsPage() {
   const filteredTickets = tickets
     .filter(t => {
       // Status filter
-      if (filterStatus === "all") {
+      if (filterStatus === "unread") {
+        // "Neue Nachrichten" shows only tickets with unread messages (any status)
+        if ((t.unreadCount || 0) === 0) {
+          return false;
+        }
+      } else if (filterStatus === "all") {
         // "Alle" shows only active tickets (not closed or resolved)
         if (t.status === "closed" || t.status === "resolved") {
           return false;
@@ -322,15 +327,22 @@ export default function TicketsPage() {
       return true;
     })
     .sort((a, b) => {
+      // For "unread" filter, sort by unreadCount first (most unread at top)
+      if (filterStatus === "unread") {
+        const unreadDiff = (b.unreadCount || 0) - (a.unreadCount || 0);
+        if (unreadDiff !== 0) return unreadDiff;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }
+
       // Sort by status priority first (open > in_progress > resolved > closed)
       const statusOrder = { open: 0, in_progress: 1, resolved: 2, closed: 3 };
       const statusDiff = statusOrder[a.status] - statusOrder[b.status];
       if (statusDiff !== 0) return statusDiff;
-      
+
       // Then by unreadCount (descending)
       const unreadDiff = (b.unreadCount || 0) - (a.unreadCount || 0);
       if (unreadDiff !== 0) return unreadDiff;
-      
+
       // Finally by updatedAt (newest first)
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
@@ -350,6 +362,7 @@ export default function TicketsPage() {
     open: tickets.filter(t => t.status === "open").length,
     inProgress: tickets.filter(t => t.status === "in_progress").length,
     resolved: tickets.filter(t => t.status === "resolved").length,
+    unread: tickets.filter(t => (t.unreadCount || 0) > 0).length,
   };
 
   if (loading) {
@@ -580,6 +593,7 @@ export default function TicketsPage() {
       <div className="mb-6 flex gap-2 flex-wrap">
         {[
           { value: "all", label: "Alle" },
+          { value: "unread", label: "Neue Nachrichten", count: stats.unread },
           { value: "open", label: "Offen" },
           { value: "in_progress", label: "In Bearbeitung" },
           { value: "resolved", label: "Gelöst" },
@@ -588,13 +602,22 @@ export default function TicketsPage() {
           <button
             key={filter.value}
             onClick={() => { setFilterStatus(filter.value); setSelectedTickets(new Set()); }}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
               filterStatus === filter.value
-                ? "bg-brand text-white"
-                : "bg-apple-gray-100 text-apple-gray-500 hover:bg-apple-gray-200"
+                ? filter.value === "unread" ? "bg-red-500 text-white" : "bg-brand text-white"
+                : filter.value === "unread" && filter.count && filter.count > 0
+                  ? "bg-red-50 text-red-600 hover:bg-red-100 ring-1 ring-red-200"
+                  : "bg-apple-gray-100 text-apple-gray-500 hover:bg-apple-gray-200"
             }`}
           >
             {filter.label}
+            {filter.value === "unread" && filter.count !== undefined && filter.count > 0 && (
+              <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full ${
+                filterStatus === "unread" ? "bg-white/20 text-white" : "bg-red-500 text-white"
+              }`}>
+                {filter.count > 99 ? '99+' : filter.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
