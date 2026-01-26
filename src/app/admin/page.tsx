@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 interface Article {
@@ -35,7 +34,6 @@ export default function AdminDashboard() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     const loadArticles = async () => {
@@ -79,7 +77,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+      <div className="animate-fade-in">
         <div className="py-12 text-center">
           <div className="inline-flex items-center gap-3 text-apple-gray-400">
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -95,7 +93,7 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+      <div className="animate-fade-in">
         <div className="bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-apple-lg" role="alert">
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,71 +107,12 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+    <div className="animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-apple-gray-600 tracking-tight">Admin Dashboard</h1>
-          <p className="text-apple-gray-400 mt-1">Verwalte deine Hilfe-Center Inhalte</p>
-        </div>
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          <Link
-            href="/admin/categories"
-            className="inline-flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-white text-apple-gray-600 font-semibold rounded-full shadow-apple border border-apple-gray-200 hover:bg-apple-gray-50 hover:shadow-apple-lg transition-all duration-300 text-sm sm:text-base"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            <span className="hidden sm:inline">Kategorien</span>
-          </Link>
-          <Link
-            href="/admin/analytics"
-            className="inline-flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-white text-apple-gray-600 font-semibold rounded-full shadow-apple border border-apple-gray-200 hover:bg-apple-gray-50 hover:shadow-apple-lg transition-all duration-300 text-sm sm:text-base"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            <span className="hidden sm:inline">Analytics</span>
-          </Link>
-          <Link
-            href="/admin/knowledge"
-            className="inline-flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-white text-apple-gray-600 font-semibold rounded-full shadow-apple border border-apple-gray-200 hover:bg-apple-gray-50 hover:shadow-apple-lg transition-all duration-300 text-sm sm:text-base"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <span className="hidden sm:inline">Knowledge</span>
-          </Link>
-          <Link
-            href="/admin/tickets"
-            className="inline-flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-white text-apple-gray-600 font-semibold rounded-full shadow-apple border border-apple-gray-200 hover:bg-apple-gray-50 hover:shadow-apple-lg transition-all duration-300 text-sm sm:text-base"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-            </svg>
-            <span className="hidden sm:inline">Tickets</span>
-          </Link>
-          <Link
-            href="/admin/new"
-            className="inline-flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-brand text-white font-semibold rounded-full shadow-apple hover:bg-brand-dark hover:shadow-apple-lg transition-all duration-300 text-sm sm:text-base"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="hidden sm:inline">Neu</span>
-          </Link>
-          <button
-            onClick={async () => {
-              await fetch('/api/admin/auth/logout', { method: 'POST' });
-              router.push('/admin/login');
-            }}
-            className="inline-flex items-center justify-center gap-2 px-3 sm:px-5 py-2 sm:py-2.5 bg-red-50 text-red-600 font-semibold rounded-full border border-red-200 hover:bg-red-100 transition-all duration-300 text-sm sm:text-base"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span className="hidden sm:inline">Abmelden</span>
-          </button>
+          <h1 className="text-2xl font-bold text-apple-gray-600 tracking-tight">Artikel</h1>
+          <p className="text-apple-gray-400 text-sm mt-1">Verwalte deine Hilfe-Center Artikel</p>
         </div>
       </div>
 
@@ -269,3 +208,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

@@ -324,17 +324,10 @@ export default function TicketsPage() {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Link href="/admin" className="text-apple-gray-400 hover:text-brand transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </Link>
-            <h1 className="text-3xl font-bold text-apple-gray-600 tracking-tight">Support Tickets</h1>
-          </div>
-          <p className="text-apple-gray-400 ml-8">Verwalte Kundenanfragen</p>
+          <h1 className="text-2xl font-bold text-apple-gray-600 tracking-tight">Support Tickets</h1>
+          <p className="text-apple-gray-400 text-sm mt-1">Verwalte Kundenanfragen</p>
         </div>
         <div className="flex items-center gap-3">
           {emailFetchResult && (

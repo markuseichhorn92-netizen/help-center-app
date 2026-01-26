@@ -153,37 +153,34 @@ export default function NewArticlePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-      <div className="max-w-3xl mx-auto animate-fade-in">
-      {/* Back Link */}
-      <div className="mb-8">
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-2 text-sm font-medium text-apple-gray-400 hover:text-brand transition-colors duration-200 group"
-        >
-          <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-          </svg>
-          Zurück zum Dashboard
-        </Link>
-      </div>
-
+    <div className="max-w-3xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="mb-8 flex items-start justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-apple-gray-600 tracking-tight">Neuen Artikel erstellen</h1>
-          <p className="text-apple-gray-400 mt-1">Erstelle einen neuen Hilfe-Artikel für deine Nutzer.</p>
+          <div className="flex items-center gap-3 mb-1">
+            <Link
+              href="/admin"
+              className="text-apple-gray-400 hover:text-brand transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <h1 className="text-2xl font-bold text-apple-gray-600 tracking-tight">Neuer Artikel</h1>
+          </div>
+          <p className="text-apple-gray-400 text-sm ml-8">Erstelle einen neuen Hilfe-Artikel</p>
         </div>
         {/* AI Generate Button */}
         <button
           type="button"
           onClick={() => setShowAIModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-semibold rounded-lg shadow hover:shadow-lg transition-all duration-200"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
-          Mit KI generieren
+          <span className="hidden sm:inline">Mit KI generieren</span>
+          <span className="sm:hidden">KI</span>
         </button>
       </div>
 
@@ -527,7 +524,6 @@ export default function NewArticlePage() {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }

@@ -139,17 +139,10 @@ export default function KnowledgePage() {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Link href="/admin" className="text-apple-gray-400 hover:text-brand transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </Link>
-            <h1 className="text-3xl font-bold text-apple-gray-600 tracking-tight">Knowledge Base</h1>
-          </div>
-          <p className="text-apple-gray-400 ml-8">Website-Inhalte für KI-gestützte Antworten</p>
+          <h1 className="text-2xl font-bold text-apple-gray-600 tracking-tight">Knowledge Base</h1>
+          <p className="text-apple-gray-400 text-sm mt-1">Website-Inhalte für KI-gestützte Antworten</p>
         </div>
       </div>
 

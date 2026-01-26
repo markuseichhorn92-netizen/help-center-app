@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+      <div className="animate-fade-in">
         <div className="py-12 text-center">
           <div className="inline-flex items-center gap-3 text-apple-gray-400">
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
 
   if (error) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+      <div className="animate-fade-in">
         <div className="bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-apple-lg" role="alert">
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,19 +99,12 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+    <div className="animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Link href="/admin" className="text-apple-gray-400 hover:text-brand transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <h1 className="text-3xl font-bold text-apple-gray-600 tracking-tight">Analytics</h1>
-          </div>
-          <p className="text-apple-gray-400 mt-1 pl-8">Besucherzahlen & Feedback deiner Artikel</p>
+          <h1 className="text-2xl font-bold text-apple-gray-600 tracking-tight">Analytics</h1>
+          <p className="text-apple-gray-400 text-sm mt-1">Besucherzahlen & Feedback deiner Artikel</p>
         </div>
       </div>
 
