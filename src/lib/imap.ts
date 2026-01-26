@@ -75,11 +75,11 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
       // Only fetch emails from start date onwards (prevents processing old emails)
       const startDate = process.env.IMAP_START_DATE
         ? new Date(process.env.IMAP_START_DATE)
-        : new Date(); // Default: only emails from now
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // Default: 30 Tage zurück
 
       // Search for unseen messages since start date
       const messages = await client.search({
-        seen: false,
+        unseen: true,
         since: startDate
       });
 
