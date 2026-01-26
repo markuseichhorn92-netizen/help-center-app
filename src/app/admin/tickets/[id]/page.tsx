@@ -77,24 +77,24 @@ function MessageStatusIcon({ message }: { message: TicketMessage }) {
   }
   
   if (status === 'delivered') {
-    // Double checkmark - delivered
+    // Double checkmark - delivered (wider spacing)
     return (
-      <span title="Zugestellt">
-        <svg className="w-4 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13l4 4L22 7" />
+      <span title="Zugestellt" className="inline-flex">
+        <svg className="w-5 h-4 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 28 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2 13l4 4L16 7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 13l4 4L24 7" />
         </svg>
       </span>
     );
   }
-  
+
   if (status === 'read') {
-    // Double checkmark blue - read
+    // Double checkmark blue - read (wider spacing)
     return (
-      <span title="Gelesen">
-        <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 13l4 4L22 7" />
+      <span title="Gelesen" className="inline-flex">
+        <svg className="w-5 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 28 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2 13l4 4L16 7" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 13l4 4L24 7" />
         </svg>
       </span>
     );

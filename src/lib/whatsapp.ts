@@ -56,6 +56,10 @@ export async function sendWhatsAppMessage(
     // Twilio API endpoint
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
 
+    // Status callback URL for delivery/read receipts
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://hilfe.fit-inn-trier.de';
+    const statusCallbackUrl = `${baseUrl}/api/webhooks/whatsapp-status`;
+
     let lastMessageSid = '';
 
     // If there are attachments, send each as a separate media message
@@ -65,6 +69,7 @@ export async function sendWhatsAppMessage(
       textFormData.append('From', formattedFrom);
       textFormData.append('To', formattedTo);
       textFormData.append('Body', fullMessage);
+      textFormData.append('StatusCallback', statusCallbackUrl);
 
       const textResponse = await fetch(twilioUrl, {
         method: 'POST',
@@ -97,6 +102,7 @@ export async function sendWhatsAppMessage(
         mediaFormData.append('To', formattedTo);
         mediaFormData.append('MediaUrl', attachment.url);
         mediaFormData.append('Body', `📎 ${attachment.filename}`);
+        mediaFormData.append('StatusCallback', statusCallbackUrl);
 
         const mediaResponse = await fetch(twilioUrl, {
           method: 'POST',
@@ -123,6 +129,7 @@ export async function sendWhatsAppMessage(
       formData.append('From', formattedFrom);
       formData.append('To', formattedTo);
       formData.append('Body', fullMessage);
+      formData.append('StatusCallback', statusCallbackUrl);
 
       const response = await fetch(twilioUrl, {
         method: 'POST',
