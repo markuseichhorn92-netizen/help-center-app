@@ -79,7 +79,7 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
 
       // Search for unseen messages since start date
       const messages = await client.search({
-        unseen: true,
+        seen: false,
         since: startDate
       });
 
