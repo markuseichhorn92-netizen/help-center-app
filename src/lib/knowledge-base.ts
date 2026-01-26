@@ -150,18 +150,45 @@ export async function searchKnowledge(query: string): Promise<KnowledgeEntry[]> 
   });
 }
 
-// Get knowledge context for AI (summarized)
+// Get knowledge context for AI (full content for accurate responses)
 export async function getKnowledgeContext(): Promise<string> {
   const entries = await getAllKnowledgeEntries();
-  
+
   if (entries.length === 0) {
     return 'Keine Unternehmensinformationen verfügbar.';
   }
 
-  const context = entries.map(entry => {
-    const preview = entry.content.substring(0, 500);
-    return `### ${entry.title}\nURL: ${entry.url}\n${entry.description || preview}...`;
-  }).join('\n\n');
+  // Include full content for each entry (max 8000 chars per entry to stay within token limits)
+  const maxContentLength = 8000;
 
-  return `# Unternehmensinformationen\n\n${context}`;
+  const context = entries.map(entry => {
+    // Use full content, truncate only if very long
+    const content = entry.content.length > maxContentLength
+      ? entry.content.substring(0, maxContentLength) + '...[gekürzt]'
+      : entry.content;
+
+    // Include both description and full content
+    const parts = [
+      `### ${entry.title}`,
+      `URL: ${entry.url}`,
+    ];
+
+    if (entry.description) {
+      parts.push(`Beschreibung: ${entry.description}`);
+    }
+
+    if (entry.keywords && entry.keywords.length > 0) {
+      parts.push(`Keywords: ${entry.keywords.join(', ')}`);
+    }
+
+    parts.push(`\nInhalt:\n${content}`);
+
+    return parts.join('\n');
+  }).join('\n\n---\n\n');
+
+  return `# Unternehmensinformationen aus der FIT INN Website
+
+WICHTIG: Die folgenden Informationen stammen direkt von der offiziellen FIT INN Website. Nutze diese Informationen als primäre Quelle für alle Antworten. Erfinde KEINE Informationen, die nicht in diesem Kontext enthalten sind. Wenn du eine Information nicht findest, sage ehrlich dass du keine genauen Informationen dazu hast.
+
+${context}`;
 }

@@ -67,7 +67,11 @@ Formatiere den Inhalt als HTML für einen Rich-Text-Editor.
 Verwende KEINE <h1> Tags (der Titel wird separat angezeigt).
 Beginne direkt mit dem Inhalt, ohne den Titel zu wiederholen.
 
-WICHTIG: Nutze die folgenden Unternehmensinformationen um genaue und aktuelle Inhalte zu erstellen:
+KRITISCH WICHTIG - ANTI-HALLUZINATION:
+- Nutze AUSSCHLIESSLICH die unten stehenden Unternehmensinformationen als Faktenquelle
+- ERFINDE KEINE Informationen wie Öffnungszeiten, Preise, Kurse, Kontaktdaten oder andere Details
+- Wenn eine spezifische Information nicht in den Unternehmensinformationen enthalten ist, schreibe allgemein oder weise darauf hin, dass man sich direkt informieren sollte
+- Bei Unsicherheit lieber weniger spezifisch sein als falsche Details zu erfinden
 
 ${knowledgeContext}`;
 
@@ -149,7 +153,11 @@ Deine Antworten sind:
 Beginne NICHT mit "Sehr geehrte/r" - verwende stattdessen den Vornamen oder "Hallo".
 Beende mit "Mit freundlichen Grüßen" oder ähnlich, aber OHNE Signatur (die wird automatisch hinzugefügt).
 
-WICHTIG: Nutze die folgenden Unternehmensinformationen um genaue und aktuelle Antworten zu geben:
+KRITISCH WICHTIG - ANTI-HALLUZINATION:
+- Nutze AUSSCHLIESSLICH die unten stehenden Unternehmensinformationen als Faktenquelle
+- ERFINDE KEINE Informationen wie Öffnungszeiten, Preise, Kurse, Kontaktdaten, Ansprechpartner oder andere spezifische Details
+- Wenn der Kunde nach etwas fragt, das nicht in den Informationen enthalten ist, bitte ihn höflich, sich direkt an das Studio zu wenden oder auf der Website nachzuschauen
+- NIEMALS Zahlen, Zeiten oder Preise erfinden - im Zweifel auf die Website oder direkten Kontakt verweisen
 
 ${knowledgeContext}`;
 

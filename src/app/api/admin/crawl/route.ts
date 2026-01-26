@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { action, urls, sitemapUrl, startUrl, maxPages } = body;
+    const { action, urls, sitemapUrl, startUrl, maxPages, skipExisting } = body;
 
     let results;
 
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         if (!urls || !Array.isArray(urls)) {
           return NextResponse.json({ error: 'URLs array required' }, { status: 400 });
         }
-        results = await crawlUrls(urls);
+        results = await crawlUrls(urls, skipExisting || false);
         break;
 
       case 'crawl_sitemap':
@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: 'Sitemap URL required' }, { status: 400 });
         }
         const sitemapUrls = await crawlSitemap(sitemapUrl);
-        results = await crawlUrls(sitemapUrls);
+        results = await crawlUrls(sitemapUrls, skipExisting || false);
         break;
 
       case 'crawl_website':
         if (!startUrl) {
           return NextResponse.json({ error: 'Start URL required' }, { status: 400 });
         }
-        results = await crawlWebsite(startUrl, maxPages || 20);
+        results = await crawlWebsite(startUrl, maxPages || 100, skipExisting || false);
         break;
 
       default:
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     const successCount = results.filter(r => r.status === 'success').length;
+    const skippedCount = results.filter(r => r.skipped).length;
     const errorCount = results.filter(r => r.status === 'error').length;
 
     return NextResponse.json({
@@ -68,6 +69,8 @@ export async function POST(req: NextRequest) {
       results: {
         total: results.length,
         success: successCount,
+        skipped: skippedCount,
+        newOrUpdated: successCount - skippedCount,
         errors: errorCount,
       },
       crawledUrls: results,

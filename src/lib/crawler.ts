@@ -9,6 +9,7 @@ export interface CrawlResult {
   keywords?: string[];
   status: 'success' | 'error';
   error?: string;
+  skipped?: boolean;
 }
 
 // Extract clean text from HTML
@@ -52,10 +53,27 @@ function extractMetadata($: cheerio.CheerioAPI): {
 }
 
 // Crawl a single URL
-export async function crawlUrl(url: string): Promise<CrawlResult> {
+export async function crawlUrl(url: string, skipExisting: boolean = false): Promise<CrawlResult> {
   try {
+    // Check if entry already exists
+    const existingEntry = await getKnowledgeEntryByUrl(url);
+
+    // Skip if already exists and skipExisting is enabled
+    if (existingEntry && skipExisting) {
+      console.log(`Skipped (already exists): ${url}`);
+      return {
+        url,
+        title: existingEntry.title,
+        content: existingEntry.content.substring(0, 500) + '...',
+        description: existingEntry.description,
+        keywords: existingEntry.keywords,
+        status: 'success',
+        skipped: true,
+      };
+    }
+
     console.log(`Crawling: ${url}`);
-    
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'HelpCenterBot/1.0 (Knowledge Base Crawler)',
@@ -71,9 +89,6 @@ export async function crawlUrl(url: string): Promise<CrawlResult> {
 
     const { title, description, keywords } = extractMetadata($);
     const content = extractText($);
-
-    // Check if entry already exists
-    const existingEntry = await getKnowledgeEntryByUrl(url);
 
     if (existingEntry) {
       await updateKnowledgeEntry(url, { title, content, description, keywords });
@@ -104,15 +119,17 @@ export async function crawlUrl(url: string): Promise<CrawlResult> {
 }
 
 // Crawl multiple URLs
-export async function crawlUrls(urls: string[]): Promise<CrawlResult[]> {
+export async function crawlUrls(urls: string[], skipExisting: boolean = false): Promise<CrawlResult[]> {
   const results: CrawlResult[] = [];
 
   for (const url of urls) {
-    const result = await crawlUrl(url);
+    const result = await crawlUrl(url, skipExisting);
     results.push(result);
-    
-    // Add delay to avoid overwhelming the server
-    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Add delay only if we actually crawled (not skipped)
+    if (!result.skipped) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
 
   return results;
@@ -146,7 +163,7 @@ export async function crawlSitemap(sitemapUrl: string): Promise<string[]> {
 }
 
 // Crawl website starting from homepage
-export async function crawlWebsite(startUrl: string, maxPages: number = 20): Promise<CrawlResult[]> {
+export async function crawlWebsite(startUrl: string, maxPages: number = 20, skipExisting: boolean = false): Promise<CrawlResult[]> {
   const visited = new Set<string>();
   const toVisit = [startUrl];
   const results: CrawlResult[] = [];
@@ -156,17 +173,20 @@ export async function crawlWebsite(startUrl: string, maxPages: number = 20): Pro
 
   while (toVisit.length > 0 && visited.size < maxPages) {
     const url = toVisit.shift()!;
-    
-    if (visited.has(url)) continue;
-    visited.add(url);
 
-    const result = await crawlUrl(url);
+    // Normalize URL (remove trailing slash, hash, etc.)
+    const normalizedUrl = normalizeUrl(url);
+    if (visited.has(normalizedUrl)) continue;
+    visited.add(normalizedUrl);
+
+    const result = await crawlUrl(normalizedUrl, skipExisting);
     results.push(result);
 
-    // Extract links from the page (if successful)
+    // Extract links from the page (if successful and not skipped)
     if (result.status === 'success') {
       try {
-        const response = await fetch(url);
+        // If skipped, we need to fetch the page to get links
+        const response = await fetch(normalizedUrl);
         const html = await response.text();
         const $ = cheerio.load(html);
 
@@ -175,10 +195,15 @@ export async function crawlWebsite(startUrl: string, maxPages: number = 20): Pro
           if (!href) return;
 
           try {
-            const linkUrl = new URL(href, url);
-            
-            // Only follow links on the same domain
-            if (linkUrl.hostname === baseDomain && !visited.has(linkUrl.href)) {
+            const linkUrl = new URL(href, normalizedUrl);
+
+            // Only follow links on the same domain, skip anchors, skip common non-content URLs
+            if (
+              linkUrl.hostname === baseDomain &&
+              !visited.has(normalizeUrl(linkUrl.href)) &&
+              !linkUrl.href.includes('#') &&
+              !linkUrl.pathname.match(/\.(pdf|jpg|jpeg|png|gif|svg|css|js|xml|json)$/i)
+            ) {
               toVisit.push(linkUrl.href);
             }
           } catch {
@@ -186,13 +211,28 @@ export async function crawlWebsite(startUrl: string, maxPages: number = 20): Pro
           }
         });
       } catch (error) {
-        console.error(`Failed to extract links from ${url}`);
+        console.error(`Failed to extract links from ${normalizedUrl}`);
       }
     }
 
-    // Add delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Add delay only if we actually crawled (not skipped)
+    if (!result.skipped) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
 
   return results;
+}
+
+// Normalize URL for deduplication
+function normalizeUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    // Remove trailing slash, hash, and common tracking params
+    let normalized = `${parsed.protocol}//${parsed.hostname}${parsed.pathname}`;
+    normalized = normalized.replace(/\/+$/, ''); // Remove trailing slashes
+    return normalized || url;
+  } catch {
+    return url;
+  }
 }

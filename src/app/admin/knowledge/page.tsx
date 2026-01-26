@@ -23,7 +23,8 @@ export default function KnowledgePage() {
   const [urlInput, setUrlInput] = useState('https://fit-inn-trier.de\nhttps://fit-inn-trier.de/ueber-uns\nhttps://fit-inn-trier.de/kurse');
   const [sitemapUrl, setSitemapUrl] = useState('https://fit-inn-trier.de/sitemap.xml');
   const [startUrl, setStartUrl] = useState('https://fit-inn-trier.de');
-  const [maxPages, setMaxPages] = useState(20);
+  const [maxPages, setMaxPages] = useState(100);
+  const [skipExisting, setSkipExisting] = useState(true);
   const [crawlResult, setCrawlResult] = useState<any>(null);
 
   const loadEntries = async () => {
@@ -61,15 +62,18 @@ export default function KnowledgePage() {
         case 'urls':
           body.action = 'crawl_urls';
           body.urls = urlInput.split('\n').map(u => u.trim()).filter(u => u);
+          body.skipExisting = skipExisting;
           break;
         case 'sitemap':
           body.action = 'crawl_sitemap';
           body.sitemapUrl = sitemapUrl;
+          body.skipExisting = skipExisting;
           break;
         case 'website':
           body.action = 'crawl_website';
           body.startUrl = startUrl;
           body.maxPages = maxPages;
+          body.skipExisting = skipExisting;
           break;
       }
 
@@ -228,19 +232,44 @@ export default function KnowledgePage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-apple-gray-600 mb-2">
-                Max. Seiten: {maxPages}
+                Max. Seiten
               </label>
-              <input
-                type="range"
-                min="5"
-                max="50"
-                value={maxPages}
-                onChange={(e) => setMaxPages(Number(e.target.value))}
-                className="w-full"
-              />
+              <div className="flex items-center gap-4">
+                <input
+                  type="number"
+                  min="1"
+                  max="1000"
+                  value={maxPages}
+                  onChange={(e) => setMaxPages(Math.min(1000, Math.max(1, Number(e.target.value))))}
+                  className="w-24 px-4 py-2 border border-apple-gray-200 rounded-apple-lg focus:outline-none focus:ring-2 focus:ring-brand/20"
+                />
+                <input
+                  type="range"
+                  min="10"
+                  max="500"
+                  value={Math.min(500, maxPages)}
+                  onChange={(e) => setMaxPages(Number(e.target.value))}
+                  className="flex-1"
+                />
+              </div>
+              <p className="text-xs text-apple-gray-400 mt-1">Max. 1000 Seiten möglich</p>
             </div>
           </div>
         )}
+
+        {/* Skip Existing Option */}
+        <div className="mt-4 flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="skipExisting"
+            checked={skipExisting}
+            onChange={(e) => setSkipExisting(e.target.checked)}
+            className="w-4 h-4 text-brand border-apple-gray-300 rounded focus:ring-brand"
+          />
+          <label htmlFor="skipExisting" className="text-sm text-apple-gray-600">
+            Bereits gecrawlte URLs überspringen (nicht erneut crawlen)
+          </label>
+        </div>
 
         <div className="flex items-center gap-3 mt-4">
           <button
@@ -270,7 +299,12 @@ export default function KnowledgePage() {
         {crawlResult && (
           <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-apple-lg">
             <p className="text-sm font-medium text-green-700">
-              ✓ Crawl abgeschlossen: {crawlResult.results.success} erfolgreich, {crawlResult.results.errors} Fehler
+              ✓ Crawl abgeschlossen: {crawlResult.results.total} Seiten gefunden
+            </p>
+            <p className="text-xs text-green-600 mt-1">
+              {crawlResult.results.newOrUpdated || crawlResult.results.success} neu/aktualisiert
+              {crawlResult.results.skipped > 0 && `, ${crawlResult.results.skipped} übersprungen`}
+              {crawlResult.results.errors > 0 && `, ${crawlResult.results.errors} Fehler`}
             </p>
           </div>
         )}
