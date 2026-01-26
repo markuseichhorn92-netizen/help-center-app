@@ -197,46 +197,45 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     loadData();
-    
-    // Auto-refresh messages every 5 seconds
+
+    // Auto-refresh messages every 3 seconds for real-time status updates
     const interval = setInterval(async () => {
       try {
         const messagesRes = await fetch(`/api/admin/tickets/${id}/messages`, {
           headers: { Authorization: getAuthHeader() }
         });
-        
+
         if (messagesRes.ok) {
           const messagesData = await messagesRes.json();
-          
-          // Check if there are new messages
-          if (messagesData.length > messages.length) {
-            const unreadCustomerMessages = messagesData.filter(
-              (msg: TicketMessage) => msg.sender === 'customer' && !msg.isRead
-            );
-            
-            if (unreadCustomerMessages.length > 0) {
-              await fetch(`/api/admin/tickets/${id}/read`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: getAuthHeader()
-                },
-                body: JSON.stringify({
-                  messageIds: unreadCustomerMessages.map((m: TicketMessage) => m.id)
-                })
-              });
-            }
-            
-            setMessages(messagesData);
+
+          // Check for new customer messages to mark as read
+          const unreadCustomerMessages = messagesData.filter(
+            (msg: TicketMessage) => msg.sender === 'customer' && !msg.isRead
+          );
+
+          if (unreadCustomerMessages.length > 0) {
+            await fetch(`/api/admin/tickets/${id}/read`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: getAuthHeader()
+              },
+              body: JSON.stringify({
+                messageIds: unreadCustomerMessages.map((m: TicketMessage) => m.id)
+              })
+            });
           }
+
+          // Always update messages to catch status changes (delivered, read)
+          setMessages(messagesData);
         }
       } catch (err) {
         console.error('Auto-refresh messages failed:', err);
       }
-    }, 5000); // 5 seconds
-    
+    }, 3000); // 3 seconds for faster status updates
+
     return () => clearInterval(interval);
-  }, [id, messages.length]);
+  }, [id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
