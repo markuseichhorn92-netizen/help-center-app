@@ -16,12 +16,14 @@ interface Article {
 async function fetchArticles(): Promise<Article[]> {
   const res = await fetch('/api/admin/articles', {
     cache: 'no-store',
-    headers: {
-      'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
-    }
+    credentials: 'same-origin',
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      window.location.href = '/admin/login';
+      throw new Error('Session abgelaufen');
+    }
     const errorData = await res.json();
     throw new Error(errorData.message || 'Failed to fetch articles for admin');
   }
@@ -57,12 +59,14 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/admin/articles/${id}`, {
         method: "DELETE",
-        headers: {
-          'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
-        }
+        credentials: 'same-origin',
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = '/admin/login';
+          return;
+        }
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to delete article");
       }

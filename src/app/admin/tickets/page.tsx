@@ -33,12 +33,14 @@ const priorityConfig = {
 async function fetchTickets(): Promise<Ticket[]> {
   const res = await fetch('/api/admin/tickets', {
     cache: 'no-store',
-    headers: {
-      'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
-    }
+    credentials: 'same-origin',
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      window.location.href = '/admin/login';
+      throw new Error('Session abgelaufen');
+    }
     throw new Error('Failed to fetch tickets');
   }
 
@@ -68,9 +70,7 @@ export default function TicketsPage() {
     try {
       await fetch('/api/admin/fetch-emails', {
         method: 'POST',
-        headers: {
-          'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
-        }
+        credentials: 'same-origin',
       });
     } catch (err) {
       console.error('Background email fetch failed:', err);
@@ -150,9 +150,7 @@ export default function TicketsPage() {
     try {
       const res = await fetch('/api/admin/fetch-emails', {
         method: 'POST',
-        headers: {
-          'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
-        }
+        credentials: 'same-origin',
       });
       const data = await res.json();
       console.log('Email fetch result:', data);
@@ -227,9 +225,7 @@ export default function TicketsPage() {
         const id = ticketIds[i];
         await fetch(`/api/admin/tickets/${id}`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`
-          }
+          credentials: 'same-origin',
         });
         setDeleteProgress({ current: i + 1, total });
       }

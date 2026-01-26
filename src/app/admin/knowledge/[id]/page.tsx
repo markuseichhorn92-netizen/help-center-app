@@ -41,9 +41,7 @@ export default function KnowledgeDetailPage({
   const loadEntry = async () => {
     try {
       const res = await fetch(`/api/admin/knowledge/${id}`, {
-        headers: {
-          Authorization: `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`,
-        },
+        credentials: "same-origin",
       });
 
       if (!res.ok) {
@@ -74,9 +72,9 @@ export default function KnowledgeDetailPage({
     try {
       const res = await fetch(`/api/admin/knowledge/${id}`, {
         method: "PUT",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`,
         },
         body: JSON.stringify({
           title,

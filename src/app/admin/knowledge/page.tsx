@@ -30,12 +30,16 @@ export default function KnowledgePage() {
   const loadEntries = async () => {
     try {
       const res = await fetch('/api/admin/crawl', {
-        headers: {
-          Authorization: `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`,
-        },
+        credentials: 'same-origin',
       });
 
-      if (!res.ok) throw new Error('Failed to load entries');
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = '/admin/login';
+          return;
+        }
+        throw new Error('Failed to load entries');
+      }
 
       const data = await res.json();
       setEntries(data.entries);
@@ -79,9 +83,9 @@ export default function KnowledgePage() {
 
       const res = await fetch('/api/admin/crawl', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`,
         },
         body: JSON.stringify(body),
       });
@@ -105,9 +109,7 @@ export default function KnowledgePage() {
     try {
       const res = await fetch(`/api/admin/crawl?id=${id}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`,
-        },
+        credentials: 'same-origin',
       });
 
       if (!res.ok) throw new Error('Delete failed');

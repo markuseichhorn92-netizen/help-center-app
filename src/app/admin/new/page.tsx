@@ -50,11 +50,9 @@ export default function NewArticlePage() {
     try {
       const res = await fetch("/api/admin/articles", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(
-            `${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`
-          )}`,
         },
         body: JSON.stringify({ title, content, category, published }),
       });
@@ -85,11 +83,9 @@ export default function NewArticlePage() {
     try {
       const res = await fetch("/api/admin/ai", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(
-            `${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`
-          )}`,
         },
         body: JSON.stringify({ action: "generate", topic: aiTopic }),
       });
@@ -133,11 +129,9 @@ export default function NewArticlePage() {
 
       const res = await fetch("/api/admin/ai", {
         method: "POST",
+        credentials: "same-origin",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(
-            `${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`
-          )}`,
         },
         body: JSON.stringify(body),
       });
@@ -364,11 +358,7 @@ export default function NewArticlePage() {
               formData.append("file", file);
               const res = await fetch("/api/admin/upload", {
                 method: "POST",
-                headers: {
-                  Authorization: `Basic ${btoa(
-                    `${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`
-                  )}`,
-                },
+                credentials: "same-origin",
                 body: formData,
               });
               const data = await res.json();
