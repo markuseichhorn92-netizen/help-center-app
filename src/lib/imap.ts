@@ -194,10 +194,15 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
           debug.push(`Anhänge gefunden: ${attachments.length}`);
 
           // Check if this is a reply to an existing ticket
+          debug.push(`E-Mail Betreff: "${subject}"`);
+          debug.push(`Absender: ${senderEmail}`);
+
           const ticketNumber = parseTicketNumberFromSubject(subject);
+          debug.push(`Erkannte Ticket-Nummer: ${ticketNumber || 'KEINE'}`);
 
           if (ticketNumber) {
             const existingTicket = await findTicketByNumber(ticketNumber);
+            debug.push(`Ticket gefunden: ${existingTicket ? 'JA' : 'NEIN'}`);
 
             if (existingTicket) {
               // Add message to existing ticket

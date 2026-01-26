@@ -26,8 +26,12 @@ export async function sendTicketConfirmation(
   subject: string
 ): Promise<boolean> {
   try {
+    // Use IMAP_USER as reply-to so responses go to the right mailbox
+    const replyToEmail = process.env.IMAP_USER || SUPPORT_EMAIL;
+
     await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
+      replyTo: replyToEmail,
       to: customerEmail,
       subject: `[${ticketNumber}] Ihre Anfrage: ${subject}`,
       html: `
@@ -114,8 +118,12 @@ export async function sendTicketReply(
       path: att.url,
     })) || [];
 
+    // Use IMAP_USER as reply-to so responses go to the right mailbox
+    const replyToEmail = process.env.IMAP_USER || SUPPORT_EMAIL;
+
     const result = await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
+      replyTo: replyToEmail,
       to: customerEmail,
       subject: `Re: [${ticketNumber}] ${subject}`,
       headers,
