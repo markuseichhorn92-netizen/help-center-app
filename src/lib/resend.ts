@@ -180,7 +180,7 @@ export async function sendTicketReply(
               </div>
 
               <div class="reply-content">
-                ${replyContent.replace(/\n/g, '<br>')}
+                ${String(replyContent || '').replace(/\n/g, '<br>')}
               </div>
 
               <p>Mit freundlichen Grüßen,<br>Ihr FIT INN Support Team</p>
@@ -203,7 +203,7 @@ export async function sendTicketReply(
                           <span class="message-sender">${msg.senderName}</span>
                           <span class="message-date">${date}</span>
                         </div>
-                        <div class="message-content">${msg.content.replace(/\n/g, '<br>')}</div>
+                        <div class="message-content">${String(msg.content || '').replace(/\n/g, '<br>')}</div>
                       </div>
                     `;
                   }).join('')}
