@@ -52,6 +52,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [replyContent, setReplyContent] = useState("");
   const [sending, setSending] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiMenu, setShowAiMenu] = useState(false);
+  const [customInstruction, setCustomInstruction] = useState("");
+  const [showCustomModal, setShowCustomModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadData = async () => {
@@ -164,6 +168,130 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       alert(err.message);
     } finally {
       setSending(false);
+    }
+  };
+
+  // AI Functions
+  const handleAiGenerate = async () => {
+    if (!ticket || messages.length === 0) return;
+
+    setAiLoading(true);
+    setShowAiMenu(false);
+    try {
+      const lastCustomerMessage = [...messages].reverse().find(m => m.sender === "customer");
+
+      const res = await fetch("/api/admin/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: getAuthHeader(),
+        },
+        body: JSON.stringify({
+          action: "ticket_reply",
+          customerMessage: lastCustomerMessage?.content || ticket.subject,
+          customerName: ticket.customerName,
+          ticketSubject: ticket.subject,
+        }),
+      });
+
+      if (!res.ok) throw new Error("KI-Fehler");
+
+      const data = await res.json();
+      setReplyContent(data.content);
+    } catch (err) {
+      alert("Fehler bei der KI-Generierung");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiCorrect = async () => {
+    if (!replyContent.trim()) return;
+
+    setAiLoading(true);
+    setShowAiMenu(false);
+    try {
+      const res = await fetch("/api/admin/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: getAuthHeader(),
+        },
+        body: JSON.stringify({
+          action: "ticket_correct",
+          content: replyContent,
+        }),
+      });
+
+      if (!res.ok) throw new Error("KI-Fehler");
+
+      const data = await res.json();
+      setReplyContent(data.content);
+    } catch (err) {
+      alert("Fehler bei der KI-Korrektur");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiRewrite = async (tone: string) => {
+    if (!replyContent.trim()) return;
+
+    setAiLoading(true);
+    setShowAiMenu(false);
+    try {
+      const res = await fetch("/api/admin/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: getAuthHeader(),
+        },
+        body: JSON.stringify({
+          action: "ticket_rewrite",
+          content: replyContent,
+          tone,
+        }),
+      });
+
+      if (!res.ok) throw new Error("KI-Fehler");
+
+      const data = await res.json();
+      setReplyContent(data.content);
+    } catch (err) {
+      alert("Fehler beim Umschreiben");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleAiCustom = async () => {
+    if (!replyContent.trim() || !customInstruction.trim()) return;
+
+    setAiLoading(true);
+    setShowCustomModal(false);
+    try {
+      const res = await fetch("/api/admin/ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: getAuthHeader(),
+        },
+        body: JSON.stringify({
+          action: "ticket_custom",
+          content: replyContent,
+          instruction: customInstruction,
+        }),
+      });
+
+      if (!res.ok) throw new Error("KI-Fehler");
+
+      const data = await res.json();
+      setReplyContent(data.content);
+      setCustomInstruction("");
+    } catch (err) {
+      alert("Fehler bei der KI-Bearbeitung");
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -287,11 +415,112 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             {/* Reply Form */}
             <div className="border-t border-apple-gray-100 p-4">
               <form onSubmit={handleSendReply}>
+                {/* AI Tools Bar */}
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className="text-xs text-apple-gray-400 font-medium">KI-Assistent:</span>
+
+                  <button
+                    type="button"
+                    onClick={handleAiGenerate}
+                    disabled={aiLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-purple-50 text-purple-700 rounded-full hover:bg-purple-100 transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Antwort generieren
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleAiCorrect}
+                    disabled={aiLoading || !replyContent.trim()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Korrigieren
+                  </button>
+
+                  {/* Rewrite Dropdown */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowAiMenu(!showAiMenu)}
+                      disabled={aiLoading || !replyContent.trim()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Umschreiben
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {showAiMenu && (
+                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-apple-gray-200 py-1 z-10 min-w-[160px]">
+                        <button
+                          type="button"
+                          onClick={() => handleAiRewrite("formal")}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                        >
+                          Formeller
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAiRewrite("friendly")}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                        >
+                          Freundlicher
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAiRewrite("short")}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                        >
+                          Kürzer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAiRewrite("detailed")}
+                          className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                        >
+                          Ausführlicher
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomModal(true)}
+                    disabled={aiLoading || !replyContent.trim()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Eigene Anweisung
+                  </button>
+
+                  {aiLoading && (
+                    <span className="inline-flex items-center gap-2 text-xs text-purple-600">
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      KI arbeitet...
+                    </span>
+                  )}
+                </div>
+
                 <textarea
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
                   placeholder="Antwort schreiben..."
-                  rows={3}
+                  rows={4}
                   className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all duration-200 resize-none"
                 />
                 <div className="flex items-center justify-between mt-3">
@@ -396,6 +625,47 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       </div>
+
+      {/* Custom AI Instruction Modal */}
+      {showCustomModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 pt-20">
+          <div className="bg-white rounded-apple-xl shadow-2xl p-6 max-w-lg mx-4 w-full">
+            <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">Eigene KI-Anweisung</h3>
+            <p className="text-sm text-apple-gray-400 mb-4">
+              Beschreibe, wie die KI deinen Text bearbeiten soll.
+            </p>
+            <textarea
+              value={customInstruction}
+              onChange={(e) => setCustomInstruction(e.target.value)}
+              placeholder="z.B. 'Füge eine Entschuldigung hinzu' oder 'Erkläre die Öffnungszeiten genauer'"
+              rows={3}
+              className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all mb-4 resize-none"
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
+                className="px-4 py-2 text-apple-gray-600 font-medium rounded-full hover:bg-apple-gray-100 transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={handleAiCustom}
+                disabled={!customInstruction.trim()}
+                className="px-4 py-2 bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors disabled:opacity-50"
+              >
+                Anwenden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Click outside to close AI menu */}
+      {showAiMenu && (
+        <div className="fixed inset-0 z-0" onClick={() => setShowAiMenu(false)} />
+      )}
     </div>
   );
 }

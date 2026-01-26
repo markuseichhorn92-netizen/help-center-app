@@ -120,6 +120,92 @@ Gib nur den bearbeiteten Text zurück, ohne Erklärungen.`;
 
       userPrompt = `Anweisung: ${instruction}\n\nText:\n${content}`;
 
+    } else if (action === "ticket_reply") {
+      // Generate a ticket reply based on customer message
+      const { customerMessage, customerName, ticketSubject } = await request.json().catch(() => ({}));
+
+      if (!customerMessage) {
+        return NextResponse.json(
+          { message: "Bitte geben Sie die Kundennachricht an." },
+          { status: 400 }
+        );
+      }
+
+      systemPrompt = `Du bist ein freundlicher und professioneller Kundenservice-Mitarbeiter für FIT INN, ein Fitnessstudio in Trier.
+Du schreibst hilfreiche, freundliche und lösungsorientierte Antworten auf Kundenanfragen auf Deutsch.
+Deine Antworten sind:
+- Höflich und freundlich (aber nicht übertrieben)
+- Direkt und lösungsorientiert
+- Professionell aber persönlich
+- Nicht zu lang (max 150 Wörter)
+
+Beginne NICHT mit "Sehr geehrte/r" - verwende stattdessen den Vornamen oder "Hallo".
+Beende mit "Mit freundlichen Grüßen" oder ähnlich, aber OHNE Signatur (die wird automatisch hinzugefügt).`;
+
+      userPrompt = `Kundenname: ${customerName || 'Kunde'}
+Betreff: ${ticketSubject || 'Anfrage'}
+Kundennachricht: ${customerMessage}
+
+Schreibe eine freundliche und hilfreiche Antwort.`;
+
+    } else if (action === "ticket_correct") {
+      // Correct/improve existing reply text
+      if (!content) {
+        return NextResponse.json(
+          { message: "Bitte geben Sie den zu korrigierenden Text an." },
+          { status: 400 }
+        );
+      }
+
+      systemPrompt = `Du bist ein Lektor für Kundenservice-Texte.
+Korrigiere Rechtschreibung, Grammatik und verbessere den Stil.
+Behalte die ursprüngliche Bedeutung und den freundlichen Ton bei.
+Gib nur den korrigierten Text zurück, ohne Erklärungen.`;
+
+      userPrompt = `Korrigiere und verbessere folgenden Kundenservice-Text:\n\n${content}`;
+
+    } else if (action === "ticket_rewrite") {
+      // Rewrite text in a different tone
+      const { tone } = await request.json().catch(() => ({}));
+
+      if (!content) {
+        return NextResponse.json(
+          { message: "Bitte geben Sie den umzuschreibenden Text an." },
+          { status: 400 }
+        );
+      }
+
+      const toneDescriptions: Record<string, string> = {
+        formal: "formeller und professioneller",
+        friendly: "freundlicher und persönlicher",
+        short: "kürzer und prägnanter",
+        detailed: "ausführlicher und detaillierter",
+      };
+
+      const toneDesc = toneDescriptions[tone] || "freundlicher";
+
+      systemPrompt = `Du bist ein Kundenservice-Textexperte.
+Schreibe den Text ${toneDesc} um.
+Behalte die wesentliche Information bei.
+Gib nur den umgeschriebenen Text zurück, ohne Erklärungen.`;
+
+      userPrompt = `Schreibe folgenden Text ${toneDesc} um:\n\n${content}`;
+
+    } else if (action === "ticket_custom") {
+      // Custom instruction for ticket reply
+      if (!content || !instruction) {
+        return NextResponse.json(
+          { message: "Bitte geben Sie Text und Anweisung an." },
+          { status: 400 }
+        );
+      }
+
+      systemPrompt = `Du bist ein Kundenservice-Textexperte für ein Fitnessstudio.
+Bearbeite den Text nach der gegebenen Anweisung.
+Gib nur den bearbeiteten Text zurück, ohne Erklärungen.`;
+
+      userPrompt = `Anweisung: ${instruction}\n\nText:\n${content}`;
+
     } else {
       return NextResponse.json(
         { message: "Ungültige Aktion. Erlaubt: generate, improve, expand, custom" },
