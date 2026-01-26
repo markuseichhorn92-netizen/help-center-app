@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import { TicketMessage } from './tickets';
 
 // Lazy-initialize Resend client to avoid build-time errors
 let resendClient: Resend | null = null;
@@ -39,28 +40,34 @@ export async function sendTicketConfirmation(
         <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1D1D1F; margin: 0; padding: 0; background-color: #FBFBFD; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #e11d48 0%, #be123c 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
-            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 12px 12px; }
-            .ticket-number { background: white; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0; }
-            .ticket-number span { font-size: 24px; font-weight: bold; color: #e11d48; font-family: monospace; }
-            .footer { text-align: center; color: #666; font-size: 12px; margin-top: 20px; }
+            .header { background: linear-gradient(135deg, #0a4958 0%, #073440 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+            .header p { margin: 10px 0 0; opacity: 0.9; }
+            .content { background: #FBFBFD; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #E8E8ED; border-top: none; }
+            .ticket-number { background: white; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0; border: 1px solid #E8E8ED; }
+            .ticket-number p { margin: 0 0 8px; color: #86868B; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+            .ticket-number span { font-size: 28px; font-weight: 700; color: #0a4958; font-family: monospace; }
+            .footer { text-align: center; color: #86868B; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E8E8ED; }
+            a { color: #0a4958; text-decoration: none; }
+            a:hover { text-decoration: underline; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin:0;">FIT INN Hilfe-Center</h1>
-              <p style="margin:10px 0 0;">Ihre Anfrage wurde empfangen</p>
+              <h1>FIT INN Hilfe-Center</h1>
+              <p>Ihre Anfrage wurde empfangen</p>
             </div>
             <div class="content">
               <p>Hallo ${customerName},</p>
               <p>vielen Dank für Ihre Nachricht. Wir haben Ihre Anfrage erhalten und werden uns schnellstmöglich bei Ihnen melden.</p>
 
               <div class="ticket-number">
-                <p style="margin:0 0 5px; color:#666;">Ihre Ticket-Nummer:</p>
+                <p>Ihre Ticket-Nummer</p>
                 <span>${ticketNumber}</span>
               </div>
 
@@ -72,6 +79,7 @@ export async function sendTicketConfirmation(
             </div>
             <div class="footer">
               <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie direkt auf diese E-Mail, um mit unserem Support zu kommunizieren.</p>
+              <p style="margin-top: 10px;"><a href="https://fit-inn-trier.de">www.fit-inn-trier.de</a></p>
             </div>
           </div>
         </body>
@@ -98,7 +106,8 @@ export async function sendTicketReply(
   subject: string,
   replyContent: string,
   messageId?: string,
-  attachments?: EmailAttachment[]
+  attachments?: EmailAttachment[],
+  conversationHistory?: TicketMessage[]
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!process.env.RESEND_API_KEY) {
@@ -133,34 +142,78 @@ export async function sendTicketReply(
         <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1D1D1F; margin: 0; padding: 0; background-color: #FBFBFD; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { border-bottom: 2px solid #e11d48; padding-bottom: 15px; margin-bottom: 20px; }
-            .header h2 { color: #e11d48; margin: 0; }
-            .ticket-badge { display: inline-block; background: #fee2e2; color: #be123c; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-family: monospace; }
-            .content { background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .footer { color: #666; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 15px; margin-top: 20px; }
+            .header { background: linear-gradient(135deg, #0a4958 0%, #073440 100%); color: white; padding: 25px 30px; border-radius: 12px 12px 0 0; }
+            .ticket-badge { display: inline-block; background: rgba(255, 255, 255, 0.2); color: white; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-family: monospace; font-weight: 600; }
+            .header h2 { color: white; margin: 12px 0 0; font-size: 20px; font-weight: 600; }
+            .content-wrapper { background: #FBFBFD; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #E8E8ED; border-top: none; }
+            .greeting { margin-bottom: 20px; }
+            .reply-content { background: white; padding: 20px; border-radius: 12px; border: 1px solid #E8E8ED; margin: 20px 0; white-space: pre-wrap; }
+            .conversation-history { margin-top: 30px; padding-top: 30px; border-top: 2px solid #E8E8ED; }
+            .conversation-title { color: #0a4958; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px; }
+            .message { margin-bottom: 20px; padding: 15px; border-radius: 12px; border: 1px solid #E8E8ED; }
+            .message-customer { background: #F5F5F7; }
+            .message-admin { background: #cfe5ea; border-color: #0a4958; }
+            .message-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+            .message-sender { font-weight: 600; color: #0a4958; font-size: 14px; }
+            .message-customer .message-sender { color: #1D1D1F; }
+            .message-date { color: #86868B; font-size: 12px; }
+            .message-content { color: #1D1D1F; white-space: pre-wrap; line-height: 1.6; }
+            .footer { color: #86868B; font-size: 12px; border-top: 1px solid #E8E8ED; padding-top: 20px; margin-top: 30px; text-align: center; }
+            a { color: #0a4958; text-decoration: none; }
+            a:hover { text-decoration: underline; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
               <span class="ticket-badge">${ticketNumber}</span>
-              <h2 style="margin-top:10px;">${subject}</h2>
+              <h2>${subject}</h2>
             </div>
 
-            <p>Hallo ${customerName},</p>
+            <div class="content-wrapper">
+              <div class="greeting">
+                <p>Hallo ${customerName},</p>
+              </div>
 
-            <div class="content">
-              ${replyContent.replace(/\n/g, '<br>')}
-            </div>
+              <div class="reply-content">
+                ${replyContent.replace(/\n/g, '<br>')}
+              </div>
 
-            <p>Mit freundlichen Grüßen,<br>Ihr FIT INN Support Team</p>
+              <p>Mit freundlichen Grüßen,<br>Ihr FIT INN Support Team</p>
 
-            <div class="footer">
-              <p>Antworten Sie direkt auf diese E-Mail, um die Konversation fortzusetzen.</p>
-              <p>FIT INN Trier | <a href="https://fit-inn-trier.de" style="color:#e11d48;">www.fit-inn-trier.de</a></p>
+              ${conversationHistory && conversationHistory.length > 0 ? `
+                <div class="conversation-history">
+                  <div class="conversation-title">Konversationsverlauf</div>
+                  ${conversationHistory.map(msg => {
+                    const isCustomer = msg.sender === 'customer';
+                    const date = new Date(msg.createdAt).toLocaleString('de-DE', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+                    return `
+                      <div class="message ${isCustomer ? 'message-customer' : 'message-admin'}">
+                        <div class="message-header">
+                          <span class="message-sender">${msg.senderName}</span>
+                          <span class="message-date">${date}</span>
+                        </div>
+                        <div class="message-content">${msg.content.replace(/\n/g, '<br>')}</div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              ` : ''}
+
+              <div class="footer">
+                <p>Antworten Sie direkt auf diese E-Mail, um die Konversation fortzusetzen.</p>
+                <p style="margin-top: 10px;">FIT INN Trier | <a href="https://fit-inn-trier.de">www.fit-inn-trier.de</a></p>
+              </div>
             </div>
           </div>
         </body>

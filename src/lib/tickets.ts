@@ -17,6 +17,8 @@ export interface Ticket {
   createdAt: string;
   updatedAt: string;
   assignedTo?: string;
+  channel?: 'email' | 'whatsapp' | 'web';
+  phone?: string;
 }
 
 export interface Attachment {
@@ -36,6 +38,8 @@ export interface TicketMessage {
   senderEmail: string;
   createdAt: string;
   emailMessageId?: string;
+  whatsappMessageId?: string;
+  channel?: 'email' | 'whatsapp' | 'web';
   attachments?: Attachment[];
 }
 
@@ -53,6 +57,8 @@ export async function createTicket(data: {
   content: string;
   priority?: 'low' | 'medium' | 'high';
   attachments?: Attachment[];
+  channel?: 'email' | 'whatsapp' | 'web';
+  phone?: string;
 }): Promise<{ ticket: Ticket; message: TicketMessage }> {
   const ticketId = crypto.randomUUID();
   const ticketNumber = await generateTicketNumber();
@@ -68,6 +74,8 @@ export async function createTicket(data: {
     customerEmail: data.customerEmail,
     createdAt: now,
     updatedAt: now,
+    channel: data.channel || 'web',
+    ...(data.phone && { phone: data.phone }),
   };
 
   // Filter out undefined/null values for Redis
@@ -81,6 +89,11 @@ export async function createTicket(data: {
 
   // Index by email for lookup
   await kv.sadd(`tickets:email:${data.customerEmail.toLowerCase()}`, ticketId);
+  
+  // Index by phone for WhatsApp lookup
+  if (data.phone) {
+    await kv.sadd(`tickets:phone:${data.phone}`, ticketId);
+  }
 
   // Create initial message
   const message = await createMessage({
@@ -163,6 +176,8 @@ export async function deleteTicket(id: string): Promise<boolean> {
     kv.del(`ticket:${id}:read`),
     // Remove from email index
     kv.srem(`tickets:email:${ticket.customerEmail.toLowerCase()}`, id),
+    // Remove from phone index if exists
+    ...(ticket.phone ? [kv.srem(`tickets:phone:${ticket.phone}`, id)] : []),
     // Delete ticket
     kv.del(`ticket:${id}`),
     // Remove from tickets list
@@ -199,6 +214,8 @@ export async function createMessage(data: {
   senderName: string;
   senderEmail: string;
   emailMessageId?: string;
+  whatsappMessageId?: string;
+  channel?: 'email' | 'whatsapp' | 'web';
   attachments?: Attachment[];
 }): Promise<TicketMessage> {
   const messageId = crypto.randomUUID();
@@ -213,6 +230,8 @@ export async function createMessage(data: {
     senderEmail: data.senderEmail,
     createdAt: now,
     ...(data.emailMessageId && { emailMessageId: data.emailMessageId }),
+    ...(data.whatsappMessageId && { whatsappMessageId: data.whatsappMessageId }),
+    ...(data.channel && { channel: data.channel }),
     ...(data.attachments && data.attachments.length > 0 && { attachments: data.attachments }),
   };
 
@@ -333,6 +352,27 @@ export async function findTicketsByEmail(email: string): Promise<Ticket[]> {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 }
 
+// Find ticket by phone number (for WhatsApp)
+export async function findTicketsByPhone(phone: string): Promise<Ticket[]> {
+  const ticketIds: string[] = await kv.smembers(`tickets:phone:${phone}`);
+  if (ticketIds.length === 0) {
+    return [];
+  }
+
+  const tickets = await Promise.all(
+    ticketIds.map(async (id) => {
+      const ticket = await kv.hgetall(`ticket:${id}`);
+      return ticket as unknown as Ticket;
+    })
+  );
+
+  // Filter out closed/resolved tickets, return most recent open ticket
+  return tickets
+    .filter((t): t is Ticket => t !== null && Object.keys(t).length > 0)
+    .filter(t => t.status !== 'closed' && t.status !== 'resolved')
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+}
+
 // Find ticket by ticket number (for email subject parsing)
 export async function findTicketByNumber(ticketNumber: string): Promise<Ticket | null> {
   const ticketIds: string[] = await kv.smembers('tickets:ids');
@@ -345,4 +385,10 @@ export async function findTicketByNumber(ticketNumber: string): Promise<Ticket |
   }
 
   return null;
+}
+
+// Parse ticket number from subject or message body
+export function parseTicketNumberFromSubject(text: string): string | null {
+  const match = text.match(/\[?(TKT-\d+)\]?/i);
+  return match ? match[1].toUpperCase() : null;
 }

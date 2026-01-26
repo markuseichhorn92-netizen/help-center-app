@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTicket, createMessage, getTicketMessages } from '@/lib/tickets';
 import { sendTicketReply } from '@/lib/resend';
+import { sendWhatsAppMessage } from '@/lib/whatsapp';
 
 // Helper function to check authentication
 function isAuthenticated(req: NextRequest): boolean {
@@ -43,43 +44,102 @@ export async function POST(
       return NextResponse.json({ message: 'Nachricht darf nicht leer sein.' }, { status: 400 });
     }
 
-    // Get last message for threading
+    // Get all messages for conversation history
     const messages = await getTicketMessages(id);
     const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
 
-    // Send email
-    console.log('Sending email to:', ticket.customerEmail);
-    console.log('RESEND_API_KEY configured:', !!process.env.RESEND_API_KEY);
-    console.log('SUPPORT_EMAIL:', process.env.SUPPORT_EMAIL);
+    // Determine channel
+    const channel = (ticket as any).channel || 'email';
+    const isWhatsApp = channel === 'whatsapp';
 
-    const emailResult = await sendTicketReply(
-      ticket.customerEmail,
-      ticket.customerName,
-      ticket.ticketNumber,
-      ticket.subject,
-      content,
-      lastMessage?.emailMessageId,
-      attachments
-    );
+    let messageResult: { success: boolean; messageId?: string; messageSid?: string; error?: string } = { success: false };
 
-    console.log('Email result:', emailResult);
+    if (isWhatsApp && ticket.phone) {
+      // Send via WhatsApp
+      console.log('Sending WhatsApp to:', ticket.phone);
+      console.log('TWILIO_ACCOUNT_SID configured:', !!process.env.TWILIO_ACCOUNT_SID);
 
-    // Create message in database
-    const message = await createMessage({
-      ticketId: id,
-      content,
-      sender: 'admin',
-      senderName: senderName || 'Support Team',
-      senderEmail: process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
-      emailMessageId: emailResult.messageId,
-      attachments: attachments || [],
-    });
+      const whatsappResult = await sendWhatsAppMessage({
+        to: ticket.phone,
+        message: content,
+        ticketNumber: ticket.ticketNumber,
+        attachments: attachments?.map(att => ({
+          filename: att.filename,
+          url: att.url,
+          contentType: att.contentType,
+          size: att.size,
+        })),
+      });
 
-    return NextResponse.json({
-      message,
-      emailSent: emailResult.success,
-      emailError: emailResult.error,
-    }, { status: 201 });
+      console.log('WhatsApp result:', whatsappResult);
+
+      messageResult = {
+        success: whatsappResult.success,
+        messageSid: whatsappResult.messageSid,
+        error: whatsappResult.error,
+      };
+
+      // Create message in database
+      const message = await createMessage({
+        ticketId: id,
+        content,
+        sender: 'admin',
+        senderName: senderName || 'Support Team',
+        senderEmail: process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
+        whatsappMessageId: whatsappResult.messageSid,
+        channel: 'whatsapp',
+        attachments: attachments || [],
+      });
+
+      return NextResponse.json({
+        message,
+        whatsappSent: whatsappResult.success,
+        whatsappError: whatsappResult.error,
+      }, { status: 201 });
+    } else {
+      // Send via Email
+      console.log('Sending email to:', ticket.customerEmail);
+      console.log('RESEND_API_KEY configured:', !!process.env.RESEND_API_KEY);
+      console.log('SUPPORT_EMAIL:', process.env.SUPPORT_EMAIL);
+
+      const emailResult = await sendTicketReply(
+        ticket.customerEmail,
+        ticket.customerName,
+        ticket.ticketNumber,
+        ticket.subject,
+        content,
+        lastMessage?.emailMessageId,
+        attachments,
+        messages // Pass conversation history
+      );
+
+      console.log('Email result:', emailResult);
+
+      messageResult = {
+        success: emailResult.success,
+        messageId: emailResult.messageId,
+        error: emailResult.error,
+      };
+
+      // Create message in database
+      const message = await createMessage({
+        ticketId: id,
+        content,
+        sender: 'admin',
+        senderName: senderName || 'Support Team',
+        senderEmail: process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
+        emailMessageId: emailResult.messageId,
+        channel: 'email',
+        attachments: attachments || [],
+      });
+
+      return NextResponse.json({
+        message,
+        emailSent: emailResult.success,
+        emailError: emailResult.error,
+      }, { status: 201 });
+    }
+
   } catch (error: any) {
     console.error('Failed to send reply:', error);
     return NextResponse.json({
