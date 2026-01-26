@@ -3,15 +3,38 @@ import { NextRequest, NextResponse } from 'next/server';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Protect admin routes
-  if (pathname.startsWith('/admin')) {
+  // Only protect admin routes (except login page and auth API)
+  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
+    // Check for session cookie
+    const sessionCookie = req.cookies.get('admin_session');
+
+    if (!sessionCookie?.value) {
+      // Redirect to login page
+      const loginUrl = new URL('/admin/login', req.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Session exists - allow access
+    return NextResponse.next();
+  }
+
+  // Protect admin API routes (except auth endpoints)
+  if (pathname.startsWith('/api/admin') && !pathname.startsWith('/api/admin/auth')) {
+    // Check for session cookie first
+    const sessionCookie = req.cookies.get('admin_session');
+
+    if (sessionCookie?.value) {
+      return NextResponse.next();
+    }
+
+    // Fall back to Basic Auth for API compatibility (e.g., external tools)
     const basicAuth = req.headers.get('authorization');
 
     if (basicAuth) {
       const authValue = basicAuth.split(' ')[1];
       const [user, password] = Buffer.from(authValue, 'base64').toString().split(':');
 
-      // Use environment variables for username and password
       const ADMIN_USER = process.env.ADMIN_USER || 'admin';
       const ADMIN_PASS = process.env.ADMIN_PASS || 'adminpass';
 
@@ -20,13 +43,10 @@ export function middleware(req: NextRequest) {
       }
     }
 
-    // If authentication fails or is not provided, prompt for credentials
-    return new NextResponse('Authentication Required', {
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Secure Area"',
-      },
-    });
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
 
   // Allow all other requests
@@ -34,5 +54,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'], // Apply middleware to all routes under /admin
+  matcher: ['/admin/:path*', '/api/admin/:path*'],
 };
