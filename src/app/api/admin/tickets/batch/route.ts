@@ -1,6 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteTickets } from '@/lib/tickets';
+import { deleteTickets, updateTicketsStatus } from '@/lib/tickets';
 
+// Batch status update
+export async function PUT(req: NextRequest) {
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { ids, status } = body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json(
+        { message: 'Keine Ticket-IDs angegeben.' },
+        { status: 400 }
+      );
+    }
+
+    if (!status || !['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
+      return NextResponse.json(
+        { message: 'Ungültiger Status.' },
+        { status: 400 }
+      );
+    }
+
+    const result = await updateTicketsStatus(ids, status);
+
+    return NextResponse.json({
+      message: `${result.updated} Ticket(s) aktualisiert.`,
+      updatedCount: result.updated,
+      failed: result.failed,
+    });
+  } catch (error) {
+    console.error('Failed to update tickets:', error);
+    return NextResponse.json(
+      { message: 'Fehler beim Aktualisieren der Tickets.' },
+      { status: 500 }
+    );
+  }
+}
+
+// Batch delete
 export async function DELETE(req: NextRequest) {
   const sessionCookie = req.cookies.get('admin_session');
   if (!sessionCookie?.value) {

@@ -81,6 +81,8 @@ export default function TicketsPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteProgress, setDeleteProgress] = useState({ current: 0, total: 0 });
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -264,6 +266,38 @@ export default function TicketsPage() {
     }
   };
 
+  const handleBatchStatusChange = async (newStatus: string) => {
+    if (selectedTickets.size === 0) return;
+
+    setUpdatingStatus(true);
+    setShowStatusMenu(false);
+
+    try {
+      const res = await fetch('/api/admin/tickets/batch', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          ids: Array.from(selectedTickets),
+          status: newStatus,
+        }),
+      });
+
+      if (res.ok) {
+        setSelectedTickets(new Set());
+        await loadTickets();
+      } else {
+        const data = await res.json();
+        alert('Fehler: ' + (data.message || 'Unbekannter Fehler'));
+      }
+    } catch (err: any) {
+      console.error('Batch status update error:', err);
+      alert('Fehler beim Aktualisieren der Tickets');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   const filteredTickets = tickets
     .filter(t => {
       // Status filter
@@ -359,16 +393,73 @@ export default function TicketsPage() {
             </span>
           )}
           {selectedTickets.size > 0 && (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={deleting}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white font-medium rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              <span className="hidden sm:inline">{selectedTickets.size} löschen</span>
-            </button>
+            <>
+              {/* Batch Status Change Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowStatusMenu(!showStatusMenu)}
+                  disabled={updatingStatus}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors disabled:opacity-50"
+                >
+                  {updatingStatus ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <span className="hidden sm:inline">Status ändern</span>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showStatusMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-apple-lg shadow-lg border border-apple-gray-200 py-1 z-20">
+                    <button
+                      onClick={() => handleBatchStatusChange('open')}
+                      className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-blue-50 flex items-center gap-2"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      Offen
+                    </button>
+                    <button
+                      onClick={() => handleBatchStatusChange('in_progress')}
+                      className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-amber-50 flex items-center gap-2"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                      In Bearbeitung
+                    </button>
+                    <button
+                      onClick={() => handleBatchStatusChange('resolved')}
+                      className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-green-50 flex items-center gap-2"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      Gelöst
+                    </button>
+                    <button
+                      onClick={() => handleBatchStatusChange('closed')}
+                      className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-gray-500"></span>
+                      Geschlossen
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white font-medium rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span className="hidden sm:inline">{selectedTickets.size} löschen</span>
+              </button>
+            </>
           )}
           <button
             onClick={handleFetchEmails}
@@ -818,6 +909,11 @@ export default function TicketsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Click outside to close status menu */}
+      {showStatusMenu && (
+        <div className="fixed inset-0 z-10" onClick={() => setShowStatusMenu(false)} />
       )}
     </div>
   );

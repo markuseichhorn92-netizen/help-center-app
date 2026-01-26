@@ -2,7 +2,7 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser, ParsedMail } from 'mailparser';
 import { createClient } from '@vercel/kv';
 import { put } from '@vercel/blob';
-import { createTicket, createMessage, findTicketByNumber, Attachment } from './tickets';
+import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment } from './tickets';
 import { parseTicketNumberFromSubject, sendTicketConfirmation } from './resend';
 
 const kv = createClient({
@@ -231,6 +231,13 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
                 emailMessageId: messageId,
                 attachments,
               });
+
+              // Reopen ticket if it was closed or resolved (customer replied)
+              if (existingTicket.status === 'closed' || existingTicket.status === 'resolved') {
+                await updateTicket(existingTicket.id, { status: 'open' });
+                console.log(`Reopened ticket ${ticketNumber} due to customer reply`);
+                debug.push(`Ticket ${ticketNumber} wurde wieder geöffnet (Kundenantwort)`);
+              }
 
               console.log(`Added reply to ticket ${ticketNumber} from ${senderEmail}`);
               results.processed++;

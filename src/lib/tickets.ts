@@ -19,6 +19,7 @@ export interface Ticket {
   assignedTo?: string;
   channel?: 'email' | 'whatsapp' | 'web';
   phone?: string;
+  resolvedAt?: string; // Timestamp when ticket was marked as resolved (for auto-close)
 }
 
 export interface Attachment {
@@ -149,11 +150,30 @@ export async function updateTicket(
     return null;
   }
 
+  const now = new Date().toISOString();
+
+  // Track resolvedAt timestamp for auto-close functionality
+  let resolvedAt = ticket.resolvedAt;
+  if (updates.status === 'resolved' && ticket.status !== 'resolved') {
+    // Just became resolved - set timestamp
+    resolvedAt = now;
+  } else if (updates.status && updates.status !== 'resolved') {
+    // Status changed to something other than resolved - clear timestamp
+    resolvedAt = undefined;
+  }
+
   const updatedTicket: Ticket = {
     ...ticket,
     ...updates,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
+    ...(resolvedAt ? { resolvedAt } : {}),
   };
+
+  // Remove resolvedAt if it was cleared
+  if (!resolvedAt) {
+    delete updatedTicket.resolvedAt;
+    await kv.hdel(`ticket:${id}`, 'resolvedAt');
+  }
 
   const updatedTicketForKV = Object.fromEntries(
     Object.entries(updatedTicket).filter(([_, v]) => v != null)
@@ -209,6 +229,54 @@ export async function deleteTickets(ids: string[]): Promise<{ deleted: number; f
     deleted: results.filter(r => r.success).length,
     failed: results.filter(r => !r.success).map(r => r.id),
   };
+}
+
+// Batch update status for multiple tickets
+export async function updateTicketsStatus(
+  ids: string[],
+  status: Ticket['status']
+): Promise<{ updated: number; failed: string[] }> {
+  const results = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const ticket = await updateTicket(id, { status });
+        return { id, success: ticket !== null };
+      } catch {
+        return { id, success: false };
+      }
+    })
+  );
+
+  return {
+    updated: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).map(r => r.id),
+  };
+}
+
+// Get tickets that should be auto-closed (resolved for more than 1 hour)
+export async function getTicketsToAutoClose(): Promise<Ticket[]> {
+  const tickets = await getAllTickets();
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+  return tickets.filter(
+    (t) => t.status === 'resolved' && t.resolvedAt && t.resolvedAt < oneHourAgo
+  );
+}
+
+// Auto-close resolved tickets (called by cron job)
+export async function autoCloseResolvedTickets(): Promise<{ closed: number; failed: string[] }> {
+  const ticketsToClose = await getTicketsToAutoClose();
+
+  if (ticketsToClose.length === 0) {
+    return { closed: 0, failed: [] };
+  }
+
+  const result = await updateTicketsStatus(
+    ticketsToClose.map((t) => t.id),
+    'closed'
+  );
+
+  return { closed: result.updated, failed: result.failed };
 }
 
 // Message Operations
@@ -416,6 +484,8 @@ export async function findTicketsByEmail(email: string): Promise<Ticket[]> {
 }
 
 // Find ticket by phone number (for WhatsApp)
+// Returns tickets sorted by status priority (open first) then by updatedAt
+// Includes closed/resolved tickets so customers can reply and reopen them
 export async function findTicketsByPhone(phone: string): Promise<Ticket[]> {
   const ticketIds: string[] = await kv.smembers(`tickets:phone:${phone}`);
   if (ticketIds.length === 0) {
@@ -429,11 +499,15 @@ export async function findTicketsByPhone(phone: string): Promise<Ticket[]> {
     })
   );
 
-  // Filter out closed/resolved tickets, return most recent open ticket
+  // Sort: open/in_progress tickets first, then resolved/closed, then by updatedAt (newest first)
+  const statusPriority: Record<string, number> = { open: 0, in_progress: 1, resolved: 2, closed: 3 };
   return tickets
     .filter((t): t is Ticket => t !== null && Object.keys(t).length > 0)
-    .filter(t => t.status !== 'closed' && t.status !== 'resolved')
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    .sort((a, b) => {
+      const statusDiff = statusPriority[a.status] - statusPriority[b.status];
+      if (statusDiff !== 0) return statusDiff;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 }
 
 // Find ticket by ticket number (for email subject parsing)
