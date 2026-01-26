@@ -140,21 +140,42 @@ export async function deleteTicket(id: string): Promise<boolean> {
     return false;
   }
 
-  // Delete all messages
+  // Delete all messages in parallel
   const messageIds: string[] = await kv.smembers(`ticket:${id}:messages`);
-  for (const msgId of messageIds) {
-    await kv.del(`message:${msgId}`);
-  }
-  await kv.del(`ticket:${id}:messages`);
 
-  // Remove from email index
-  await kv.srem(`tickets:email:${ticket.customerEmail.toLowerCase()}`, id);
-
-  // Delete ticket
-  await kv.del(`ticket:${id}`);
-  await kv.srem('tickets:ids', id);
+  await Promise.all([
+    // Delete all messages
+    ...messageIds.map(msgId => kv.del(`message:${msgId}`)),
+    // Delete message index
+    kv.del(`ticket:${id}:messages`),
+    // Remove from email index
+    kv.srem(`tickets:email:${ticket.customerEmail.toLowerCase()}`, id),
+    // Delete ticket
+    kv.del(`ticket:${id}`),
+    // Remove from tickets list
+    kv.srem('tickets:ids', id),
+  ]);
 
   return true;
+}
+
+// Batch delete multiple tickets efficiently
+export async function deleteTickets(ids: string[]): Promise<{ deleted: number; failed: string[] }> {
+  const results = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const success = await deleteTicket(id);
+        return { id, success };
+      } catch {
+        return { id, success: false };
+      }
+    })
+  );
+
+  return {
+    deleted: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).map(r => r.id),
+  };
 }
 
 // Message Operations

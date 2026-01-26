@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteTicket } from '@/lib/tickets';
+import { deleteTickets } from '@/lib/tickets';
 
 // Helper function to check authentication
 function isAuthenticated(req: NextRequest): boolean {
@@ -35,19 +35,12 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const results = await Promise.all(
-      ids.map(async (id: string) => {
-        const deleted = await deleteTicket(id);
-        return { id, deleted };
-      })
-    );
-
-    const deletedCount = results.filter((r) => r.deleted).length;
+    const result = await deleteTickets(ids);
 
     return NextResponse.json({
-      message: `${deletedCount} Ticket(s) gelöscht.`,
-      deletedCount,
-      results,
+      message: `${result.deleted} Ticket(s) gelöscht.`,
+      deletedCount: result.deleted,
+      failed: result.failed,
     });
   } catch (error) {
     console.error('Failed to delete tickets:', error);
