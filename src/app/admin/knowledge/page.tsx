@@ -334,36 +334,58 @@ export default function KnowledgePage() {
             {entries.map((entry) => (
               <div key={entry.id} className="p-6 hover:bg-apple-gray-50 transition-colors">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-apple-gray-600 mb-1">{entry.title}</h3>
-                    <a
-                      href={entry.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-brand hover:underline block mb-2"
-                    >
+                  <Link
+                    href={`/admin/knowledge/${entry.id}`}
+                    className="flex-1 min-w-0 cursor-pointer"
+                  >
+                    <h3 className="text-lg font-medium text-apple-gray-600 mb-1 hover:text-brand transition-colors">
+                      {entry.title}
+                    </h3>
+                    <span className="text-sm text-brand hover:underline block mb-2">
                       {entry.url}
-                    </a>
+                    </span>
                     {entry.description && (
                       <p className="text-sm text-apple-gray-500 mb-2">{entry.description}</p>
                     )}
                     <div className="flex items-center gap-4 text-xs text-apple-gray-400">
                       <span>Gecrawlt: {new Date(entry.lastCrawled).toLocaleDateString('de-DE')}</span>
-                      <span>{entry.content.length} Zeichen</span>
+                      <span>{entry.content.length.toLocaleString()} Zeichen</span>
                       {entry.keywords && entry.keywords.length > 0 && (
                         <span>{entry.keywords.length} Keywords</span>
                       )}
                     </div>
+                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/admin/knowledge/${entry.id}`}
+                      className="text-apple-gray-400 hover:text-brand transition-colors"
+                      title="Bearbeiten"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </Link>
+                    <a
+                      href={entry.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-apple-gray-400 hover:text-brand transition-colors"
+                      title="Original-Seite öffnen"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                    <button
+                      onClick={() => handleDelete(entry.id)}
+                      className="text-apple-gray-400 hover:text-red-500 transition-colors"
+                      title="Löschen"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleDelete(entry.id)}
-                    className="text-red-500 hover:text-red-700 transition-colors"
-                    title="Löschen"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
                 </div>
               </div>
             ))}

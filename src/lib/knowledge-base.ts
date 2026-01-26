@@ -109,12 +109,52 @@ export async function getAllKnowledgeEntries(): Promise<KnowledgeEntry[]> {
 // Get knowledge entry by URL
 export async function getKnowledgeEntryByUrl(url: string): Promise<KnowledgeEntry | null> {
   const entryId = await kv.get<string>(`knowledge:url:${encodeURIComponent(url)}`);
-  
+
   if (!entryId) {
     return null;
   }
 
   const entry = await kv.hgetall(`knowledge:${entryId}`);
+  return entry as unknown as KnowledgeEntry;
+}
+
+// Get knowledge entry by ID
+export async function getKnowledgeEntryById(id: string): Promise<KnowledgeEntry | null> {
+  const entry = await kv.hgetall(`knowledge:${id}`);
+  if (!entry || Object.keys(entry).length === 0) {
+    return null;
+  }
+  return entry as unknown as KnowledgeEntry;
+}
+
+// Update knowledge entry by ID
+export async function updateKnowledgeEntryById(
+  id: string,
+  data: {
+    title?: string;
+    content?: string;
+    description?: string;
+    keywords?: string[];
+  }
+): Promise<KnowledgeEntry | null> {
+  const existingEntry = await getKnowledgeEntryById(id);
+  if (!existingEntry) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const updates: Record<string, string | string[]> = {
+    lastCrawled: now,
+  };
+
+  if (data.title !== undefined) updates.title = data.title;
+  if (data.content !== undefined) updates.content = data.content;
+  if (data.description !== undefined) updates.description = data.description;
+  if (data.keywords !== undefined) updates.keywords = data.keywords;
+
+  await kv.hmset(`knowledge:${id}`, updates);
+
+  const entry = await kv.hgetall(`knowledge:${id}`);
   return entry as unknown as KnowledgeEntry;
 }
 
