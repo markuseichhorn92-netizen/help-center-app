@@ -180,9 +180,25 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
           }
 
           const subject = parsed.subject || 'Kein Betreff';
-          const htmlContent = typeof parsed.html === 'string' ? parsed.html.replace(/<[^>]*>/g, '') : '';
-          const content = parsed.text || htmlContent || '';
           const messageId = parsed.messageId || undefined;
+
+          // Prefer HTML content for proper formatting, fallback to text
+          let content = '';
+          if (typeof parsed.html === 'string' && parsed.html.trim()) {
+            // Use HTML content but sanitize dangerous elements
+            content = parsed.html
+              .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
+              .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '') // Remove styles
+              .replace(/on\w+="[^"]*"/gi, '') // Remove event handlers
+              .replace(/on\w+='[^']*'/gi, ''); // Remove event handlers (single quotes)
+          } else if (parsed.text) {
+            // Convert plain text to simple HTML
+            content = parsed.text
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/\n/g, '<br>');
+          }
 
           if (!content.trim()) {
             await client.messageFlagsAdd(uid, ['\\Seen']);
