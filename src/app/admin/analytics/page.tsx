@@ -256,7 +256,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Time Filter */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         {[
           { key: 'today', label: 'Heute' },
           { key: 'week', label: '7 Tage' },
@@ -266,7 +266,7 @@ export default function AnalyticsPage() {
           <button
             key={key}
             onClick={() => setTimeFilter(key as any)}
-            className={`px-4 py-2 text-sm font-medium rounded-full transition-all ${
+            className={`px-4 py-3 min-h-[44px] text-sm font-medium rounded-full transition-all ${
               timeFilter === key
                 ? 'bg-brand text-white'
                 : 'bg-apple-gray-100 text-apple-gray-600 hover:bg-apple-gray-200'

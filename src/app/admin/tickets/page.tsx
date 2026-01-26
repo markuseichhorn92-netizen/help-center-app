@@ -422,31 +422,31 @@ export default function TicketsPage() {
                   </svg>
                 </button>
                 {showStatusMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-apple-lg shadow-lg border border-apple-gray-200 py-1 z-20">
+                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-48 bg-white rounded-apple-lg shadow-lg border border-apple-gray-200 py-1 z-20">
                     <button
                       onClick={() => handleBatchStatusChange('open')}
-                      className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-blue-50 flex items-center gap-2"
+                      className="w-full px-4 py-3 text-left text-sm text-apple-gray-600 hover:bg-blue-50 flex items-center gap-2"
                     >
                       <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                       Offen
                     </button>
                     <button
                       onClick={() => handleBatchStatusChange('in_progress')}
-                      className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-amber-50 flex items-center gap-2"
+                      className="w-full px-4 py-3 text-left text-sm text-apple-gray-600 hover:bg-amber-50 flex items-center gap-2"
                     >
                       <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                       In Bearbeitung
                     </button>
                     <button
                       onClick={() => handleBatchStatusChange('resolved')}
-                      className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-green-50 flex items-center gap-2"
+                      className="w-full px-4 py-3 text-left text-sm text-apple-gray-600 hover:bg-green-50 flex items-center gap-2"
                     >
                       <span className="w-2 h-2 rounded-full bg-green-500"></span>
                       Gelöst
                     </button>
                     <button
                       onClick={() => handleBatchStatusChange('closed')}
-                      className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                      className="w-full px-4 py-3 text-left text-sm text-apple-gray-600 hover:bg-gray-50 flex items-center gap-2"
                     >
                       <span className="w-2 h-2 rounded-full bg-gray-500"></span>
                       Geschlossen
@@ -810,7 +810,7 @@ export default function TicketsPage() {
               <button
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Erste Seite"
               >
                 <svg className="w-4 h-4 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -820,7 +820,7 @@ export default function TicketsPage() {
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Vorherige Seite"
               >
                 <svg className="w-4 h-4 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -828,14 +828,14 @@ export default function TicketsPage() {
                 </svg>
               </button>
 
-              <span className="px-3 py-1 text-sm text-apple-gray-600">
+              <span className="px-3 py-2 text-sm text-apple-gray-600">
                 Seite {currentPage} von {totalPages || 1}
               </span>
 
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className="p-2 rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Nächste Seite"
               >
                 <svg className="w-4 h-4 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -845,7 +845,7 @@ export default function TicketsPage() {
               <button
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className="p-2 rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-3 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-apple-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Letzte Seite"
               >
                 <svg className="w-4 h-4 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

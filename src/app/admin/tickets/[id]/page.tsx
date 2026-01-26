@@ -934,16 +934,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   </div>
                 )}
 
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 text-sm text-apple-gray-500">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-3">
+                  <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                    <label className="flex items-center gap-2 text-sm text-apple-gray-500 min-h-[44px]">
                       <input
                         type="checkbox"
                         checked={sendEmail}
                         onChange={(e) => setSendEmail(e.target.checked)}
-                        className="rounded border-apple-gray-300 text-brand focus:ring-brand"
+                        className="w-5 h-5 rounded border-apple-gray-300 text-brand focus:ring-brand"
                       />
-                      Auch per E-Mail senden
+                      <span className="hidden sm:inline">Auch per E-Mail senden</span>
+                      <span className="sm:hidden">E-Mail</span>
                     </label>
 
                     {/* File Upload Button */}
@@ -958,29 +959,29 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploading}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-apple-gray-500 hover:text-apple-gray-700 transition-colors disabled:opacity-50"
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-3 min-h-[44px] text-sm text-apple-gray-500 hover:text-apple-gray-700 hover:bg-apple-gray-100 rounded-lg transition-colors disabled:opacity-50"
                     >
                       {uploading ? (
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                       ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                         </svg>
                       )}
-                      Datei anhängen
+                      <span className="hidden sm:inline">Datei anhängen</span>
                     </button>
                   </div>
                   <button
                     type="submit"
                     disabled={sending || !replyContent.trim()}
-                    className="px-5 py-2 bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-6 py-3 min-h-[44px] bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {sending ? (
                       <>
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -988,7 +989,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                       </>
                     ) : (
                       <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
                         Senden
