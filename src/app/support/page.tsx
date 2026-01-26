@@ -45,7 +45,8 @@ export default function SupportPage() {
 
   if (submitted) {
     return (
-      <div className="animate-fade-in max-w-2xl mx-auto">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+        <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-8 text-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,12 +76,13 @@ export default function SupportPage() {
             Zurück zum Hilfe-Center
           </Link>
         </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
       {/* Header */}
       <div className="text-center mb-10">
         <h1 className="text-3xl md:text-4xl font-bold text-apple-gray-600 tracking-tight mb-3">

@@ -1,17 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 
+interface Category {
+  id: string;
+  name: string;
+  icon: string;
+  description?: string;
+}
+
 export default function NewArticlePage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<Category[]>([]);
   const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Load categories
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => setCategories(data))
+      .catch(() => {});
+  }, []);
 
   // AI States
   const [showAIModal, setShowAIModal] = useState(false);
@@ -39,7 +56,7 @@ export default function NewArticlePage() {
             `${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`
           )}`,
         },
-        body: JSON.stringify({ title, content, published }),
+        body: JSON.stringify({ title, content, category, published }),
       });
 
       if (!res.ok) {
@@ -142,7 +159,8 @@ export default function NewArticlePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto animate-fade-in">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="max-w-3xl mx-auto animate-fade-in">
       {/* Back Link */}
       <div className="mb-8">
         <Link
@@ -187,20 +205,47 @@ export default function NewArticlePage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Title Card */}
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
-          <label htmlFor="title" className="block text-sm font-semibold text-apple-gray-600 mb-2">
-            Artikeltitel
-          </label>
-          <input
-            type="text"
-            id="title"
-            className="w-full px-4 py-3 bg-apple-gray-50 border border-apple-gray-200 rounded-apple-lg text-apple-gray-600 placeholder:text-apple-gray-400 focus:outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all duration-200"
-            placeholder="z.B. Wie fange ich an?"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-          />
+        {/* Title & Category Card */}
+        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6 space-y-5">
+          <div>
+            <label htmlFor="title" className="block text-sm font-semibold text-apple-gray-600 mb-2">
+              Artikeltitel
+            </label>
+            <input
+              type="text"
+              id="title"
+              className="w-full px-4 py-3 bg-apple-gray-50 border border-apple-gray-200 rounded-apple-lg text-apple-gray-600 placeholder:text-apple-gray-400 focus:outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all duration-200"
+              placeholder="z.B. Wie fange ich an?"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="category" className="block text-sm font-semibold text-apple-gray-600 mb-2">
+              Kategorie
+            </label>
+            <select
+              id="category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-4 py-3 bg-apple-gray-50 border border-apple-gray-200 rounded-apple-lg text-apple-gray-600 focus:outline-none focus:ring-4 focus:ring-brand/10 focus:border-brand transition-all duration-200 appearance-none cursor-pointer"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2386868B'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right 12px center",
+                backgroundSize: "20px",
+              }}
+            >
+              <option value="">Keine Kategorie</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Content Card */}
@@ -492,6 +537,7 @@ export default function NewArticlePage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

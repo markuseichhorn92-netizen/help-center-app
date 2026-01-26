@@ -75,7 +75,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="animate-fade-in">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
         <div className="py-12 text-center">
           <div className="inline-flex items-center gap-3 text-apple-gray-400">
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="animate-fade-in">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
         <div className="bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-apple-lg" role="alert">
           <div className="flex items-center gap-3">
             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +105,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
