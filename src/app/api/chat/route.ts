@@ -106,10 +106,13 @@ export async function POST(req: NextRequest) {
       escalated: false,
       wantsHuman: aiResponse.wantsHuman,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Chat API error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error("Error details:", errorMessage, errorStack);
     return NextResponse.json(
-      { error: "Server error", details: error.message },
+      { error: errorMessage || "Unbekannter Fehler", details: errorStack },
       { status: 500 }
     );
   }

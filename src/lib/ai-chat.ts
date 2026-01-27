@@ -48,7 +48,10 @@ export function wantsHumanSupport(message: string): boolean {
  * Create a new chat session
  */
 export async function createChatSession(email?: string): Promise<ChatSession> {
+  console.log("createChatSession: Starting...");
   const sessionId = uuidv4();
+  console.log("createChatSession: Generated sessionId:", sessionId);
+
   const session: ChatSession = {
     sessionId,
     email,
@@ -63,9 +66,12 @@ export async function createChatSession(email?: string): Promise<ChatSession> {
     messages: JSON.stringify(session.messages),
   };
 
+  console.log("createChatSession: Saving to KV...");
   await kv.hset(`chat:session:${sessionId}`, toStore as Record<string, unknown>);
+  console.log("createChatSession: Setting expiry...");
   // Sessions expire after 24 hours
   await kv.expire(`chat:session:${sessionId}`, 24 * 60 * 60);
+  console.log("createChatSession: Done");
 
   return session;
 }
