@@ -5,25 +5,36 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, use } from "react";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 
-// Format message content based on whether it contains HTML or is plain text
+// Format message content based on channel and content type
 function formatMessageContent(content: string, channel?: string): string {
-  // If the content contains HTML tags (like <p>, <br>, <div>), render as HTML
-  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
+  // WhatsApp messages are ALWAYS plain text - strip any HTML tags
+  if (channel === 'whatsapp') {
+    // Remove all HTML tags (they shouldn't be there for WhatsApp)
+    const plainText = content.replace(/<[^>]*>/g, '');
+    // Escape any remaining special characters and convert newlines
+    return plainText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+      .replace(/\n/g, '<br />');
+  }
 
+  // For email/web: If content has HTML tags, render as HTML
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
   if (hasHtmlTags) {
     return content;
   }
 
-  // For plain text (WhatsApp, plain emails), escape HTML and convert newlines
-  const escaped = content
+  // Plain text - escape HTML and convert newlines
+  return content
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
-  // Convert newlines to <br> for proper display
-  return escaped.replace(/\n/g, '<br />');
+    .replace(/'/g, '&#039;')
+    .replace(/\n/g, '<br />');
 }
 
 interface Ticket {

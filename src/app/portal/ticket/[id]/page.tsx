@@ -36,25 +36,36 @@ const statusLabels: Record<string, { label: string; color: string; bg: string }>
   closed: { label: "Geschlossen", color: "text-gray-600", bg: "bg-gray-100" },
 };
 
-// Format message content based on whether it contains HTML or is plain text
-function formatMessageContent(content: string): string {
-  // If the content contains HTML tags (like <p>, <br>, <div>), render as HTML
-  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
+// Format message content based on channel and content type
+function formatMessageContent(content: string, channel?: string): string {
+  // WhatsApp messages are ALWAYS plain text - strip any HTML tags
+  if (channel === 'whatsapp') {
+    // Remove all HTML tags (they shouldn't be there for WhatsApp)
+    const plainText = content.replace(/<[^>]*>/g, '');
+    // Escape any remaining special characters and convert newlines
+    return plainText
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+      .replace(/\n/g, '<br />');
+  }
 
+  // For email/web: If content has HTML tags, render as HTML
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
   if (hasHtmlTags) {
     return content;
   }
 
-  // For plain text (WhatsApp, plain messages), escape HTML and convert newlines
-  const escaped = content
+  // Plain text - escape HTML and convert newlines
+  return content
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-
-  // Convert newlines to <br> for proper display
-  return escaped.replace(/\n/g, '<br />');
+    .replace(/'/g, '&#039;')
+    .replace(/\n/g, '<br />');
 }
 
 export default function PortalTicketPage({ params }: { params: Promise<{ id: string }> }) {
@@ -609,7 +620,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                         isCustomer ? "text-white" : "text-apple-gray-600"
                       }`}
                       style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
-                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
+                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content, ticket?.channel) }}
                     />
 
                     {/* Attachments */}
