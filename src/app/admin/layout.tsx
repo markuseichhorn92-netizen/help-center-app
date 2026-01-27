@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AdminHeader from "@/components/AdminHeader";
 
 export default function AdminLayout({
@@ -10,9 +10,28 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   // Don't show header on login page
   const isLoginPage = pathname === "/admin/login";
+
+  // Listen for messages from Service Worker (for notification clicks)
+  useEffect(() => {
+    if (isLoginPage) return;
+    if (!("serviceWorker" in navigator)) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      console.log("[App] Received message from SW:", event.data);
+      if (event.data?.type === "NAVIGATE" && event.data?.url) {
+        router.push(event.data.url);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+    };
+  }, [isLoginPage, router]);
 
   // Register service worker for push notifications
   useEffect(() => {
