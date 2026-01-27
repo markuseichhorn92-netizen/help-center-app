@@ -4,6 +4,7 @@ import { createClient } from '@vercel/kv';
 import { put } from '@vercel/blob';
 import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment } from './tickets';
 import { parseTicketNumberFromSubject, sendTicketConfirmation } from './resend';
+import { ensureContactFromTicket, updateLastContact } from './contacts';
 
 const kv = createClient({
   url: process.env.KV_REST_API_URL || '',
@@ -239,6 +240,9 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
                 debug.push(`Ticket ${ticketNumber} wurde wieder geöffnet (Kundenantwort)`);
               }
 
+              // Update contact last activity
+              await updateLastContact(senderEmail);
+
               console.log(`Added reply to ticket ${ticketNumber} from ${senderEmail}`);
               results.processed++;
 
@@ -264,6 +268,12 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             content: content.trim(),
             priority: 'medium',
             attachments,
+          });
+
+          // Ensure contact exists
+          await ensureContactFromTicket({
+            name: senderName,
+            email: senderEmail,
           });
 
           // Send confirmation (temporarily disabled)

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTicket, createMessage, findTicketsByPhone, findTicketByNumber, parseTicketNumberFromSubject, updateTicket, Attachment } from '@/lib/tickets';
+import { ensureContactFromTicket, updateLastContact } from '@/lib/contacts';
 import crypto from 'crypto';
 
 // Validate Twilio request signature
@@ -168,6 +169,9 @@ export async function POST(req: NextRequest) {
         await updateTicket(existingTicket.id, { status: 'open' });
       }
 
+      // Update contact last activity
+      await updateLastContact(`${phoneNumber}@whatsapp`);
+
       return new Response(
         '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
         { status: 200, headers: { 'Content-Type': 'text/xml' } }
@@ -184,6 +188,13 @@ export async function POST(req: NextRequest) {
       channel: 'whatsapp',
       phone: phoneNumber,
       attachments: attachments.length > 0 ? attachments : undefined,
+    });
+
+    // Ensure contact exists
+    await ensureContactFromTicket({
+      name: profileName || phoneNumber,
+      email: `${phoneNumber}@whatsapp`,
+      phone: phoneNumber,
     });
 
     console.log(`New WhatsApp ticket created: ${ticket.ticketNumber}`);

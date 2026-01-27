@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTicket } from '@/lib/tickets';
+import { ensureContactFromTicket } from '@/lib/contacts';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,6 +30,12 @@ export async function POST(req: NextRequest) {
       customerEmail,
       content,
       priority: priority || 'medium',
+    });
+
+    // Ensure contact exists
+    await ensureContactFromTicket({
+      name: customerName,
+      email: customerEmail,
     });
 
     return NextResponse.json(
