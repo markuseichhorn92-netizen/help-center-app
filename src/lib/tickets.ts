@@ -95,7 +95,8 @@ export async function createTicket(data: {
     createdAt: now,
     updatedAt: now,
     channel: data.channel || 'web',
-    aiStatus: 'active', // AI handles new tickets by default
+    // AI only for WhatsApp and Portal/Chat - NOT for emails
+    aiStatus: data.channel === 'email' ? 'disabled' : 'active',
     ...(data.phone && { phone: data.phone }),
   };
 
