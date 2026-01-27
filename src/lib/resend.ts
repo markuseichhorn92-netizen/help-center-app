@@ -49,7 +49,7 @@ export async function sendTicketConfirmation(
     const replyToEmail = process.env.IMAP_USER || SUPPORT_EMAIL;
 
     // Portal URL if token is provided
-    const portalUrl = portalToken ? `${BASE_URL}/portal/auth/verify?token=${portalToken}` : null;
+    const portalUrl = portalToken ? `${BASE_URL}/api/portal/auth/verify?token=${portalToken}` : null;
 
     await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
@@ -170,7 +170,7 @@ export async function sendTicketReply(
     const replyToEmail = process.env.IMAP_USER || SUPPORT_EMAIL;
 
     // Portal URL if token is provided
-    const portalUrl = portalToken ? `${BASE_URL}/portal/auth/verify?token=${portalToken}` : null;
+    const portalUrl = portalToken ? `${BASE_URL}/api/portal/auth/verify?token=${portalToken}` : null;
 
     const result = await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
@@ -310,7 +310,7 @@ export async function sendPortalMagicLink(
   ticketNumber?: string
 ): Promise<boolean> {
   try {
-    const portalUrl = `${BASE_URL}/portal/auth/verify?token=${token}`;
+    const portalUrl = `${BASE_URL}/api/portal/auth/verify?token=${token}`;
     const replyToEmail = process.env.IMAP_USER || SUPPORT_EMAIL;
 
     await getResend().emails.send({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTicket, createMessage, getTicketMessages, updateTicket, Attachment } from '@/lib/tickets';
 import { sendTicketReply } from '@/lib/resend';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { generatePortalToken } from '@/lib/portal';
 
 export async function POST(
   req: NextRequest,
@@ -95,6 +96,9 @@ export async function POST(
       console.log('RESEND_API_KEY configured:', !!process.env.RESEND_API_KEY);
       console.log('SUPPORT_EMAIL:', process.env.SUPPORT_EMAIL);
 
+      // Generate portal token for direct access
+      const portalToken = await generatePortalToken(ticket.customerEmail, id);
+
       const emailResult = await sendTicketReply(
         ticket.customerEmail,
         ticket.customerName,
@@ -103,7 +107,8 @@ export async function POST(
         content,
         lastMessage?.emailMessageId,
         attachments,
-        messages // Pass conversation history
+        messages, // Pass conversation history
+        portalToken.token
       );
 
       console.log('Email result:', emailResult);

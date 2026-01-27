@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTicket } from '@/lib/tickets';
 import { ensureContactFromTicket } from '@/lib/contacts';
 import { sendTicketReply } from '@/lib/resend';
+import { generatePortalToken } from '@/lib/portal';
 
 // POST /api/admin/tickets/create - Create new ticket from admin
 export async function POST(req: NextRequest) {
@@ -103,12 +104,19 @@ export async function POST(req: NextRequest) {
 
     if (sendEmail) {
       try {
+        // Generate portal token for direct access
+        const portalToken = await generatePortalToken(customerEmail, ticketId);
+
         const emailResult = await sendTicketReply(
           customerEmail,
           customerName,
           properTicketNumber,
           subject,
-          content
+          content,
+          undefined, // messageId
+          undefined, // attachments
+          undefined, // conversationHistory
+          portalToken.token
         );
 
         if (emailResult.success && emailResult.messageId) {

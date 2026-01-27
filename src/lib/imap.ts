@@ -5,6 +5,7 @@ import { put } from '@vercel/blob';
 import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment } from './tickets';
 import { parseTicketNumberFromSubject, sendTicketConfirmation } from './resend';
 import { ensureContactFromTicket, updateLastContact } from './contacts';
+import { generatePortalToken } from './portal';
 
 const kv = createClient({
   url: process.env.KV_REST_API_URL || '',
@@ -276,13 +277,18 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             email: senderEmail,
           });
 
-          // Send confirmation (temporarily disabled)
-          // await sendTicketConfirmation(
-          //   senderEmail,
-          //   senderName,
-          //   ticket.ticketNumber,
-          //   cleanSubject
-          // );
+          // Generate portal token for direct access
+          const portalToken = await generatePortalToken(senderEmail, ticket.id);
+
+          // Send confirmation email with portal link
+          await sendTicketConfirmation(
+            senderEmail,
+            senderName,
+            ticket.ticketNumber,
+            cleanSubject,
+            ticket.id,
+            portalToken.token
+          );
 
           console.log(`Created ticket ${ticket.ticketNumber} from email by ${senderEmail}`);
           results.processed++;
