@@ -15,7 +15,15 @@
       "Bash(npm run dev:*)",
       "Bash(timeout:*)",
       "Bash(curl:*)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(npm uninstall:*)",
+      "WebFetch(domain:hilfe.fit-inn-trier.de)",
+      "Bash(node:*)",
+      "Bash(powershell:*)",
+      "Bash(grep:*)",
+      "Bash(git restore:*)",
+      "WebFetch(domain:fit-inn-trier.de)",
+      "WebFetch(domain:cdn.sanity.io)"
     ]
   }
 }

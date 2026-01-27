@@ -57,7 +57,13 @@ export async function createChatSession(email?: string): Promise<ChatSession> {
     escalated: false,
   };
 
-  await kv.hset(`chat:session:${sessionId}`, session as Record<string, unknown>);
+  // Store with messages as JSON string (like updateChatSession does)
+  const toStore = {
+    ...session,
+    messages: JSON.stringify(session.messages),
+  };
+
+  await kv.hset(`chat:session:${sessionId}`, toStore as Record<string, unknown>);
   // Sessions expire after 24 hours
   await kv.expire(`chat:session:${sessionId}`, 24 * 60 * 60);
 
@@ -73,7 +79,16 @@ export async function getChatSession(sessionId: string): Promise<ChatSession | n
 
   // Parse messages if stored as string
   if (typeof data.messages === "string") {
-    data.messages = JSON.parse(data.messages);
+    try {
+      data.messages = JSON.parse(data.messages);
+    } catch {
+      data.messages = [];
+    }
+  }
+
+  // Ensure messages is always an array
+  if (!Array.isArray(data.messages)) {
+    data.messages = [];
   }
 
   return data;
