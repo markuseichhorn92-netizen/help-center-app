@@ -6,11 +6,19 @@ import { useState, useEffect, useRef, use } from "react";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 
 // Format message content based on channel and content type
-function formatMessageContent(content: string, channel?: string): string {
+function formatMessageContent(content: string | null | undefined, channel?: string): string {
+  // Handle null/undefined content
+  if (!content) {
+    return '';
+  }
+
+  // Ensure content is a string
+  const strContent = String(content);
+
   // WhatsApp messages are ALWAYS plain text - strip any HTML tags
   if (channel === 'whatsapp') {
     // Remove all HTML tags (they shouldn't be there for WhatsApp)
-    const plainText = content.replace(/<[^>]*>/g, '');
+    const plainText = strContent.replace(/<[^>]*>/g, '');
     // Escape any remaining special characters and convert newlines
     return plainText
       .replace(/&/g, '&amp;')
@@ -22,13 +30,13 @@ function formatMessageContent(content: string, channel?: string): string {
   }
 
   // For email/web: If content has HTML tags, render as HTML
-  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(strContent);
   if (hasHtmlTags) {
-    return content;
+    return strContent;
   }
 
   // Plain text - escape HTML and convert newlines
-  return content
+  return strContent
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -2198,7 +2206,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     <p className="text-xs font-medium text-apple-gray-400 uppercase tracking-wider mb-2">Kontext</p>
                     <div className="bg-apple-gray-50 rounded-xl p-3 space-y-2 max-h-32 overflow-y-auto">
                       {messages.slice(-3).map((msg, idx) => {
-                        const content = msg.content || '';
+                        const content = String(msg.content || '');
                         const cleanContent = content.replace(/<[^>]*>/g, '').trim();
                         return (
                           <div key={msg.id || idx} className="flex items-start gap-2">
