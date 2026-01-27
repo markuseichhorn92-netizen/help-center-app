@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import AdminHeader from "@/components/AdminHeader";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function AdminLayout({
   children,
@@ -88,7 +89,9 @@ export default function AdminLayout({
     <div className="min-h-screen bg-apple-gray-50">
       <AdminHeader />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
     </div>
   );
