@@ -1,6 +1,6 @@
 // FIT INN Admin Service Worker for Push Notifications
 
-const CACHE_NAME = 'fitinn-admin-v4';
+const CACHE_NAME = 'fitinn-admin-v5';
 
 // Install event
 self.addEventListener('install', (event) => {
@@ -83,7 +83,7 @@ self.addEventListener('push', (event) => {
 
 // Notification click event
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event);
+  console.log('[SW] Notification clicked');
 
   event.notification.close();
 
@@ -92,41 +92,13 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   const urlToOpen = event.notification.data?.url || '/admin/tickets';
-
-  // Build full URL
   const fullUrl = new URL(urlToOpen, self.location.origin).href;
-  console.log('[SW] Opening URL:', fullUrl);
 
+  // Simple approach: just open the URL
+  // This works on all platforms including iOS
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      console.log('[SW] Found clients:', clientList.length);
-
-      // Check if there's already a window open with the admin area
-      for (const client of clientList) {
-        if (client.url.includes('/admin') && 'focus' in client) {
-          console.log('[SW] Focusing existing client');
-          // Focus the existing window and navigate via postMessage
-          client.focus();
-          // Send message to navigate
-          client.postMessage({
-            type: 'NAVIGATE',
-            url: urlToOpen
-          });
-          return;
-        }
-      }
-
-      // Open new window if none exists
-      console.log('[SW] Opening new window');
-      if (clients.openWindow) {
-        return clients.openWindow(fullUrl);
-      }
-    }).catch((error) => {
-      console.error('[SW] Error handling notification click:', error);
-      // Fallback: just open the URL
-      if (clients.openWindow) {
-        return clients.openWindow(fullUrl);
-      }
+    clients.openWindow(fullUrl).catch((error) => {
+      console.error('[SW] openWindow failed:', error);
     })
   );
 });
