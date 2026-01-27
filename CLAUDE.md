@@ -28,8 +28,11 @@ npm run lint     # ESLint
 ### Key Directories
 - `src/app/` - Next.js App Router pages and API routes
 - `src/app/admin/` - Admin dashboard with dedicated layout and header
-- `src/lib/` - Service modules (tickets.ts, categories.ts, analytics.ts, feedback.ts, imap.ts, resend.ts, whatsapp.ts)
+- `src/app/portal/` - Customer portal for ticket viewing/creation
+- `src/app/chat/` - Standalone AI chat page
+- `src/lib/` - Service modules (tickets.ts, categories.ts, analytics.ts, feedback.ts, imap.ts, resend.ts, whatsapp.ts, push-notifications.ts)
 - `src/components/` - Reusable React components including AdminHeader
+- `src/components/editor/` - TipTap rich text editor with extensions (CalloutExtension, etc.)
 
 ### Admin Layout Structure
 - `src/app/admin/layout.tsx` - Shared layout with AdminHeader (excludes login page)
@@ -104,13 +107,20 @@ npm run lint     # ESLint
 - Tracking: `/api/webhooks/whatsapp-status` - Receives `sent`, `delivered`, `read`, `failed`
 
 **Real-time Status Updates:**
-- Ticket detail page polls messages every 3 seconds
+- Ticket detail page polls messages every 5 seconds
+- Ticket list page polls every 15 seconds
 - Status icons: Single checkmark (sent), Double checkmark (delivered), Blue double checkmark (read)
 
 ### AI Autoreply System
 
+**Channel-based AI Defaults:**
+- `email` channel → `aiStatus: 'disabled'` - No automatic AI responses for emails
+- `whatsapp` channel → `aiStatus: 'active'` - AI responds automatically
+- `web` channel (Portal/Chat) → `aiStatus: 'active'` - AI responds automatically
+
 **KI-Handling Workflow:**
-- New tickets start with `aiStatus: 'active'` - AI responds automatically
+- New WhatsApp/Web tickets start with `aiStatus: 'active'` - AI responds automatically
+- New Email tickets start with `aiStatus: 'disabled'` - requires manual handling
 - Customer writes "Mitarbeiter" → `aiStatus: 'escalated'` - AI stops, ticket moves to "Offen"
 - Admin clicks "KI deaktivieren" → `aiStatus: 'disabled'` - AI stops, ticket moves to "Offen"
 - Admin can re-enable AI → `aiStatus: 'active'` - ticket moves back to "KI bearbeitet"
@@ -136,6 +146,42 @@ Located at `/chat` - standalone chat without login requirement:
 - `src/app/api/chat/route.ts` - AI chat endpoint
 - `src/app/api/chat/escalate/route.ts` - Ticket creation from chat
 
+### Customer Portal
+
+Located at `/portal` - customers can view and manage their tickets:
+- Login via email + ticket number (no password required)
+- View all tickets associated with email address
+- Create new tickets from portal
+- Real-time chat with support in ticket detail view
+
+**Files:**
+- `src/app/portal/page.tsx` - Login page
+- `src/app/portal/tickets/page.tsx` - Ticket list
+- `src/app/portal/ticket/[id]/page.tsx` - Ticket detail with chat
+- `src/app/portal/tickets/new/page.tsx` - Create new ticket
+- `src/lib/portal.ts` - Portal authentication logic
+
+**Data Layer:**
+- `portal:session:{token}` - Session data with email
+- Authentication via `/api/portal/auth/login` and `/api/portal/auth/logout`
+
+### Push Notifications (Admin)
+
+Web Push notifications for admins when new tickets arrive:
+- Service Worker at `public/sw.js`
+- VAPID-based authentication
+- Notifications for new tickets and messages
+
+**Files:**
+- `src/lib/push-notifications.ts` - Send notifications, manage subscriptions
+- `src/app/api/admin/push/subscribe/route.ts` - Save subscription
+- `src/app/api/admin/push/unsubscribe/route.ts` - Remove subscription
+- `src/components/AdminHeader.tsx` - Notification bell with subscription toggle
+
+**Data Layer:**
+- `push:subscription:{id}` - Hash with endpoint, keys
+- `push:subscriptions` - Set of all subscription IDs
+
 ## Environment Variables
 
 Required:
@@ -147,6 +193,8 @@ Required:
 - `NEXT_PUBLIC_BASE_URL` - Required for webhook callbacks (e.g., `https://hilfe.fit-inn-trier.de`)
 - `ANTHROPIC_API_KEY` - Claude AI for ticket responses
 - `CRON_SECRET` - Cron job authentication
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` - Web Push notifications
+- `VAPID_SUBJECT` - mailto: address for VAPID (defaults to support email)
 
 ## Styling
 
