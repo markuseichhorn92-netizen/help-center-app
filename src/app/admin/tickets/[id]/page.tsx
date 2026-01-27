@@ -1954,7 +1954,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-apple-gray-600 line-clamp-2">{selectedArticle.title}</p>
                       <p className="text-xs text-apple-gray-400 mt-1">
-                        hilfe.fit-inn-trier.de/artikel/{selectedArticle.slug}
+                        hilfe.fit-inn-trier.de/articles/{selectedArticle.id}
                       </p>
                     </div>
                   </div>

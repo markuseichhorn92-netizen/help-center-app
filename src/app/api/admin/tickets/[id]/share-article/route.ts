@@ -16,7 +16,7 @@ interface Article {
 
 // Generate beautiful Apple-style article card HTML for chat/email
 function generateArticleCardHTML(article: Article, baseUrl: string): string {
-  const articleUrl = `${baseUrl}/artikel/${article.slug}`;
+  const articleUrl = `${baseUrl}/articles/${article.id}`;
 
   // Extract first 150 characters of content as preview (strip HTML)
   const previewText = article.content
@@ -67,7 +67,7 @@ function generateArticleCardHTML(article: Article, baseUrl: string): string {
 
 // Generate WhatsApp-friendly text message
 function generateWhatsAppMessage(article: Article, baseUrl: string): string {
-  const articleUrl = `${baseUrl}/artikel/${article.slug}`;
+  const articleUrl = `${baseUrl}/articles/${article.id}`;
   const previewText = article.content
     .replace(/<[^>]*>/g, "")
     .replace(/\s+/g, " ")
