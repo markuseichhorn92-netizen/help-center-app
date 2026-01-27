@@ -19,6 +19,14 @@ export const metadata: Metadata = {
     initialScale: 1,
     maximumScale: 1,
   },
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
