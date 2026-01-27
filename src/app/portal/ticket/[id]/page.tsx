@@ -514,7 +514,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 </svg>
               </Link>
               <Image
-                src="/logo.png"
+                src="/logo.svg"
                 alt="FIT INN"
                 width={100}
                 height={25}

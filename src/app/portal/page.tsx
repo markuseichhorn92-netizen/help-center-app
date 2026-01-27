@@ -117,7 +117,7 @@ export default function PortalLoginPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center bg-white rounded-apple-lg shadow-card p-4 mb-6">
             <Image
-              src="/logo.png"
+              src="/logo.svg"
               alt="FIT INN"
               width={140}
               height={35}
