@@ -311,11 +311,42 @@ body {
   margin: 0 !important;
 }
 
+/* Strong/Bold text inside callouts */
+.prose [data-callout] strong,
+.prose div.callout strong,
+.callout strong {
+  font-weight: 600 !important;
+  color: inherit !important;
+}
+
+/* Ensure inline text in callouts wraps properly */
+.prose [data-callout],
+.prose div.callout,
+.callout {
+  line-height: 1.5 !important;
+}
+
+/* Fix for callout content that might not be wrapped in p tags */
+.prose [data-callout] > p,
+.prose div.callout > p,
+.callout > p {
+  display: inline !important;
+}
+
+/* Multiple paragraphs in callouts */
+.prose [data-callout] > p + p,
+.prose div.callout > p + p,
+.callout > p + p {
+  display: block !important;
+  margin-top: 0.5rem !important;
+}
+
 .prose .callout-info,
 .prose [data-type="info"],
 .prose [data-callout-type="info"] {
   background: #EBF5FF !important;
   border-left-color: #3B82F6 !important;
+  color: #1e40af !important;
 }
 
 .prose .callout-info::before,
@@ -329,6 +360,7 @@ body {
 .prose [data-callout-type="success"] {
   background: #ECFDF5 !important;
   border-left-color: #10B981 !important;
+  color: #065f46 !important;
 }
 
 .prose .callout-success::before,
@@ -342,6 +374,7 @@ body {
 .prose [data-callout-type="warning"] {
   background: #FFFBEB !important;
   border-left-color: #F59E0B !important;
+  color: #92400e !important;
 }
 
 .prose .callout-warning::before,
@@ -356,6 +389,7 @@ body {
 .prose [data-callout-type="danger"] {
   background: #FEF2F2 !important;
   border-left-color: #EF4444 !important;
+  color: #991b1b !important;
 }
 
 .prose .callout-error::before,
