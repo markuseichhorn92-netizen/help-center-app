@@ -23,7 +23,8 @@
       "Bash(grep:*)",
       "Bash(git restore:*)",
       "WebFetch(domain:fit-inn-trier.de)",
-      "WebFetch(domain:cdn.sanity.io)"
+      "WebFetch(domain:cdn.sanity.io)",
+      "Bash(npm ls:*)"
     ]
   }
 }

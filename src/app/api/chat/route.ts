@@ -16,7 +16,10 @@ export async function POST(req: NextRequest) {
 
     // Action: Start new session
     if (action === "start") {
+      console.log("Starting new chat session...");
       const session = await createChatSession(email);
+      console.log("Session created:", session.sessionId);
+
       const welcomeMessage = getWelcomeMessage();
 
       // Add welcome message to session
@@ -25,6 +28,7 @@ export async function POST(req: NextRequest) {
         content: welcomeMessage,
         timestamp: new Date().toISOString(),
       });
+      console.log("Welcome message added to session");
 
       return NextResponse.json({
         sessionId: session.sessionId,

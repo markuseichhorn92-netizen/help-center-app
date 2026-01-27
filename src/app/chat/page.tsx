@@ -47,11 +47,12 @@ export default function ChatPage() {
         body: JSON.stringify({ action: "start" }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        throw new Error(data.error || data.details || `HTTP ${res.status}`);
       }
 
-      const data = await res.json();
       if (data.sessionId) {
         setSessionId(data.sessionId);
         setMessages([
@@ -66,7 +67,8 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error("Failed to start session:", error);
-      setSessionError("Chat konnte nicht gestartet werden. Bitte Seite neu laden.");
+      const errorMsg = error instanceof Error ? error.message : "Unbekannter Fehler";
+      setSessionError(`Fehler: ${errorMsg}`);
     } finally {
       setIsStarting(false);
     }
