@@ -175,6 +175,23 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastMessageCountRef = useRef(0);
 
+  // Relevant articles state
+  const [relevantArticles, setRelevantArticles] = useState<Array<{
+    id: string;
+    title: string;
+    slug: string;
+    category?: string;
+  }>>([]);
+  const [articlesLoading, setArticlesLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState<{
+    id: string;
+    title: string;
+    slug: string;
+  } | null>(null);
+  const [shareChannel, setShareChannel] = useState<'auto' | 'live' | 'email' | 'whatsapp'>('auto');
+  const [sharingArticle, setSharingArticle] = useState(false);
+
   useEffect(() => {
     const updateRows = () => {
       setTextareaRows(window.innerWidth < 640 ? 3 : 4);
@@ -400,6 +417,27 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
     loadQuickReplies();
   }, []);
+
+  // Load relevant articles for this ticket
+  useEffect(() => {
+    const loadRelevantArticles = async () => {
+      try {
+        const res = await fetch(`/api/admin/tickets/${id}/relevant-articles`, {
+          headers: { Authorization: getAuthHeader() }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setRelevantArticles(data.articles || []);
+        }
+      } catch {
+        // Silently fail
+      } finally {
+        setArticlesLoading(false);
+      }
+    };
+
+    loadRelevantArticles();
+  }, [id]);
 
   // Load sound preference from localStorage
   useEffect(() => {
@@ -712,6 +750,49 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       alert("Fehler bei der KI-Bearbeitung: " + (err.message || "Unbekannter Fehler"));
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  // Share article with customer
+  const handleShareArticle = async () => {
+    if (!selectedArticle || !ticket) return;
+
+    setSharingArticle(true);
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}/share-article`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: getAuthHeader(),
+        },
+        body: JSON.stringify({
+          articleId: selectedArticle.id,
+          channel: shareChannel,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Fehler beim Teilen");
+      }
+
+      // Reload messages to show the shared article
+      const messagesRes = await fetch(`/api/admin/tickets/${id}/messages`, {
+        headers: { Authorization: getAuthHeader() }
+      });
+      if (messagesRes.ok) {
+        const messagesData = await messagesRes.json();
+        setMessages(messagesData);
+      }
+
+      setShowShareModal(false);
+      setSelectedArticle(null);
+      setShareChannel('auto');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSharingArticle(false);
     }
   };
 
@@ -1598,6 +1679,73 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
           </div>
+
+          {/* Relevant Articles */}
+          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-apple-gray-400 uppercase tracking-wider">Passende Artikel</h3>
+              <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            {articlesLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <svg className="w-5 h-5 animate-spin text-apple-gray-300" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            ) : relevantArticles.length === 0 ? (
+              <p className="text-sm text-apple-gray-400 text-center py-4">
+                Keine passenden Artikel gefunden
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {relevantArticles.map((article) => (
+                  <div
+                    key={article.id}
+                    className="group relative bg-apple-gray-50 hover:bg-brand/5 rounded-xl p-3 transition-all"
+                  >
+                    <div className="pr-8">
+                      <p className="text-sm font-medium text-apple-gray-600 group-hover:text-brand transition-colors line-clamp-2">
+                        {article.title}
+                      </p>
+                      {article.category && (
+                        <p className="text-xs text-apple-gray-400 mt-1">
+                          {article.category}
+                        </p>
+                      )}
+                    </div>
+                    {/* Share Button */}
+                    <button
+                      onClick={() => {
+                        setSelectedArticle(article);
+                        setShowShareModal(true);
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-brand text-white opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all hover:bg-brand-dark"
+                      title="Mit Kunde teilen"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+                {/* View All Articles Link */}
+                <a
+                  href="/admin/artikel"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-medium text-apple-gray-400 hover:text-brand transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  Alle Artikel
+                </a>
+              </div>
+            )}
+          </div>
         </div>
         </div>
         </div>
@@ -1740,6 +1888,239 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     {replyContent.trim() ? "Text bearbeiten" : "Antwort generieren"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Share Article Modal */}
+      {showShareModal && selectedArticle && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-50 animate-fade-in backdrop-blur-sm"
+            onClick={() => {
+              setShowShareModal(false);
+              setSelectedArticle(null);
+              setShareChannel('auto');
+            }}
+          />
+          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-md sm:w-full sm:mx-4">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl animate-slide-up sm:animate-fade-in">
+              {/* Header */}
+              <div className="border-b border-apple-gray-100">
+                <div className="flex justify-center pt-3 sm:hidden">
+                  <div className="w-12 h-1.5 bg-apple-gray-200 rounded-full"></div>
+                </div>
+                <div className="flex items-center justify-between px-5 py-4 sm:px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-apple-gray-600">Artikel teilen</h3>
+                      <p className="text-xs text-apple-gray-400">An Kunde senden</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowShareModal(false);
+                      setSelectedArticle(null);
+                      setShareChannel('auto');
+                    }}
+                    className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center text-apple-gray-500 hover:bg-apple-gray-200 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="px-5 py-4 sm:px-6">
+                {/* Article Preview */}
+                <div className="mb-5 p-4 bg-gradient-to-br from-apple-gray-50 to-apple-gray-100 rounded-xl border border-apple-gray-200">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-apple-gray-600 line-clamp-2">{selectedArticle.title}</p>
+                      <p className="text-xs text-apple-gray-400 mt-1">
+                        hilfe.fit-inn-trier.de/artikel/{selectedArticle.slug}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Channel Selection */}
+                <div>
+                  <p className="text-xs font-medium text-apple-gray-400 uppercase tracking-wider mb-3">Versandkanal</p>
+                  <div className="space-y-2">
+                    {/* Auto - Smart Selection */}
+                    <button
+                      onClick={() => setShareChannel('auto')}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                        shareChannel === 'auto'
+                          ? 'border-brand bg-brand/5'
+                          : 'border-apple-gray-200 hover:border-apple-gray-300'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        shareChannel === 'auto' ? 'bg-brand text-white' : 'bg-apple-gray-100 text-apple-gray-500'
+                      }`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className={`font-medium ${shareChannel === 'auto' ? 'text-brand' : 'text-apple-gray-600'}`}>
+                          Automatisch
+                        </p>
+                        <p className="text-xs text-apple-gray-400">
+                          {customerPresence.online ? 'Live-Chat (Kunde online)' : 'E-Mail (Kunde offline)'}
+                        </p>
+                      </div>
+                      {shareChannel === 'auto' && (
+                        <svg className="w-5 h-5 text-brand" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+
+                    {/* Live Chat */}
+                    <button
+                      onClick={() => setShareChannel('live')}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                        shareChannel === 'live'
+                          ? 'border-brand bg-brand/5'
+                          : 'border-apple-gray-200 hover:border-apple-gray-300'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        shareChannel === 'live' ? 'bg-brand text-white' : 'bg-apple-gray-100 text-apple-gray-500'
+                      }`}>
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className={`font-medium ${shareChannel === 'live' ? 'text-brand' : 'text-apple-gray-600'}`}>
+                          Live-Chat
+                        </p>
+                        <p className="text-xs text-apple-gray-400">Im Portal anzeigen</p>
+                      </div>
+                      {shareChannel === 'live' && (
+                        <svg className="w-5 h-5 text-brand" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+
+                    {/* Email */}
+                    <button
+                      onClick={() => setShareChannel('email')}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                        shareChannel === 'email'
+                          ? 'border-brand bg-brand/5'
+                          : 'border-apple-gray-200 hover:border-apple-gray-300'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        shareChannel === 'email' ? 'bg-brand text-white' : 'bg-apple-gray-100 text-apple-gray-500'
+                      }`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className={`font-medium ${shareChannel === 'email' ? 'text-brand' : 'text-apple-gray-600'}`}>
+                          E-Mail
+                        </p>
+                        <p className="text-xs text-apple-gray-400">Als schöne E-Mail senden</p>
+                      </div>
+                      {shareChannel === 'email' && (
+                        <svg className="w-5 h-5 text-brand" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+
+                    {/* WhatsApp - only if ticket is WhatsApp */}
+                    {ticket && (ticket as any).channel === 'whatsapp' && (
+                      <button
+                        onClick={() => setShareChannel('whatsapp')}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                          shareChannel === 'whatsapp'
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-apple-gray-200 hover:border-apple-gray-300'
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          shareChannel === 'whatsapp' ? 'bg-green-500 text-white' : 'bg-apple-gray-100 text-apple-gray-500'
+                        }`}>
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                          </svg>
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className={`font-medium ${shareChannel === 'whatsapp' ? 'text-green-600' : 'text-apple-gray-600'}`}>
+                            WhatsApp
+                          </p>
+                          <p className="text-xs text-apple-gray-400">Als WhatsApp-Nachricht</p>
+                        </div>
+                        {shareChannel === 'whatsapp' && (
+                          <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-apple-gray-100 px-5 py-4 sm:px-6 bg-apple-gray-50/50">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowShareModal(false);
+                      setSelectedArticle(null);
+                      setShareChannel('auto');
+                    }}
+                    className="flex-1 sm:flex-none px-5 py-3 text-apple-gray-600 font-medium rounded-xl border border-apple-gray-200 hover:bg-white transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={handleShareArticle}
+                    disabled={sharingArticle}
+                    className="flex-[2] sm:flex-1 px-5 py-3 bg-gradient-to-r from-brand to-brand-dark text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-brand/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {sharingArticle ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Senden...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        Artikel senden
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

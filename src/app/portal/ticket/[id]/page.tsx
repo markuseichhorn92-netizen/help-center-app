@@ -419,8 +419,8 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-4 w-full">
           {/* Welcome Message */}
           {messages.length === 0 && (
             <div className="text-center py-12">
@@ -462,13 +462,14 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 )}
 
                 {/* Message Bubble */}
-                <div className={`flex ${isCustomer ? "justify-end" : "justify-start"}`}>
+                <div className={`flex ${isCustomer ? "justify-end" : "justify-start"} max-w-full`}>
                   <div
-                    className={`max-w-[85%] sm:max-w-[70%] rounded-apple-lg px-4 py-3 overflow-hidden ${
+                    className={`max-w-[85%] sm:max-w-[70%] rounded-apple-lg px-4 py-3 overflow-hidden break-words ${
                       isCustomer
                         ? "bg-gradient-to-br from-brand to-brand-dark text-white rounded-br-md"
                         : "bg-white border border-apple-gray-200 text-apple-gray-600 rounded-bl-md"
                     }`}
+                    style={{ wordBreak: "break-word" }}
                   >
                     {/* Sender Name (for admin messages) */}
                     {!isCustomer && (
@@ -479,9 +480,10 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
 
                     {/* Message Content */}
                     <div
-                      className={`text-sm whitespace-pre-wrap break-words ${
+                      className={`text-sm whitespace-pre-wrap break-words overflow-hidden ${
                         isCustomer ? "text-white" : "text-apple-gray-600"
                       }`}
+                      style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
                       dangerouslySetInnerHTML={{ __html: message.content }}
                     />
 
