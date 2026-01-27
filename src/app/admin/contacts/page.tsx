@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 
 interface Contact {
@@ -19,15 +20,6 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [editingContact, setEditingContact] = useState<Contact | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    notes: "",
-  });
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,51 +47,6 @@ export default function ContactsPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-    setError(null);
-
-    try {
-      const url = editingContact
-        ? `/api/admin/contacts/${editingContact.id}`
-        : "/api/admin/contacts";
-      const method = editingContact ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Fehler beim Speichern");
-      }
-
-      setShowModal(false);
-      setEditingContact(null);
-      setFormData({ name: "", email: "", phone: "", notes: "" });
-      await loadContacts();
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleEdit = (contact: Contact) => {
-    setEditingContact(contact);
-    setFormData({
-      name: contact.name,
-      email: contact.email,
-      phone: contact.phone || "",
-      notes: contact.notes || "",
-    });
-    setShowModal(true);
-  };
-
   const handleDelete = async (id: string) => {
     if (!confirm("Kontakt wirklich löschen?")) return;
 
@@ -114,12 +61,6 @@ export default function ContactsPage() {
     } catch (err: any) {
       alert(err.message);
     }
-  };
-
-  const openNewModal = () => {
-    setEditingContact(null);
-    setFormData({ name: "", email: "", phone: "", notes: "" });
-    setShowModal(true);
   };
 
   const filteredContacts = contacts.filter((c) => {
@@ -148,6 +89,21 @@ export default function ContactsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="animate-fade-in">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-6 py-4 rounded-apple-lg" role="alert">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Fehler: {error}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-in">
       {/* Header */}
@@ -158,15 +114,15 @@ export default function ContactsPage() {
             {contacts.length} Kontakt{contacts.length !== 1 ? "e" : ""} gespeichert
           </p>
         </div>
-        <button
-          onClick={openNewModal}
+        <Link
+          href="/admin/contacts/new"
           className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
           </svg>
           Neuer Kontakt
-        </button>
+        </Link>
       </div>
 
       {/* Search */}
@@ -195,15 +151,27 @@ export default function ContactsPage() {
               </svg>
             </div>
             <p className="text-apple-gray-500 text-lg mb-2">Keine Kontakte gefunden</p>
-            <p className="text-apple-gray-400 text-sm">
+            <p className="text-apple-gray-400 text-sm mb-4">
               {searchQuery ? "Versuche einen anderen Suchbegriff." : "Erstelle deinen ersten Kontakt."}
             </p>
+            {!searchQuery && (
+              <Link
+                href="/admin/contacts/new"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white font-medium rounded-full hover:bg-brand-dark transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Kontakt erstellen
+              </Link>
+            )}
           </div>
         ) : (
           filteredContacts.map((contact) => (
-            <div
+            <Link
               key={contact.id}
-              className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5 hover:shadow-lg transition-shadow"
+              href={`/admin/contacts/${contact.id}`}
+              className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5 hover:shadow-lg transition-shadow block"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -215,26 +183,19 @@ export default function ContactsPage() {
                     <p className="text-sm text-apple-gray-400">{contact.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleEdit(contact)}
-                    className="p-2 text-apple-gray-400 hover:text-brand hover:bg-brand/5 rounded-lg transition-colors"
-                    title="Bearbeiten"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(contact.id)}
-                    className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Löschen"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDelete(contact.id);
+                  }}
+                  className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Löschen"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
               </div>
 
               {contact.phone && (
@@ -251,117 +212,20 @@ export default function ContactsPage() {
               )}
 
               <div className="flex items-center justify-between pt-3 border-t border-apple-gray-100">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                    </svg>
-                    {contact.ticketCount || 0} Tickets
-                  </span>
-                </div>
-                <a
-                  href={`/admin/contacts/${contact.id}`}
-                  className="text-sm text-brand hover:text-brand-dark font-medium transition-colors"
-                >
-                  Details
-                </a>
+                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded-full">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                  {contact.ticketCount || 0} Tickets
+                </span>
+                <span className="text-sm text-brand font-medium">
+                  Details &rarr;
+                </span>
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-16 sm:pt-4 overflow-y-auto">
-          <div className="bg-white rounded-apple-xl shadow-2xl max-w-md w-full p-6 animate-fade-in my-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-apple-gray-600">
-                {editingContact ? "Kontakt bearbeiten" : "Neuer Kontakt"}
-              </h2>
-              <button
-                onClick={() => { setShowModal(false); setError(null); }}
-                className="p-2 text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-apple-gray-600 mb-1">Name *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="w-full px-4 py-2.5 bg-white border border-apple-gray-200 rounded-xl text-apple-gray-600 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
-                  placeholder="Max Mustermann"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-apple-gray-600 mb-1">E-Mail *</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  className="w-full px-4 py-2.5 bg-white border border-apple-gray-200 rounded-xl text-apple-gray-600 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
-                  placeholder="max@beispiel.de"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-apple-gray-600 mb-1">Telefon</label>
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-white border border-apple-gray-200 rounded-xl text-apple-gray-600 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
-                  placeholder="+49 123 456789"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-apple-gray-600 mb-1">Notizen</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={3}
-                  className="w-full px-4 py-2.5 bg-white border border-apple-gray-200 rounded-xl text-apple-gray-600 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all resize-none"
-                  placeholder="Interne Notizen zum Kontakt..."
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => { setShowModal(false); setError(null); }}
-                  className="flex-1 px-4 py-2.5 text-apple-gray-600 font-medium rounded-xl hover:bg-apple-gray-100 transition-colors"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 px-4 py-2.5 bg-brand text-white font-medium rounded-xl hover:bg-brand-dark transition-colors disabled:opacity-50"
-                >
-                  {saving ? "Speichern..." : editingContact ? "Speichern" : "Erstellen"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
