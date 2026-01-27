@@ -64,6 +64,11 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/portal" className="text-white/70 text-sm hover:text-white transition-colors duration-200">
+                  Meine Tickets
+                </Link>
+              </li>
+              <li>
                 <a href="https://fit-inn-trier.de/kontakt" target="_blank" rel="noopener noreferrer" className="text-white/70 text-sm hover:text-white transition-colors duration-200">
                   Kontaktformular
                 </a>
