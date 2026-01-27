@@ -149,8 +149,9 @@ export async function addMessageToSession(
 
 /**
  * Get relevant articles for chat context
+ * Exported for use in ai-autoreply.ts
  */
-async function getRelevantArticles(query: string): Promise<string> {
+export async function getRelevantArticles(query: string): Promise<string> {
   try {
     // Get all published articles
     const articleIds: string[] = (await kv.smembers("articles:ids")) || [];
@@ -239,8 +240,9 @@ async function getRelevantArticles(query: string): Promise<string> {
 
 /**
  * Get knowledge base entries for context
+ * Exported for use in ai-autoreply.ts
  */
-async function getKnowledgeBaseContext(query: string): Promise<string> {
+export async function getKnowledgeBaseContext(query: string): Promise<string> {
   try {
     // Get knowledge base entry IDs from the set (not using kv.keys which is expensive)
     const entryIds: string[] = (await kv.smembers("knowledge:ids")) || [];

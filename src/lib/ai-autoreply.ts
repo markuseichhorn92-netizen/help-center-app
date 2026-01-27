@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { kv } from "@vercel/kv";
 import { TicketMessage } from "./tickets";
+import { getRelevantArticles, getKnowledgeBaseContext } from "./ai-chat";
 
 const anthropic = new Anthropic();
 
@@ -74,7 +75,7 @@ export async function setAIStatus(ticketId: string, status: 'active' | 'escalate
 }
 
 /**
- * Generate an auto-reply using AI
+ * Generate an auto-reply using AI with knowledge base context
  */
 export async function generateAutoReply(params: {
   customerMessage: string;
@@ -86,11 +87,11 @@ export async function generateAutoReply(params: {
   try {
     const { customerMessage, customerName, ticketSubject, conversationHistory, isWhatsApp } = params;
 
-    // Build conversation context
-    let context = "";
+    // Build conversation context from history
+    let conversationContext = "";
     if (conversationHistory && conversationHistory.length > 0) {
       const recentMessages = conversationHistory.slice(-5); // Last 5 messages
-      context = recentMessages
+      conversationContext = recentMessages
         .map((msg) => {
           const sender = msg.sender === "customer" ? customerName : "Support";
           const cleanContent = msg.content.replace(/<[^>]*>/g, "").trim();
@@ -99,20 +100,42 @@ export async function generateAutoReply(params: {
         .join("\n");
     }
 
-    const systemPrompt = `Du bist der freundliche Support-Assistent von FIT INN Trier, einem Fitnessstudio.
-Deine Aufgaben:
-- Beantworte Kundenfragen höflich und hilfsbereit
-- Halte dich kurz (2-3 Sätze maximal)
-- Wenn du dir bei einer Antwort nicht sicher bist, sage dass ein Mitarbeiter sich melden wird
-- Verwende eine freundliche, aber professionelle Sprache
-- Du darfst keine Verträge kündigen, Preise nennen oder verbindliche Zusagen machen
+    // Get knowledge context (articles + knowledge base)
+    console.log("[AI-AutoReply] Loading context for:", customerMessage);
+    const searchQuery = `${ticketSubject} ${customerMessage}`;
 
-WICHTIG: Beende JEDE Antwort mit diesem Hinweis:
+    const [articlesContext, knowledgeContext] = await Promise.all([
+      getRelevantArticles(searchQuery),
+      getKnowledgeBaseContext(searchQuery),
+    ]);
+
+    console.log("[AI-AutoReply] Articles context length:", articlesContext.length);
+    console.log("[AI-AutoReply] Knowledge context length:", knowledgeContext.length);
+
+    const systemPrompt = `Du bist der freundliche Support-Assistent von FIT INN Trier, einem Fitnessstudio.
+
+DEINE AUFGABEN:
+- Beantworte Kundenfragen höflich und hilfsbereit basierend auf den bereitgestellten Informationen
+- Halte dich kurz (2-3 Sätze maximal)
+- WICHTIG: Durchsuche die HILFE-ARTIKEL und WISSENSBASIS unten sorgfältig nach relevanten Informationen BEVOR du antwortest
+- Wenn die Antwort in den Artikeln steht, gib sie wieder - erfinde NICHTS
+- Bei komplexen Fragen oder wenn die Info NICHT in den Artikeln steht, empfehle den Kontakt zu einem Mitarbeiter
+
+WICHTIGE REGELN:
+- Du darfst KEINE Verträge kündigen oder ändern
+- Du darfst KEINE verbindlichen Preise oder Zusagen machen
+- Bei Kündigungen, Beschwerden oder Vertragsfragen: Immer an Mitarbeiter verweisen
+- Sage NIE "ich habe die Information nicht" wenn sie in den Artikeln unten steht!
+
+${articlesContext ? `\n=== HILFE-ARTIKEL (durchsuche diese ZUERST!) ===\n${articlesContext}\n=== ENDE HILFE-ARTIKEL ===` : "\n(Keine Hilfe-Artikel verfügbar)"}
+${knowledgeContext ? `\n=== WISSENSBASIS ===\n${knowledgeContext}\n=== ENDE WISSENSBASIS ===` : ""}
+
+BEENDE JEDE Antwort mit:
 "Möchtest du mit einem Mitarbeiter sprechen? Schreibe einfach 'Mitarbeiter'."`;
 
     const userPrompt = `Ticket-Betreff: ${ticketSubject}
 
-${context ? `Bisheriger Verlauf:\n${context}\n\n` : ""}Aktuelle Nachricht von ${customerName}:
+${conversationContext ? `Bisheriger Verlauf:\n${conversationContext}\n\n` : ""}Aktuelle Nachricht von ${customerName}:
 ${customerMessage}
 
 Antworte kurz und hilfreich auf diese Nachricht.`;
