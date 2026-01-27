@@ -1,6 +1,6 @@
 // FIT INN Admin Service Worker for Push Notifications
 
-const CACHE_NAME = 'fitinn-admin-v2';
+const CACHE_NAME = 'fitinn-admin-v3';
 
 // Install event
 self.addEventListener('install', (event) => {
@@ -44,26 +44,40 @@ self.addEventListener('push', (event) => {
 
   console.log('[SW] Final notification data:', JSON.stringify(data));
 
+  // Basic options that work on all platforms including iOS Safari
   const options = {
     body: data.body,
     icon: data.icon || '/favicon.png',
     badge: data.badge || '/favicon.png',
     tag: data.tag || 'default',
     renotify: true,
-    requireInteraction: data.requireInteraction || false,
     data: {
       url: data.url || '/admin/tickets',
       ticketId: data.ticketId
-    },
-    actions: data.actions || [
+    }
+  };
+
+  // Only add actions if not on iOS (iOS Safari doesn't support notification actions)
+  const isIOS = /iPad|iPhone|iPod/.test(self.navigator?.userAgent || '');
+  if (!isIOS) {
+    options.actions = [
       { action: 'open', title: 'Öffnen' },
       { action: 'dismiss', title: 'Schließen' }
-    ],
-    vibrate: [200, 100, 200]
-  };
+    ];
+    options.vibrate = [200, 100, 200];
+    options.requireInteraction = data.requireInteraction || false;
+  }
+
+  console.log('[SW] isIOS:', isIOS, 'Options:', JSON.stringify(options));
 
   event.waitUntil(
     self.registration.showNotification(data.title, options)
+      .then(() => {
+        console.log('[SW] Notification shown successfully');
+      })
+      .catch((error) => {
+        console.error('[SW] Failed to show notification:', error);
+      })
   );
 });
 
