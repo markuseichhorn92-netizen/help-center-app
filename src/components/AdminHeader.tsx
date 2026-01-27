@@ -277,6 +277,17 @@ export default function AdminHeader() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
+            {/* Push Debug Link */}
+            <Link
+              href="/admin/debug-push"
+              className="p-2 text-apple-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+              title="Push Debug"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+            </Link>
+
             {/* Push Notification Toggle */}
             {pushStatus !== "unsupported" && (
               <button
@@ -420,6 +431,16 @@ export default function AdminHeader() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
               </a>
+              <Link
+                href="/admin/debug-push"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 text-apple-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-lg text-sm font-medium transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <span>Push Debug</span>
+              </Link>
             </nav>
           </div>
         )}
