@@ -43,6 +43,9 @@ export async function GET(req: NextRequest) {
 
     const validTickets = tickets.filter(Boolean) as any[];
 
+    // Only count active tickets (not closed/resolved) for unread messages
+    const activeTickets = validTickets.filter(t => t.status === 'open' || t.status === 'in_progress');
+
     // Ticket stats
     const ticketStats = {
       total: validTickets.length,
@@ -50,11 +53,12 @@ export async function GET(req: NextRequest) {
       inProgress: validTickets.filter(t => t.status === 'in_progress').length,
       resolved: validTickets.filter(t => t.status === 'resolved').length,
       closed: validTickets.filter(t => t.status === 'closed').length,
-      unreadMessages: validTickets.reduce((sum, t) => sum + (t.unreadCount || 0), 0),
+      // Only count unread messages from active tickets
+      unreadMessages: activeTickets.reduce((sum, t) => sum + (t.unreadCount || 0), 0),
     };
 
-    // Get recent tickets with unread messages
-    const ticketsWithUnread = validTickets
+    // Get recent tickets with unread messages (only active tickets)
+    const ticketsWithUnread = activeTickets
       .filter(t => (t.unreadCount || 0) > 0)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 5);

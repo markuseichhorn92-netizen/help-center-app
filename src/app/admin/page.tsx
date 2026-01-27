@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface DashboardData {
   tickets: {
@@ -54,33 +54,46 @@ export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const res = await fetch("/api/admin/dashboard", {
-          credentials: "same-origin",
-        });
+  const loadDashboard = useCallback(async (isInitial = false) => {
+    try {
+      const res = await fetch("/api/admin/dashboard", {
+        credentials: "same-origin",
+      });
 
-        if (!res.ok) {
-          if (res.status === 401) {
-            window.location.href = "/admin/login";
-            return;
-          }
-          throw new Error("Fehler beim Laden");
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = "/admin/login";
+          return;
         }
-
-        const dashboardData = await res.json();
-        setData(dashboardData);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        throw new Error("Fehler beim Laden");
       }
-    };
 
-    loadDashboard();
+      const dashboardData = await res.json();
+      setData(dashboardData);
+      setLastUpdate(new Date());
+      if (isInitial) setError(null);
+    } catch (err: any) {
+      if (isInitial) setError(err.message);
+    } finally {
+      if (isInitial) setLoading(false);
+    }
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    loadDashboard(true);
+  }, [loadDashboard]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadDashboard(false);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [loadDashboard]);
 
   if (loading) {
     return (
@@ -133,9 +146,26 @@ export default function AdminDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-apple-gray-600 tracking-tight">Dashboard</h1>
-          <p className="text-apple-gray-400 text-sm mt-1">
-            Willkommen im Admin-Bereich
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-apple-gray-400 text-sm">
+              Willkommen im Admin-Bereich
+            </p>
+            {lastUpdate && (
+              <>
+                <span className="text-apple-gray-300">•</span>
+                <button
+                  onClick={() => loadDashboard(false)}
+                  className="text-apple-gray-400 text-sm hover:text-brand transition-colors flex items-center gap-1"
+                  title="Jetzt aktualisieren"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {lastUpdate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                </button>
+              </>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           <Link
