@@ -36,6 +36,27 @@ const statusLabels: Record<string, { label: string; color: string; bg: string }>
   closed: { label: "Geschlossen", color: "text-gray-600", bg: "bg-gray-100" },
 };
 
+// Format message content based on whether it contains HTML or is plain text
+function formatMessageContent(content: string): string {
+  // If the content contains HTML tags (like <p>, <br>, <div>), render as HTML
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
+
+  if (hasHtmlTags) {
+    return content;
+  }
+
+  // For plain text (WhatsApp, plain messages), escape HTML and convert newlines
+  const escaped = content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  // Convert newlines to <br> for proper display
+  return escaped.replace(/\n/g, '<br />');
+}
+
 export default function PortalTicketPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
@@ -584,11 +605,11 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
 
                     {/* Message Content */}
                     <div
-                      className={`text-sm whitespace-pre-wrap break-words overflow-hidden ${
+                      className={`text-sm break-words overflow-hidden ${
                         isCustomer ? "text-white" : "text-apple-gray-600"
                       }`}
                       style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
-                      dangerouslySetInnerHTML={{ __html: message.content }}
+                      dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content) }}
                     />
 
                     {/* Attachments */}

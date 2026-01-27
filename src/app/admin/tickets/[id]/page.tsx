@@ -5,6 +5,27 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, use } from "react";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 
+// Format message content based on whether it contains HTML or is plain text
+function formatMessageContent(content: string, channel?: string): string {
+  // If the content contains HTML tags (like <p>, <br>, <div>), render as HTML
+  const hasHtmlTags = /<[a-z][\s\S]*>/i.test(content);
+
+  if (hasHtmlTags) {
+    return content;
+  }
+
+  // For plain text (WhatsApp, plain emails), escape HTML and convert newlines
+  const escaped = content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
+  // Convert newlines to <br> for proper display
+  return escaped.replace(/\n/g, '<br />');
+}
+
 interface Ticket {
   id: string;
   ticketNumber: string;
@@ -1300,7 +1321,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                             ? "ticket-message-admin"
                             : "ticket-message-customer"
                         }`}
-                        dangerouslySetInnerHTML={{ __html: msg.content }}
+                        dangerouslySetInnerHTML={{ __html: formatMessageContent(msg.content, msg.channel) }}
                       />
                     {/* Attachments */}
                     {msg.attachments && msg.attachments.length > 0 && (

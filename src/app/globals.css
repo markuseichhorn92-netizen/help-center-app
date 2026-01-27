@@ -603,3 +603,16 @@ body {
 .ticket-message-customer a:hover {
   color: #073440;
 }
+
+/* Chat Message Content Styles (KI-Chat) */
+.chat-message-content {
+  line-height: 1.5;
+}
+
+.chat-message-content strong {
+  font-weight: 600;
+}
+
+.chat-message-content em {
+  font-style: italic;
+}

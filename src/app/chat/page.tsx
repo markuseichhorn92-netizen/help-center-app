@@ -9,6 +9,19 @@ interface Message {
   timestamp: string;
 }
 
+// Simple markdown-to-HTML converter for chat messages
+function renderMarkdown(text: string): string {
+  return text
+    // Bold: **text** or __text__
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/__(.+?)__/g, '<strong>$1</strong>')
+    // Italic: *text* or _text_ (but not inside words)
+    .replace(/(?<!\w)\*([^*\n]+)\*(?!\w)/g, '<em>$1</em>')
+    .replace(/(?<!\w)_([^_\n]+)_(?!\w)/g, '<em>$1</em>')
+    // Line breaks
+    .replace(/\n/g, '<br />');
+}
+
 export default function ChatPage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -242,7 +255,10 @@ export default function ChatPage() {
                     : "bg-white border border-apple-gray-200 text-apple-gray-600 rounded-bl-md shadow-sm"
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <div
+                  className="text-sm chat-message-content"
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(message.content) }}
+                />
                 <p
                   className={`text-xs mt-1 ${
                     message.role === "user" ? "text-white/60" : "text-apple-gray-400"
@@ -256,6 +272,21 @@ export default function ChatPage() {
               </div>
             </div>
           ))}
+
+          {/* Mitarbeiter-Button nach der letzten Nachricht */}
+          {messages.length > 0 && !isLoading && !isEscalated && !showEmailModal && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => setShowEmailModal(true)}
+                className="flex items-center gap-2 px-4 py-2 text-sm text-apple-gray-500 hover:text-brand border border-apple-gray-200 hover:border-brand rounded-full transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Mit Mitarbeiter sprechen
+              </button>
+            </div>
+          )}
 
           {isLoading && (
             <div className="flex justify-start">
