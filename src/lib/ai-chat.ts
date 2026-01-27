@@ -250,6 +250,7 @@ async function getKnowledgeBaseContext(query: string): Promise<string> {
           title: string;
           content: string;
           keywords: string;
+          url: string;
         }>(key);
         return entry;
       })
@@ -258,7 +259,17 @@ async function getKnowledgeBaseContext(query: string): Promise<string> {
     const validEntries = entries.filter((e) => e !== null);
     if (validEntries.length === 0) return "";
 
-    // Simple keyword matching
+    // If there are only a few entries (<=5), include all of them
+    if (validEntries.length <= 5) {
+      return validEntries
+        .map((e) => {
+          const cleanContent = (e.content || "").substring(0, 500).trim();
+          return `Website-Info: "${e.title}"\nQuelle: ${e.url || "Website"}\nInhalt: ${cleanContent}`;
+        })
+        .join("\n\n---\n\n");
+    }
+
+    // For larger sets, use keyword matching
     const queryLower = query.toLowerCase();
     const keywords = queryLower.split(/\s+/).filter((w) => w.length > 2);
 
@@ -267,6 +278,12 @@ async function getKnowledgeBaseContext(query: string): Promise<string> {
       const contentLower = (entry.content || "").toLowerCase();
       const keywordsLower = (entry.keywords || "").toLowerCase();
       let score = 0;
+
+      // Full query match
+      if (titleLower.includes(queryLower) || contentLower.includes(queryLower)) {
+        score += 10;
+      }
+
       for (const keyword of keywords) {
         if (titleLower.includes(keyword)) score += 3;
         if (keywordsLower.includes(keyword)) score += 2;
@@ -275,19 +292,22 @@ async function getKnowledgeBaseContext(query: string): Promise<string> {
       return { ...entry, score };
     });
 
-    const relevant = scored
+    let relevant = scored
       .filter((e) => e.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 2);
+      .slice(0, 3);
 
-    if (relevant.length === 0) return "";
+    // Fallback to first 3 if no matches
+    if (relevant.length === 0) {
+      relevant = validEntries.slice(0, 3).map((e) => ({ ...e, score: 0 }));
+    }
 
     return relevant
       .map((e) => {
-        const cleanContent = (e.content || "").substring(0, 200).trim();
-        return `${e.title}: ${cleanContent}...`;
+        const cleanContent = (e.content || "").substring(0, 500).trim();
+        return `Website-Info: "${e.title}"\nQuelle: ${e.url || "Website"}\nInhalt: ${cleanContent}`;
       })
-      .join("\n\n");
+      .join("\n\n---\n\n");
   } catch (error) {
     console.error("Error getting knowledge base:", error);
     return "";
