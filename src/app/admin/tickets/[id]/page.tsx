@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, use } from "react";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 
@@ -114,8 +115,20 @@ function MessageStatusIcon({ message }: { message: TicketMessage }) {
   return null;
 }
 
+// Sidebar ticket type
+interface SidebarTicket {
+  id: string;
+  ticketNumber: string;
+  subject: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  customerName: string;
+  unreadCount: number;
+  updatedAt: string;
+}
+
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +147,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [textareaRows, setTextareaRows] = useState(4);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const prevMessagesCountRef = useRef(0);
+
+  // Sidebar state
+  const [sidebarTickets, setSidebarTickets] = useState<SidebarTicket[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
 
   useEffect(() => {
     const updateRows = () => {
@@ -199,8 +217,33 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  // Load sidebar tickets (active tickets for quick navigation)
+  const loadSidebarTickets = async () => {
+    try {
+      const res = await fetch('/api/admin/tickets', {
+        headers: { Authorization: getAuthHeader() }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        // Filter to open and in_progress tickets, sort by updatedAt
+        const activeTickets = data
+          .filter((t: SidebarTicket) => t.status === 'open' || t.status === 'in_progress')
+          .sort((a: SidebarTicket, b: SidebarTicket) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          )
+          .slice(0, 15); // Limit to 15 tickets
+        setSidebarTickets(activeTickets);
+      }
+    } catch (err) {
+      console.error('Failed to load sidebar tickets:', err);
+    } finally {
+      setSidebarLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    loadSidebarTickets();
 
     // Auto-refresh messages every 3 seconds for real-time status updates
     const interval = setInterval(async () => {
@@ -590,8 +633,132 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     );
   }
 
+  // Navigate to ticket
+  const navigateToTicket = (ticketId: string) => {
+    setSidebarOpen(false);
+    router.push(`/admin/tickets/${ticketId}`);
+  };
+
   return (
     <div className="animate-fade-in">
+      {/* Mobile: Floating Button to open sidebar */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="xl:hidden fixed bottom-24 left-4 z-30 w-12 h-12 bg-white rounded-full shadow-lg border border-apple-gray-200 flex items-center justify-center text-apple-gray-500 hover:text-brand hover:shadow-xl transition-all"
+        title="Andere Tickets"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+        </svg>
+        {sidebarTickets.filter(t => t.id !== id && (t.unreadCount || 0) > 0).length > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            {sidebarTickets.filter(t => t.id !== id && (t.unreadCount || 0) > 0).length}
+          </span>
+        )}
+      </button>
+
+      {/* Mobile: Sidebar Drawer */}
+      {sidebarOpen && (
+        <>
+          <div
+            className="xl:hidden fixed inset-0 bg-black/50 z-40 animate-fade-in backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div className="xl:hidden fixed inset-y-0 left-0 w-[85%] max-w-sm bg-white z-50 shadow-2xl animate-slide-in-left flex flex-col">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-4 py-4 border-b border-apple-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-apple-gray-600">Offene Tickets</h3>
+                  <p className="text-xs text-apple-gray-400">{sidebarTickets.length} aktiv</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center text-apple-gray-500 hover:bg-apple-gray-200 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Drawer Content */}
+            <div className="flex-1 overflow-y-auto">
+              {sidebarLoading ? (
+                <div className="p-4 text-center text-apple-gray-400">
+                  <svg className="w-5 h-5 animate-spin mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-sm">Laden...</span>
+                </div>
+              ) : sidebarTickets.length === 0 ? (
+                <div className="p-4 text-center text-apple-gray-400 text-sm">
+                  Keine offenen Tickets
+                </div>
+              ) : (
+                <div className="py-2">
+                  {sidebarTickets.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => navigateToTicket(t.id)}
+                      className={`w-full px-4 py-3 text-left transition-all ${
+                        t.id === id
+                          ? "bg-brand/10 border-l-3 border-brand"
+                          : "hover:bg-apple-gray-50 border-l-3 border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                              t.status === 'open' ? 'bg-blue-500' : 'bg-amber-500'
+                            }`} />
+                            <span className="text-xs text-apple-gray-400 font-mono">{t.ticketNumber}</span>
+                          </div>
+                          <p className={`text-sm font-medium truncate ${
+                            t.id === id ? 'text-brand' : 'text-apple-gray-600'
+                          }`}>
+                            {t.subject}
+                          </p>
+                          <p className="text-xs text-apple-gray-400 truncate mt-0.5">
+                            {t.customerName}
+                          </p>
+                        </div>
+                        {(t.unreadCount || 0) > 0 && t.id !== id && (
+                          <span className="flex-shrink-0 min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                            {t.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="border-t border-apple-gray-100 p-4">
+              <Link
+                href="/admin/tickets"
+                className="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-medium text-brand hover:bg-brand/5 rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                Alle Tickets anzeigen
+              </Link>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-6">
         <div>
@@ -613,9 +780,99 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content - Messages */}
-        <div className="lg:col-span-2">
+      {/* Main Layout with Desktop Sidebar */}
+      <div className="flex gap-6">
+        {/* Desktop Sidebar - Ticket Navigation */}
+        <div className="hidden xl:block w-72 flex-shrink-0">
+          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden sticky top-20">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-apple-gray-100 bg-apple-gray-50/50">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+                <span className="text-sm font-semibold text-apple-gray-600">Offene Tickets</span>
+                <span className="ml-auto text-xs text-apple-gray-400 bg-apple-gray-100 px-2 py-0.5 rounded-full">
+                  {sidebarTickets.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Ticket List */}
+            <div className="max-h-[calc(100vh-220px)] overflow-y-auto">
+              {sidebarLoading ? (
+                <div className="p-4 text-center text-apple-gray-400">
+                  <svg className="w-5 h-5 animate-spin mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-xs">Laden...</span>
+                </div>
+              ) : sidebarTickets.length === 0 ? (
+                <div className="p-4 text-center text-apple-gray-400 text-sm">
+                  Keine offenen Tickets
+                </div>
+              ) : (
+                <div className="divide-y divide-apple-gray-50">
+                  {sidebarTickets.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => navigateToTicket(t.id)}
+                      className={`w-full px-4 py-3 text-left transition-all group ${
+                        t.id === id
+                          ? "bg-brand/5 border-l-3 border-brand"
+                          : "hover:bg-apple-gray-50 border-l-3 border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                              t.status === 'open' ? 'bg-blue-500' : 'bg-amber-500'
+                            }`} />
+                            <span className="text-[10px] text-apple-gray-400 font-mono">{t.ticketNumber}</span>
+                          </div>
+                          <p className={`text-sm font-medium truncate transition-colors ${
+                            t.id === id ? 'text-brand' : 'text-apple-gray-600 group-hover:text-brand'
+                          }`}>
+                            {t.subject}
+                          </p>
+                          <p className="text-xs text-apple-gray-400 truncate mt-0.5">
+                            {t.customerName}
+                          </p>
+                        </div>
+                        {(t.unreadCount || 0) > 0 && t.id !== id && (
+                          <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                            {t.unreadCount}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-apple-gray-100 p-3 bg-apple-gray-50/50">
+              <Link
+                href="/admin/tickets"
+                className="flex items-center justify-center gap-1.5 w-full py-2 text-xs font-medium text-apple-gray-500 hover:text-brand rounded-lg transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                Alle Tickets
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 min-w-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Content - Messages */}
+            <div className="lg:col-span-2">
           <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
             {/* Messages */}
             <div className="max-h-[500px] overflow-y-auto p-6 space-y-4">
@@ -1064,6 +1321,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
           </div>
+        </div>
+        </div>
         </div>
       </div>
 
