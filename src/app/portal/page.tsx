@@ -117,11 +117,11 @@ export default function PortalLoginPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center bg-white rounded-apple-lg shadow-card p-4 mb-6">
             <Image
-              src="/logo.svg"
-              alt="FIT INN"
+              src="https://cdn.sanity.io/images/6qiktmvm/production/e33b949b11d3aa8b60befb3f5f537803a8c48700-2917x486.png"
+              alt="FIT INN Logo"
               width={140}
-              height={35}
-              className="h-8 w-auto"
+              height={24}
+              className="h-6 w-auto"
             />
           </div>
           <h1 className="text-3xl font-bold text-apple-gray-600 mb-2">

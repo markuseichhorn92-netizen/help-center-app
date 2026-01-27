@@ -514,11 +514,11 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 </svg>
               </Link>
               <Image
-                src="/logo.svg"
-                alt="FIT INN"
-                width={100}
-                height={25}
-                className="h-6 w-auto hidden sm:block"
+                src="https://cdn.sanity.io/images/6qiktmvm/production/e33b949b11d3aa8b60befb3f5f537803a8c48700-2917x486.png"
+                alt="FIT INN Logo"
+                width={120}
+                height={20}
+                className="h-5 w-auto hidden sm:block"
               />
             </div>
 
