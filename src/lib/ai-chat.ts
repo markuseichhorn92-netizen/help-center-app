@@ -173,14 +173,35 @@ async function getRelevantArticles(query: string): Promise<string> {
     const publishedArticles = articles.filter((a) => a !== null);
     if (publishedArticles.length === 0) return "";
 
-    // Simple keyword matching for relevance
+    // If there are only a few articles (<=5), include all of them for context
+    if (publishedArticles.length <= 5) {
+      return publishedArticles
+        .map((a) => {
+          const cleanContent = a.content
+            .replace(/<[^>]*>/g, "")
+            .substring(0, 400)
+            .trim();
+          return `Artikel: "${a.title}"\nInhalt: ${cleanContent}`;
+        })
+        .join("\n\n---\n\n");
+    }
+
+    // For larger article sets, use keyword matching
     const queryLower = query.toLowerCase();
+    // Split query and also include common German variations
     const keywords = queryLower.split(/\s+/).filter((w) => w.length > 2);
 
     const scored = publishedArticles.map((article) => {
       const titleLower = article.title.toLowerCase();
       const contentLower = article.content.toLowerCase().replace(/<[^>]*>/g, "");
       let score = 0;
+
+      // Check for full query match (highest priority)
+      if (titleLower.includes(queryLower) || contentLower.includes(queryLower)) {
+        score += 10;
+      }
+
+      // Check individual keywords
       for (const keyword of keywords) {
         if (titleLower.includes(keyword)) score += 3;
         if (contentLower.includes(keyword)) score += 1;
@@ -188,22 +209,26 @@ async function getRelevantArticles(query: string): Promise<string> {
       return { ...article, score };
     });
 
-    const relevant = scored
+    // Get top matches, or fall back to first 3 if no matches
+    let relevant = scored
       .filter((a) => a.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
 
-    if (relevant.length === 0) return "";
+    // If no keyword matches, return first 3 articles as general context
+    if (relevant.length === 0) {
+      relevant = publishedArticles.slice(0, 3).map((a) => ({ ...a, score: 0 }));
+    }
 
     return relevant
       .map((a) => {
         const cleanContent = a.content
           .replace(/<[^>]*>/g, "")
-          .substring(0, 300)
+          .substring(0, 400)
           .trim();
-        return `Artikel: "${a.title}"\nInhalt: ${cleanContent}...`;
+        return `Artikel: "${a.title}"\nInhalt: ${cleanContent}`;
       })
-      .join("\n\n");
+      .join("\n\n---\n\n");
   } catch (error) {
     console.error("Error getting relevant articles:", error);
     return "";
@@ -306,18 +331,20 @@ export async function generateChatResponse(params: {
     const systemPrompt = `Du bist der freundliche Support-Assistent von FIT INN Trier, einem Fitnessstudio.
 
 DEINE AUFGABEN:
-- Beantworte Kundenfragen höflich und hilfsbereit
+- Beantworte Kundenfragen höflich und hilfsbereit basierend auf den bereitgestellten Informationen
 - Halte dich kurz (2-3 Sätze maximal)
-- Nutze die bereitgestellten Artikel-Informationen wenn relevant
-- Bei komplexen Fragen oder wenn du unsicher bist, empfehle den Kontakt zu einem Mitarbeiter
+- WICHTIG: Durchsuche die HILFE-ARTIKEL unten sorgfältig nach relevanten Informationen BEVOR du antwortest
+- Wenn die Antwort in den Artikeln steht, gib sie wieder - erfinde NICHTS
+- Bei komplexen Fragen oder wenn die Info NICHT in den Artikeln steht, empfehle den Kontakt zu einem Mitarbeiter
 
 WICHTIGE REGELN:
 - Du darfst KEINE Verträge kündigen oder ändern
 - Du darfst KEINE verbindlichen Preise oder Zusagen machen
 - Bei Kündigungen, Beschwerden oder Vertragsfragen: Immer an Mitarbeiter verweisen
+- Sage NIE "ich habe die Information nicht" wenn sie in den Artikeln unten steht!
 
-${articlesContext ? `\nRELEVANTE HILFE-ARTIKEL:\n${articlesContext}` : ""}
-${knowledgeContext ? `\nWISSENSBASIS:\n${knowledgeContext}` : ""}
+${articlesContext ? `\n=== HILFE-ARTIKEL (durchsuche diese ZUERST!) ===\n${articlesContext}\n=== ENDE HILFE-ARTIKEL ===` : "\n(Keine Hilfe-Artikel verfügbar)"}
+${knowledgeContext ? `\n=== WISSENSBASIS ===\n${knowledgeContext}\n=== ENDE WISSENSBASIS ===` : ""}
 
 BEENDE JEDE Antwort mit:
 "💬 Für persönliche Hilfe schreibe 'Mitarbeiter'."`;
