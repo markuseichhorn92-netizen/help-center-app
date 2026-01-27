@@ -307,6 +307,11 @@ export default function TicketsPage() {
         if ((t.unreadCount || 0) === 0) {
           return false;
         }
+      } else if (filterStatus === "escalated") {
+        // "Mitarbeiter angefordert" shows only tickets with aiStatus = 'escalated'
+        if (t.aiStatus !== "escalated") {
+          return false;
+        }
       } else if (filterStatus === "ai_handling") {
         // "KI bearbeitet" shows only tickets with aiStatus = 'active'
         if (t.aiStatus !== "active") {
@@ -380,6 +385,7 @@ export default function TicketsPage() {
     resolved: tickets.filter(t => t.status === "resolved").length,
     unread: tickets.filter(t => (t.unreadCount || 0) > 0).length,
     aiHandling: tickets.filter(t => t.aiStatus === "active").length,
+    escalated: tickets.filter(t => t.aiStatus === "escalated").length,
   };
 
   if (loading) {
@@ -611,6 +617,7 @@ export default function TicketsPage() {
         {[
           { value: "all", label: "Alle" },
           { value: "unread", label: "Neue Nachrichten", count: stats.unread },
+          { value: "escalated", label: "Mitarbeiter angefordert", count: stats.escalated, icon: "alert" },
           { value: "ai_handling", label: "KI bearbeitet", count: stats.aiHandling, icon: "robot" },
           { value: "open", label: "Offen" },
           { value: "in_progress", label: "In Bearbeitung" },
@@ -623,25 +630,34 @@ export default function TicketsPage() {
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
               filterStatus === filter.value
                 ? filter.value === "unread" ? "bg-red-500 text-white"
+                  : filter.value === "escalated" ? "bg-orange-500 text-white"
                   : filter.value === "ai_handling" ? "bg-purple-600 text-white"
                   : "bg-brand text-white"
                 : filter.value === "unread" && filter.count && filter.count > 0
                   ? "bg-red-50 text-red-600 hover:bg-red-100 ring-1 ring-red-200"
+                  : filter.value === "escalated" && filter.count && filter.count > 0
+                    ? "bg-orange-50 text-orange-600 hover:bg-orange-100 ring-1 ring-orange-200"
                   : filter.value === "ai_handling" && filter.count && filter.count > 0
                     ? "bg-purple-50 text-purple-600 hover:bg-purple-100 ring-1 ring-purple-200"
                     : "bg-apple-gray-100 text-apple-gray-500 hover:bg-apple-gray-200"
             }`}
           >
+            {filter.value === "escalated" && (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            )}
             {filter.value === "ai_handling" && (
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             )}
             {filter.label}
-            {(filter.value === "unread" || filter.value === "ai_handling") && filter.count !== undefined && filter.count > 0 && (
+            {(filter.value === "unread" || filter.value === "escalated" || filter.value === "ai_handling") && filter.count !== undefined && filter.count > 0 && (
               <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full ${
                 filterStatus === filter.value ? "bg-white/20 text-white"
                   : filter.value === "unread" ? "bg-red-500 text-white"
+                  : filter.value === "escalated" ? "bg-orange-500 text-white"
                   : "bg-purple-500 text-white"
               }`}>
                 {filter.count > 99 ? '99+' : filter.count}
@@ -701,7 +717,7 @@ export default function TicketsPage() {
                   {paginatedTickets.map((ticket, index) => (
                     <tr
                       key={ticket.id}
-                      className={`hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''}`}
+                      className={`hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''} ${ticket.aiStatus === 'escalated' ? 'bg-orange-50/50' : ''}`}
                     >
                       <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
                         <input
@@ -721,6 +737,14 @@ export default function TicketsPage() {
                             {ticket.unreadCount && ticket.unreadCount > 0 && (
                               <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold text-white bg-red-500 rounded-full">
                                 {ticket.unreadCount > 99 ? '99+' : ticket.unreadCount}
+                              </span>
+                            )}
+                            {ticket.aiStatus === 'escalated' && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                Mitarbeiter
                               </span>
                             )}
                           </div>
@@ -770,7 +794,7 @@ export default function TicketsPage() {
                 <div
                   key={ticket.id}
                   onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}
-                  className={`p-4 hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''}`}
+                  className={`p-4 hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''} ${ticket.aiStatus === 'escalated' ? 'bg-orange-50/50 border-l-4 border-l-orange-400' : ''}`}
                 >
                   <div className="flex items-start gap-3">
                     <div onClick={(e) => e.stopPropagation()}>
@@ -798,6 +822,14 @@ export default function TicketsPage() {
                           <span className="text-base font-medium text-apple-gray-600 block truncate">
                             {ticket.subject}
                           </span>
+                          {ticket.aiStatus === 'escalated' && (
+                            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              Mitarbeiter angefordert
+                            </span>
+                          )}
                         </div>
                         <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ring-1 ring-inset flex-shrink-0 ${statusConfig[ticket.status].color}`}>
                           {statusConfig[ticket.status].label}
