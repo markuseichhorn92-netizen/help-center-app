@@ -402,11 +402,10 @@ export default function ArticlePage() {
           </div>
         </header>
 
-        <div className="flex gap-8 lg:gap-10">
+        <div className="flex items-start gap-8 lg:gap-10">
           {/* Table of Contents - Desktop (sticky sidebar LEFT) */}
           {toc.length > 0 && (
-            <aside className="hidden lg:block w-56 xl:w-64 flex-shrink-0">
-              <div className="sticky top-24">
+            <aside className="hidden lg:block w-56 xl:w-64 flex-shrink-0 self-start sticky top-24">
                 <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-apple-gray-100 shadow-sm">
                   <h2 className="text-xs font-semibold text-apple-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                     <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -453,7 +452,6 @@ export default function ArticlePage() {
                     </span>
                   </div>
                 </div>
-              </div>
             </aside>
           )}
 
