@@ -76,6 +76,8 @@ export default function AdminHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [adminStatus, setAdminStatus] = useState<"online" | "offline">("offline");
   const [statusLoading, setStatusLoading] = useState(true);
+  const [pushStatus, setPushStatus] = useState<"unsupported" | "denied" | "disabled" | "enabled">("unsupported");
+  const [pushLoading, setPushLoading] = useState(false);
 
   // Load admin status on mount
   useEffect(() => {
@@ -94,6 +96,102 @@ export default function AdminHeader() {
     };
     loadStatus();
   }, []);
+
+  // Check push notification status on mount
+  useEffect(() => {
+    const checkPushStatus = async () => {
+      // Check if push notifications are supported
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        setPushStatus("unsupported");
+        return;
+      }
+
+      // Check notification permission
+      if (Notification.permission === "denied") {
+        setPushStatus("denied");
+        return;
+      }
+
+      // Check if we have an active subscription
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        setPushStatus(subscription ? "enabled" : "disabled");
+      } catch {
+        setPushStatus("disabled");
+      }
+    };
+    checkPushStatus();
+  }, []);
+
+  // Toggle push notifications
+  const togglePush = async () => {
+    if (pushStatus === "unsupported" || pushStatus === "denied") return;
+
+    setPushLoading(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+
+      if (pushStatus === "enabled") {
+        // Unsubscribe
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await fetch("/api/admin/push/unsubscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: subscription.endpoint }),
+          });
+          await subscription.unsubscribe();
+        }
+        setPushStatus("disabled");
+      } else {
+        // Subscribe
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          setPushStatus("denied");
+          return;
+        }
+
+        // Get VAPID public key
+        const keyRes = await fetch("/api/admin/push/vapid-key");
+        if (!keyRes.ok) {
+          console.error("Failed to get VAPID key");
+          return;
+        }
+        const { publicKey } = await keyRes.json();
+
+        // Convert VAPID key to Uint8Array
+        const urlBase64ToUint8Array = (base64String: string) => {
+          const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+          const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+          }
+          return outputArray;
+        };
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+
+        // Send subscription to server
+        await fetch("/api/admin/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(subscription.toJSON()),
+        });
+
+        setPushStatus("enabled");
+      }
+    } catch (error) {
+      console.error("Failed to toggle push notifications:", error);
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   // Send heartbeat every 30 seconds when online
   useEffect(() => {
@@ -179,6 +277,43 @@ export default function AdminHeader() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
+            {/* Push Notification Toggle */}
+            {pushStatus !== "unsupported" && (
+              <button
+                onClick={togglePush}
+                disabled={pushLoading || pushStatus === "denied"}
+                className={`p-2 rounded-lg transition-all ${
+                  pushStatus === "enabled"
+                    ? "text-brand bg-brand/10 hover:bg-brand/20"
+                    : pushStatus === "denied"
+                    ? "text-red-400 bg-red-50 cursor-not-allowed"
+                    : "text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100"
+                } ${pushLoading ? "opacity-50 cursor-wait" : ""}`}
+                title={
+                  pushStatus === "enabled"
+                    ? "Push-Benachrichtigungen aktiv"
+                    : pushStatus === "denied"
+                    ? "Push-Benachrichtigungen blockiert - bitte in Browser-Einstellungen erlauben"
+                    : "Push-Benachrichtigungen aktivieren"
+                }
+              >
+                {pushStatus === "enabled" ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+                  </svg>
+                ) : pushStatus === "denied" ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364L5.636 5.636" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                )}
+              </button>
+            )}
+
             {/* Online/Offline Toggle */}
             <button
               onClick={toggleStatus}

@@ -6,6 +6,7 @@ import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachme
 import { parseTicketNumberFromSubject, sendTicketConfirmation, sendNewTicketNotification } from './resend';
 import { ensureContactFromTicket, updateLastContact } from './contacts';
 import { generatePortalToken } from './portal';
+import { notifyNewMessage, notifyNewTicket } from './push-notifications';
 
 const kv = createClient({
   url: process.env.KV_REST_API_URL || '',
@@ -244,6 +245,18 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
               // Update contact last activity
               await updateLastContact(senderEmail);
 
+              // Send push notification for new message
+              try {
+                await notifyNewMessage({
+                  ticketId: existingTicket.id,
+                  ticketNumber: existingTicket.ticketNumber,
+                  customerName: senderName,
+                  preview: content.substring(0, 100).replace(/<[^>]*>/g, ''),
+                });
+              } catch (e) {
+                console.error('[Push] New message notification failed:', e);
+              }
+
               console.log(`Added reply to ticket ${ticketNumber} from ${senderEmail}`);
               results.processed++;
 
@@ -302,6 +315,18 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             });
           } catch (notifyError) {
             console.error('Failed to send admin notification:', notifyError);
+          }
+
+          // Send push notification for new ticket
+          try {
+            await notifyNewTicket({
+              ticketId: ticket.id,
+              ticketNumber: ticket.ticketNumber,
+              customerName: senderName,
+              subject: cleanSubject,
+            });
+          } catch (e) {
+            console.error('[Push] New ticket notification failed:', e);
           }
 
           console.log(`Created ticket ${ticket.ticketNumber} from email by ${senderEmail}`);

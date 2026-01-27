@@ -4,6 +4,7 @@ import { ensureContactFromTicket, updateLastContact } from '@/lib/contacts';
 import { generateAutoReply, wantsHuman, markHumanRequested, isAutoReplyEnabled } from '@/lib/ai-autoreply';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { sendNewTicketNotification } from '@/lib/resend';
+import { notifyNewMessage, notifyEscalation, notifyNewTicket } from '@/lib/push-notifications';
 import crypto from 'crypto';
 
 // Validate Twilio request signature
@@ -161,6 +162,16 @@ export async function POST(req: NextRequest) {
       const customerWantsHuman = wantsHuman(messageContent);
       if (customerWantsHuman) {
         await markHumanRequested(existingTicket.id);
+        // Send push notification for escalation
+        try {
+          await notifyEscalation({
+            ticketId: existingTicket.id,
+            ticketNumber: existingTicket.ticketNumber,
+            customerName: profileName || phoneNumber,
+          });
+        } catch (e) {
+          console.error('[Push] Escalation notification failed:', e);
+        }
       }
 
       await createMessage({
@@ -172,6 +183,18 @@ export async function POST(req: NextRequest) {
         channel: 'whatsapp',
         attachments: attachments.length > 0 ? attachments : undefined,
       });
+
+      // Send push notification for new message
+      try {
+        await notifyNewMessage({
+          ticketId: existingTicket.id,
+          ticketNumber: existingTicket.ticketNumber,
+          customerName: profileName || phoneNumber,
+          preview: messageContent,
+        });
+      } catch (e) {
+        console.error('[Push] New message notification failed:', e);
+      }
 
       // Update ticket status to open if it was closed/resolved
       if (existingTicket.status === 'closed' || existingTicket.status === 'resolved') {
@@ -284,10 +307,32 @@ export async function POST(req: NextRequest) {
       console.error('Failed to send admin notification:', notifyError);
     }
 
+    // Send push notification for new ticket
+    try {
+      await notifyNewTicket({
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        customerName: profileName || phoneNumber,
+        subject: ticket.subject,
+      });
+    } catch (e) {
+      console.error('[Push] New ticket notification failed:', e);
+    }
+
     // Check if customer wants to talk to a human
     const customerWantsHuman = wantsHuman(messageContent);
     if (customerWantsHuman) {
       await markHumanRequested(ticket.id);
+      // Send push notification for escalation
+      try {
+        await notifyEscalation({
+          ticketId: ticket.id,
+          ticketNumber: ticket.ticketNumber,
+          customerName: profileName || phoneNumber,
+        });
+      } catch (e) {
+        console.error('[Push] Escalation notification failed:', e);
+      }
     }
 
     // Generate AI auto-reply for new WhatsApp ticket

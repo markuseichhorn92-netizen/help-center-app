@@ -14,6 +14,21 @@ export default function AdminLayout({
   // Don't show header on login page
   const isLoginPage = pathname === "/admin/login";
 
+  // Register service worker for push notifications
+  useEffect(() => {
+    if (isLoginPage) return;
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").then(
+        (registration) => {
+          console.log("[SW] Service Worker registered:", registration.scope);
+        },
+        (error) => {
+          console.error("[SW] Service Worker registration failed:", error);
+        }
+      );
+    }
+  }, [isLoginPage]);
+
   // Send heartbeat to indicate admin is online (for portal live chat)
   useEffect(() => {
     if (isLoginPage) return;

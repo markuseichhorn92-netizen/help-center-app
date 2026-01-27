@@ -7,6 +7,18 @@ import CookieBanner from "@/components/CookieBanner";
 export const metadata: Metadata = {
   title: "FIT INN Hilfe-Center",
   description: "Das Hilfe-Center von FIT INN Trier",
+  manifest: "/manifest.json",
+  themeColor: "#0a4958",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "FIT INN Admin",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+  },
 };
 
 export default function RootLayout({
