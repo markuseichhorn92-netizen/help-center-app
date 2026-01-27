@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
-import { getTicket, createMessage, getTicketMessages } from "@/lib/tickets";
+import { getTicket, createMessage, getTicketMessages, updateTicket } from "@/lib/tickets";
 import { sendTicketReply } from "@/lib/resend";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { generatePortalToken, getCustomerPresence } from "@/lib/portal";
@@ -101,6 +101,11 @@ export async function POST(
     const ticket = await getTicket(id);
     if (!ticket) {
       return NextResponse.json({ error: "Ticket nicht gefunden" }, { status: 404 });
+    }
+
+    // Set ticket to "in_progress" when admin shares article (counts as interaction)
+    if (ticket.status === 'open' || ticket.status === 'closed' || ticket.status === 'resolved') {
+      await updateTicket(id, { status: 'in_progress' });
     }
 
     // Get the article

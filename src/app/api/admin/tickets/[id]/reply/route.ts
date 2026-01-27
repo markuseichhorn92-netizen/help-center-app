@@ -32,10 +32,11 @@ export async function POST(
       return NextResponse.json({ message: 'Nachricht darf nicht leer sein.' }, { status: 400 });
     }
 
-    // Reopen ticket if closed or resolved when staff replies
-    if (ticket.status === 'closed' || ticket.status === 'resolved') {
+    // Set ticket to "in_progress" when admin replies (if not already resolved/closed)
+    // This covers: open -> in_progress, and reopening closed/resolved -> in_progress
+    if (ticket.status === 'open' || ticket.status === 'closed' || ticket.status === 'resolved') {
       await updateTicket(id, { status: 'in_progress' });
-      console.log(`Ticket ${ticket.ticketNumber} reopened to in_progress due to staff reply`);
+      console.log(`Ticket ${ticket.ticketNumber} set to in_progress due to admin reply (was: ${ticket.status})`);
     }
 
     // Get all messages for conversation history

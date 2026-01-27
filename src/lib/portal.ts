@@ -204,18 +204,80 @@ export async function deletePortalSession(sessionId: string): Promise<void> {
 // ADMIN PRESENCE
 // ============================================
 
+export interface AdminPresence {
+  [key: string]: string | boolean;
+  status: "online" | "offline";
+  lastSeen: string;
+  setManually: boolean;
+}
+
 /**
- * Update admin online status (heartbeat)
+ * Set admin online/offline status manually
+ */
+export async function setAdminStatus(status: "online" | "offline"): Promise<AdminPresence> {
+  const presence: AdminPresence = {
+    status,
+    lastSeen: new Date().toISOString(),
+    setManually: true,
+  };
+
+  await kv.hset("admin:presence", presence as Record<string, string | boolean>);
+
+  // Also update the simple online flag for backwards compatibility
+  if (status === "online") {
+    await kv.set("admin:online", Date.now().toString());
+    await kv.expire("admin:online", 24 * 60 * 60); // 24 hours (until manually set offline)
+  } else {
+    await kv.del("admin:online");
+  }
+
+  return presence;
+}
+
+/**
+ * Get admin presence status
+ */
+export async function getAdminPresence(): Promise<AdminPresence> {
+  const data = await kv.hgetall<AdminPresence>("admin:presence");
+
+  if (!data) {
+    return {
+      status: "offline",
+      lastSeen: new Date().toISOString(),
+      setManually: false,
+    };
+  }
+
+  return data;
+}
+
+/**
+ * Update admin online status (heartbeat) - only if status is "online"
  */
 export async function updateAdminPresence(): Promise<void> {
-  await kv.set("admin:online", Date.now().toString());
-  await kv.expire("admin:online", ADMIN_ONLINE_THRESHOLD_SECONDS * 2);
+  const presence = await getAdminPresence();
+
+  // Only update heartbeat if admin has manually set themselves as online
+  if (presence.status === "online") {
+    await kv.set("admin:online", Date.now().toString());
+    await kv.expire("admin:online", ADMIN_ONLINE_THRESHOLD_SECONDS * 2);
+    await kv.hset("admin:presence", { lastSeen: new Date().toISOString() });
+  }
 }
 
 /**
  * Check if admin is currently online
  */
 export async function isAdminOnline(): Promise<boolean> {
+  // First check the manual status
+  const presence = await getAdminPresence();
+
+  // If manually set to offline, always return false
+  if (presence.status === "offline") {
+    return false;
+  }
+
+  // If manually set to online, check the heartbeat
   const timestamp = await kv.get<string>("admin:online");
 
   if (!timestamp) {

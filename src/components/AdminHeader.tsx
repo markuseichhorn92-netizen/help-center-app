@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const navItems = [
   {
@@ -74,6 +74,58 @@ export default function AdminHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [adminStatus, setAdminStatus] = useState<"online" | "offline">("offline");
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  // Load admin status on mount
+  useEffect(() => {
+    const loadStatus = async () => {
+      try {
+        const res = await fetch("/api/admin/presence/status");
+        if (res.ok) {
+          const data = await res.json();
+          setAdminStatus(data.status || "offline");
+        }
+      } catch (error) {
+        console.error("Failed to load admin status:", error);
+      } finally {
+        setStatusLoading(false);
+      }
+    };
+    loadStatus();
+  }, []);
+
+  // Send heartbeat every 30 seconds when online
+  useEffect(() => {
+    if (adminStatus !== "online") return;
+
+    const sendHeartbeat = () => {
+      fetch("/api/admin/presence/heartbeat", { method: "POST" }).catch(() => {});
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 30000);
+    return () => clearInterval(interval);
+  }, [adminStatus]);
+
+  const toggleStatus = async () => {
+    const newStatus = adminStatus === "online" ? "offline" : "online";
+    setStatusLoading(true);
+    try {
+      const res = await fetch("/api/admin/presence/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        setAdminStatus(newStatus);
+      }
+    } catch (error) {
+      console.error("Failed to toggle status:", error);
+    } finally {
+      setStatusLoading(false);
+    }
+  };
 
   const isActive = (href: string) => {
     if (href === "/admin") {
@@ -127,6 +179,25 @@ export default function AdminHeader() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
+            {/* Online/Offline Toggle */}
+            <button
+              onClick={toggleStatus}
+              disabled={statusLoading}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                adminStatus === "online"
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              } ${statusLoading ? "opacity-50 cursor-wait" : ""}`}
+              title={adminStatus === "online" ? "Du bist online - Kunden sehen dich als verfügbar" : "Du bist offline - Kunden sehen dich als nicht verfügbar"}
+            >
+              <span className={`w-2.5 h-2.5 rounded-full ${
+                adminStatus === "online" ? "bg-green-500 animate-pulse" : "bg-gray-400"
+              }`} />
+              <span className="hidden sm:inline">
+                {statusLoading ? "..." : adminStatus === "online" ? "Online" : "Offline"}
+              </span>
+            </button>
+
             {/* Dashboard Link */}
             <a
               href="https://fitinntrierdashboard.org/admin"
