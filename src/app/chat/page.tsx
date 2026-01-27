@@ -15,6 +15,7 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isStarting, setIsStarting] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   // Escalation state
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -38,12 +39,17 @@ export default function ChatPage() {
   }, [messages]);
 
   const startSession = async () => {
+    setSessionError(null);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "start" }),
       });
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
       const data = await res.json();
       if (data.sessionId) {
@@ -55,9 +61,12 @@ export default function ChatPage() {
             timestamp: new Date().toISOString(),
           },
         ]);
+      } else {
+        throw new Error("Keine Session-ID erhalten");
       }
     } catch (error) {
       console.error("Failed to start session:", error);
+      setSessionError("Chat konnte nicht gestartet werden. Bitte Seite neu laden.");
     } finally {
       setIsStarting(false);
     }
@@ -272,15 +281,15 @@ export default function ChatPage() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Schreibe eine Nachricht..."
+                placeholder={sessionId ? "Schreibe eine Nachricht..." : "Chat wird initialisiert..."}
                 rows={1}
                 className="flex-1 resize-none rounded-2xl border border-apple-gray-200 px-4 py-3 text-sm focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
                 style={{ maxHeight: "120px" }}
-                disabled={isLoading}
+                disabled={isLoading || !sessionId}
               />
               <button
                 onClick={sendMessage}
-                disabled={!inputValue.trim() || isLoading}
+                disabled={!inputValue.trim() || isLoading || !sessionId}
                 className="w-12 h-12 bg-brand text-white rounded-full flex items-center justify-center hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -288,9 +297,18 @@ export default function ChatPage() {
                 </svg>
               </button>
             </div>
-            <p className="text-xs text-apple-gray-400 mt-2 text-center">
-              Schreibe &apos;Mitarbeiter&apos; für persönliche Hilfe
-            </p>
+            {sessionError ? (
+              <p className="text-xs text-red-500 mt-2 text-center">
+                {sessionError}{" "}
+                <button onClick={startSession} className="underline hover:no-underline">
+                  Erneut versuchen
+                </button>
+              </p>
+            ) : (
+              <p className="text-xs text-apple-gray-400 mt-2 text-center">
+                Schreibe &apos;Mitarbeiter&apos; für persönliche Hilfe
+              </p>
+            )}
           </div>
         </div>
       ) : (
