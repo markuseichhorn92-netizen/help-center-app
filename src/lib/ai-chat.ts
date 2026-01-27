@@ -154,6 +154,7 @@ async function getRelevantArticles(query: string): Promise<string> {
   try {
     // Get all published articles
     const articleIds: string[] = (await kv.smembers("articles:ids")) || [];
+    console.log("[AI-Chat] Article IDs:", articleIds.length);
     if (articleIds.length === 0) return "";
 
     const articles = await Promise.all(
@@ -171,6 +172,7 @@ async function getRelevantArticles(query: string): Promise<string> {
     );
 
     const publishedArticles = articles.filter((a) => a !== null);
+    console.log("[AI-Chat] Published articles:", publishedArticles.length);
     if (publishedArticles.length === 0) return "";
 
     // If there are only a few articles (<=5), include all of them for context
@@ -240,18 +242,19 @@ async function getRelevantArticles(query: string): Promise<string> {
  */
 async function getKnowledgeBaseContext(query: string): Promise<string> {
   try {
-    // Get knowledge base entries
-    const keys = await kv.keys("knowledge:*");
-    if (keys.length === 0) return "";
+    // Get knowledge base entry IDs from the set (not using kv.keys which is expensive)
+    const entryIds: string[] = (await kv.smembers("knowledge:ids")) || [];
+    console.log("[AI-Chat] Knowledge base entry IDs:", entryIds.length);
+    if (entryIds.length === 0) return "";
 
     const entries = await Promise.all(
-      keys.map(async (key) => {
+      entryIds.map(async (id) => {
         const entry = await kv.hgetall<{
           title: string;
           content: string;
           keywords: string;
           url: string;
-        }>(key);
+        }>(`knowledge:${id}`);
         return entry;
       })
     );
