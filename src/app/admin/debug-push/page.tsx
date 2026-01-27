@@ -140,9 +140,47 @@ export default function DebugPushPage() {
     }
   };
 
+  const unsubscribe = async () => {
+    try {
+      setTestResult("Unsubscribing...");
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (subscription) {
+        // Tell server to remove
+        await fetch("/api/admin/push/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        });
+        // Unsubscribe locally
+        await subscription.unsubscribe();
+        setTestResult("Erfolgreich abgemeldet! Jetzt neu subscriben.");
+      } else {
+        setTestResult("Keine aktive Subscription gefunden.");
+      }
+      window.location.reload();
+    } catch (e: any) {
+      setTestResult(`Fehler: ${e.message}`);
+    }
+  };
+
   const subscribe = async () => {
     try {
       setTestResult("Subscribing...");
+
+      // First unsubscribe if exists
+      const registration = await navigator.serviceWorker.ready;
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        await fetch("/api/admin/push/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: existingSubscription.endpoint }),
+        });
+        await existingSubscription.unsubscribe();
+        setTestResult("Alte Subscription entfernt, erstelle neue...");
+      }
 
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -150,11 +188,10 @@ export default function DebugPushPage() {
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
-
       // Get VAPID key
       const keyRes = await fetch("/api/admin/push/vapid-key");
       const { publicKey } = await keyRes.json();
+      setTestResult(`VAPID Key erhalten: ${publicKey.substring(0, 20)}...`);
 
       // Convert key
       const urlBase64ToUint8Array = (base64String: string) => {
@@ -174,14 +211,16 @@ export default function DebugPushPage() {
       });
 
       // Send to server
-      await fetch("/api/admin/push/subscribe", {
+      const saveRes = await fetch("/api/admin/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(subscription.toJSON()),
       });
 
-      setTestResult("Subscription erfolgreich!\n" + JSON.stringify(subscription.toJSON(), null, 2));
-      window.location.reload();
+      const saveData = await saveRes.json();
+
+      setTestResult("Subscription erfolgreich!\n\nEndpoint: " + subscription.endpoint.substring(0, 60) + "...\n\nServer: " + JSON.stringify(saveData, null, 2));
+      setTimeout(() => window.location.reload(), 2000);
     } catch (e: any) {
       setTestResult(`Fehler: ${e.message}\n${e.stack}`);
     }
@@ -223,10 +262,16 @@ export default function DebugPushPage() {
             1. Berechtigung anfragen
           </button>
           <button
+            onClick={unsubscribe}
+            className="w-full bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600"
+          >
+            1b. Alte Subscription löschen
+          </button>
+          <button
             onClick={subscribe}
             className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
           >
-            2. Push Subscribe
+            2. Push Subscribe (neu)
           </button>
           <button
             onClick={testLocalNotification}

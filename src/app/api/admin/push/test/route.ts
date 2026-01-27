@@ -67,9 +67,14 @@ export async function GET(req: NextRequest) {
       vapidPublicSet: !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
       vapidPrivateSet: !!process.env.VAPID_PRIVATE_KEY,
       vapidSubjectSet: !!process.env.VAPID_SUBJECT,
+      vapidSubject: process.env.VAPID_SUBJECT || "(not set - using default)",
+      vapidPublicKeyPreview: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.substring(0, 20) + "...",
       subscriptionCount: subscriptions.length,
       subscriptions: subscriptions.map(s => ({
-        endpoint: s.endpoint.substring(0, 50) + "...",
+        endpoint: s.endpoint.substring(0, 60) + "...",
+        isApple: s.endpoint.includes("apple") || s.endpoint.includes("push.apple"),
+        isGoogle: s.endpoint.includes("fcm.googleapis") || s.endpoint.includes("google"),
+        hasKeys: !!s.keys?.p256dh && !!s.keys?.auth,
       })),
     });
   } catch (error: any) {
