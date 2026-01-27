@@ -273,8 +273,8 @@ export default function ContactsPage() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-apple-xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+        <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center z-50 p-4 pt-16 sm:pt-4 overflow-y-auto">
+          <div className="bg-white rounded-apple-xl shadow-2xl max-w-md w-full p-6 animate-fade-in my-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-apple-gray-600">
                 {editingContact ? "Kontakt bearbeiten" : "Neuer Kontakt"}
