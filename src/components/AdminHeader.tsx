@@ -119,7 +119,7 @@ export default function AdminHeader() {
 
             {/* Dashboard Link */}
             <a
-              href="https://fitinntrierdashboard.org/"
+              href="https://fitinntrierdashboard.org/admin"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
@@ -200,7 +200,7 @@ export default function AdminHeader() {
                 <span>Neuer Artikel</span>
               </Link>
               <a
-                href="https://fitinntrierdashboard.org/"
+                href="https://fitinntrierdashboard.org/admin"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setMobileMenuOpen(false)}
