@@ -175,8 +175,8 @@ async function getRelevantArticles(query: string): Promise<string> {
     console.log("[AI-Chat] Published articles:", publishedArticles.length);
     if (publishedArticles.length === 0) return "";
 
-    // If there are only a few articles (<=5), include all of them for context
-    if (publishedArticles.length <= 5) {
+    // If there are only a few articles (<=20), include all of them for context
+    if (publishedArticles.length <= 20) {
       return publishedArticles
         .map((a) => {
           const cleanContent = a.content
@@ -262,8 +262,8 @@ async function getKnowledgeBaseContext(query: string): Promise<string> {
     const validEntries = entries.filter((e) => e !== null);
     if (validEntries.length === 0) return "";
 
-    // If there are only a few entries (<=5), include all of them
-    if (validEntries.length <= 5) {
+    // If there are only a few entries (<=30), include all of them
+    if (validEntries.length <= 30) {
       return validEntries
         .map((e) => {
           const cleanContent = (e.content || "").substring(0, 1000).trim();
