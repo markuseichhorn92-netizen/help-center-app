@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyPortalSession, incrementSessionMessages } from "@/lib/portal";
+import { verifyPortalSession, incrementSessionMessages, isAdminOnline } from "@/lib/portal";
 import { getTicket, getTicketMessages, createMessage, updateTicket } from "@/lib/tickets";
+import { generateAutoReply, wantsHuman, markHumanRequested, isAutoReplyEnabled } from "@/lib/ai-autoreply";
 
 // GET - Retrieve messages for a ticket
 export async function GET(
@@ -141,7 +142,13 @@ export async function POST(
       );
     }
 
-    // Create message
+    // Check if customer wants to talk to a human
+    const customerWantsHuman = wantsHuman(content.trim());
+    if (customerWantsHuman) {
+      await markHumanRequested(id);
+    }
+
+    // Create customer message
     const message = await createMessage({
       ticketId: id,
       content: content.trim(),
@@ -159,6 +166,68 @@ export async function POST(
     // Track session activity
     await incrementSessionMessages(session.email, id);
 
+    // Check if we should generate an AI auto-reply
+    const adminOnline = await isAdminOnline();
+    const autoReplyEnabled = await isAutoReplyEnabled(id);
+
+    let aiResponse = null;
+
+    if (!adminOnline && autoReplyEnabled && !customerWantsHuman) {
+      // Admin is offline and auto-reply is enabled - generate AI response
+      console.log("Admin offline, generating AI auto-reply");
+
+      const messages = await getTicketMessages(id);
+      const aiResult = await generateAutoReply({
+        customerMessage: content.trim(),
+        customerName: ticket.customerName,
+        ticketSubject: ticket.subject,
+        conversationHistory: messages,
+        isWhatsApp: false,
+      });
+
+      if (aiResult.success) {
+        // Create AI response message
+        const aiMessage = await createMessage({
+          ticketId: id,
+          content: aiResult.content,
+          sender: "admin",
+          senderName: "FIT INN Assistent",
+          senderEmail: process.env.SUPPORT_EMAIL || "support@fit-inn-trier.de",
+          channel: "web",
+          deliveryChannel: "live",
+        });
+
+        aiResponse = {
+          id: aiMessage.id,
+          content: aiMessage.content,
+          sender: aiMessage.sender,
+          senderName: "FIT INN Assistent",
+          createdAt: aiMessage.createdAt,
+          isAiGenerated: true,
+        };
+      }
+    } else if (customerWantsHuman) {
+      // Customer wants human - send confirmation
+      const humanConfirmMessage = await createMessage({
+        ticketId: id,
+        content: "Ich habe einen Mitarbeiter benachrichtigt. Jemand aus unserem Team wird sich in Kurze bei dir melden. Vielen Dank fur deine Geduld!",
+        sender: "admin",
+        senderName: "FIT INN Assistent",
+        senderEmail: process.env.SUPPORT_EMAIL || "support@fit-inn-trier.de",
+        channel: "web",
+        deliveryChannel: "live",
+      });
+
+      aiResponse = {
+        id: humanConfirmMessage.id,
+        content: humanConfirmMessage.content,
+        sender: humanConfirmMessage.sender,
+        senderName: "FIT INN Assistent",
+        createdAt: humanConfirmMessage.createdAt,
+        isAiGenerated: true,
+      };
+    }
+
     return NextResponse.json({
       message: {
         id: message.id,
@@ -167,6 +236,8 @@ export async function POST(
         senderName: ticket.customerName,
         createdAt: message.createdAt,
       },
+      aiResponse,
+      humanRequested: customerWantsHuman,
     });
   } catch (error) {
     console.error("Portal message create error:", error);

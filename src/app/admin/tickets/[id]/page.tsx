@@ -41,6 +41,7 @@ interface TicketMessage {
   deliveredAt?: string;
   readAt?: string;
   failureReason?: string;
+  deliveryChannel?: 'live' | 'email' | 'whatsapp';
 }
 
 const statusConfig = {
@@ -152,6 +153,27 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [sidebarTickets, setSidebarTickets] = useState<SidebarTicket[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarLoading, setSidebarLoading] = useState(true);
+
+  // Customer presence state
+  const [customerPresence, setCustomerPresence] = useState<{
+    online: boolean;
+    lastSeen: string | null;
+  }>({ online: false, lastSeen: null });
+
+  // Human requested state (for AI auto-reply)
+  const [humanRequested, setHumanRequested] = useState(false);
+
+  // Typing indicator state
+  const [isCustomerTyping, setIsCustomerTyping] = useState(false);
+
+  // Quick replies state
+  const [quickReplies, setQuickReplies] = useState<Array<{ id: string; title: string; content: string }>>([]);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
+
+  // Notification sound state
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastMessageCountRef = useRef(0);
 
   useEffect(() => {
     const updateRows = () => {
@@ -292,6 +314,122 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     }
     prevMessagesCountRef.current = messages.length;
   }, [messages, initialLoadDone]);
+
+  // Poll customer presence
+  useEffect(() => {
+    const checkCustomerPresence = async () => {
+      try {
+        const res = await fetch(`/api/admin/tickets/${id}/customer-presence`, {
+          headers: { Authorization: getAuthHeader() }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCustomerPresence({
+            online: data.online,
+            lastSeen: data.lastSeen,
+          });
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
+    checkCustomerPresence();
+    const interval = setInterval(checkCustomerPresence, 5000); // Check every 5s
+
+    return () => clearInterval(interval);
+  }, [id]);
+
+  // Check if human was requested
+  useEffect(() => {
+    const checkHumanRequested = async () => {
+      try {
+        const res = await fetch(`/api/admin/tickets/${id}/human-requested`, {
+          headers: { Authorization: getAuthHeader() }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setHumanRequested(data.humanRequested);
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
+    checkHumanRequested();
+    // Also check when messages change (in case customer requested human in chat)
+  }, [id, messages]);
+
+  // Poll typing indicator
+  useEffect(() => {
+    const checkTyping = async () => {
+      try {
+        const res = await fetch(`/api/admin/tickets/${id}/typing`, {
+          headers: { Authorization: getAuthHeader() }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIsCustomerTyping(data.isTyping);
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
+    // Check frequently for typing indicator
+    const interval = setInterval(checkTyping, 1000);
+
+    return () => clearInterval(interval);
+  }, [id]);
+
+  // Load quick replies
+  useEffect(() => {
+    const loadQuickReplies = async () => {
+      try {
+        const res = await fetch('/api/admin/quick-replies', {
+          headers: { Authorization: getAuthHeader() }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setQuickReplies(data.replies || []);
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
+    loadQuickReplies();
+  }, []);
+
+  // Load sound preference from localStorage
+  useEffect(() => {
+    const savedPref = localStorage.getItem('admin:sound-enabled');
+    if (savedPref !== null) {
+      setSoundEnabled(savedPref === 'true');
+    }
+  }, []);
+
+  // Play notification sound for new customer messages
+  useEffect(() => {
+    if (!initialLoadDone) {
+      lastMessageCountRef.current = messages.filter(m => m.sender === 'customer').length;
+      return;
+    }
+
+    const customerMessages = messages.filter(m => m.sender === 'customer');
+    const newCount = customerMessages.length;
+
+    if (newCount > lastMessageCountRef.current && soundEnabled && document.hidden) {
+      // Play notification sound
+      if (audioRef.current) {
+        audioRef.current.play().catch(() => {
+          // Silently fail if audio can't play
+        });
+      }
+    }
+
+    lastMessageCountRef.current = newCount;
+  }, [messages, soundEnabled, initialLoadDone]);
 
   const handleStatusChange = async (newStatus: Ticket["status"]) => {
     if (!ticket) return;
@@ -897,7 +1035,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                           Neu
                         </span>
                       )}
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <span className={`text-sm font-medium ${msg.sender === "admin" ? "text-white/90" : "text-apple-gray-500"}`}>
                           {msg.senderName}
                         </span>
@@ -911,6 +1049,35 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         </span>
                         {msg.sender === "admin" && (
                           <MessageStatusIcon message={msg} />
+                        )}
+                        {/* Delivery Channel Indicator */}
+                        {msg.sender === "admin" && msg.deliveryChannel && (
+                          <span className={`text-xs flex items-center gap-1 ${msg.sender === "admin" ? "text-white/60" : "text-apple-gray-400"}`}>
+                            {msg.deliveryChannel === 'live' && (
+                              <>
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                                </svg>
+                                Live
+                              </>
+                            )}
+                            {msg.deliveryChannel === 'email' && (
+                              <>
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                E-Mail
+                              </>
+                            )}
+                            {msg.deliveryChannel === 'whatsapp' && (
+                              <>
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                                </svg>
+                                WhatsApp
+                              </>
+                            )}
+                          </span>
                         )}
                       </div>
                       <div
@@ -956,6 +1123,19 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 </div>
                 );
               })}
+              {/* Typing Indicator */}
+              {isCustomerTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-apple-gray-100 rounded-apple-lg px-4 py-3 flex items-center gap-2">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-apple-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-apple-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-apple-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-xs text-apple-gray-500">Kunde tippt...</span>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -1230,6 +1410,66 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                       )}
                       <span className="hidden sm:inline">Datei anhängen</span>
                     </button>
+
+                    {/* Quick Replies Dropdown */}
+                    {quickReplies.length > 0 && (
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowQuickReplies(!showQuickReplies)}
+                          className="inline-flex items-center justify-center gap-1.5 px-4 py-3 min-h-[44px] text-sm text-apple-gray-500 hover:text-apple-gray-700 hover:bg-apple-gray-100 rounded-lg transition-colors"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                          </svg>
+                          <span className="hidden sm:inline">Schnellantwort</span>
+                        </button>
+                        {showQuickReplies && (
+                          <div className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-lg border border-apple-gray-200 py-1 z-20 min-w-[200px]">
+                            {quickReplies.map((reply) => (
+                              <button
+                                key={reply.id}
+                                type="button"
+                                onClick={() => {
+                                  setReplyContent(reply.content);
+                                  setShowQuickReplies(false);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm text-apple-gray-600 hover:bg-apple-gray-50"
+                              >
+                                {reply.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Sound Toggle */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newValue = !soundEnabled;
+                        setSoundEnabled(newValue);
+                        localStorage.setItem('admin:sound-enabled', String(newValue));
+                      }}
+                      className={`inline-flex items-center justify-center gap-1.5 px-4 py-3 min-h-[44px] text-sm rounded-lg transition-colors ${
+                        soundEnabled
+                          ? 'text-brand bg-brand/10 hover:bg-brand/20'
+                          : 'text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100'
+                      }`}
+                      title={soundEnabled ? 'Ton aktiv' : 'Ton stumm'}
+                    >
+                      {soundEnabled ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        </svg>
+                      )}
+                    </button>
                   </div>
                   <button
                     type="submit"
@@ -1293,13 +1533,50 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
             <h3 className="text-sm font-semibold text-apple-gray-400 uppercase tracking-wider mb-3">Kunde</h3>
             <div className="space-y-2">
-              <p className="text-apple-gray-600 font-medium">{ticket.customerName}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-apple-gray-600 font-medium">{ticket.customerName}</p>
+                {/* Online Status Indicator */}
+                <div className="flex items-center gap-1.5">
+                  <div className={`w-2 h-2 rounded-full ${customerPresence.online ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+                  <span className={`text-xs ${customerPresence.online ? 'text-green-600' : 'text-apple-gray-400'}`}>
+                    {customerPresence.online ? 'Online' : 'Offline'}
+                  </span>
+                </div>
+              </div>
               <a
                 href={`mailto:${ticket.customerEmail}`}
                 className="text-brand hover:text-brand-dark text-sm break-all"
               >
                 {ticket.customerEmail}
               </a>
+              {/* Last Seen */}
+              {!customerPresence.online && customerPresence.lastSeen && (
+                <p className="text-xs text-apple-gray-400">
+                  Zuletzt gesehen: {(() => {
+                    const lastSeen = new Date(customerPresence.lastSeen);
+                    const now = new Date();
+                    const diffMs = now.getTime() - lastSeen.getTime();
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffHours = Math.floor(diffMs / 3600000);
+                    const diffDays = Math.floor(diffMs / 86400000);
+
+                    if (diffMins < 1) return 'gerade eben';
+                    if (diffMins < 60) return `vor ${diffMins} Min.`;
+                    if (diffHours < 24) return `vor ${diffHours} Std.`;
+                    if (diffDays < 7) return `vor ${diffDays} Tag${diffDays > 1 ? 'en' : ''}`;
+                    return lastSeen.toLocaleDateString('de-DE');
+                  })()}
+                </p>
+              )}
+              {/* Human Requested Badge */}
+              {humanRequested && (
+                <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-orange-50 rounded-lg border border-orange-200">
+                  <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="text-xs font-medium text-orange-700">Mensch angefordert</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1475,6 +1752,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       {showAiMenu && (
         <div className="fixed inset-0 z-0" onClick={() => setShowAiMenu(false)} />
       )}
+
+      {/* Click outside to close quick replies */}
+      {showQuickReplies && (
+        <div className="fixed inset-0 z-0" onClick={() => setShowQuickReplies(false)} />
+      )}
+
+      {/* Audio element for notification */}
+      <audio ref={audioRef} preload="auto">
+        <source src="/sounds/notification.mp3" type="audio/mpeg" />
+      </audio>
     </div>
   );
 }

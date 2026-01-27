@@ -33,6 +33,12 @@ export interface SessionActivity {
   emailSent: boolean;
 }
 
+export interface CustomerPresence {
+  [key: string]: string | undefined;
+  lastSeen: string;
+  ticketId?: string;
+}
+
 // ============================================
 // CONSTANTS
 // ============================================
@@ -42,6 +48,7 @@ const SESSION_EXPIRY_HOURS = 24;
 const RATE_LIMIT_REQUESTS = 3;
 const RATE_LIMIT_WINDOW_HOURS = 1;
 const ADMIN_ONLINE_THRESHOLD_SECONDS = 60;
+const CUSTOMER_ONLINE_THRESHOLD_SECONDS = 60;
 
 // ============================================
 // TOKEN MANAGEMENT
@@ -219,6 +226,53 @@ export async function isAdminOnline(): Promise<boolean> {
   const now = Date.now();
 
   return (now - lastActive) < ADMIN_ONLINE_THRESHOLD_SECONDS * 1000;
+}
+
+// ============================================
+// CUSTOMER PRESENCE
+// ============================================
+
+/**
+ * Update customer presence (heartbeat from portal)
+ */
+export async function updateCustomerPresence(
+  email: string,
+  ticketId?: string
+): Promise<void> {
+  const key = `portal:presence:${email.toLowerCase()}`;
+  const presence: CustomerPresence = {
+    lastSeen: new Date().toISOString(),
+    ticketId,
+  };
+
+  await kv.hset(key, presence);
+  await kv.expire(key, CUSTOMER_ONLINE_THRESHOLD_SECONDS * 2);
+}
+
+/**
+ * Get customer presence status
+ */
+export async function getCustomerPresence(email: string): Promise<{
+  online: boolean;
+  lastSeen: string | null;
+  ticketId?: string;
+}> {
+  const key = `portal:presence:${email.toLowerCase()}`;
+  const data = await kv.hgetall<CustomerPresence>(key);
+
+  if (!data || !data.lastSeen) {
+    return { online: false, lastSeen: null };
+  }
+
+  const lastSeenTime = new Date(data.lastSeen).getTime();
+  const now = Date.now();
+  const online = (now - lastSeenTime) < CUSTOMER_ONLINE_THRESHOLD_SECONDS * 1000;
+
+  return {
+    online,
+    lastSeen: data.lastSeen,
+    ticketId: data.ticketId,
+  };
 }
 
 // ============================================

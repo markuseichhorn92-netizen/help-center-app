@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTicket, createMessage, findTicketsByPhone, findTicketByNumber, parseTicketNumberFromSubject, updateTicket, Attachment } from '@/lib/tickets';
+import { createTicket, createMessage, findTicketsByPhone, findTicketByNumber, parseTicketNumberFromSubject, updateTicket, getTicketMessages, Attachment } from '@/lib/tickets';
 import { ensureContactFromTicket, updateLastContact } from '@/lib/contacts';
+import { generateAutoReply, wantsHuman, markHumanRequested, isAutoReplyEnabled } from '@/lib/ai-autoreply';
+import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import crypto from 'crypto';
 
 // Validate Twilio request signature
@@ -154,6 +156,12 @@ export async function POST(req: NextRequest) {
       // Add message to existing ticket
       console.log(`Adding message to existing ticket: ${existingTicket.ticketNumber}`);
 
+      // Check if customer wants to talk to a human
+      const customerWantsHuman = wantsHuman(messageContent);
+      if (customerWantsHuman) {
+        await markHumanRequested(existingTicket.id);
+      }
+
       await createMessage({
         ticketId: existingTicket.id,
         content: messageContent,
@@ -171,6 +179,68 @@ export async function POST(req: NextRequest) {
 
       // Update contact last activity
       await updateLastContact(`${phoneNumber}@whatsapp`);
+
+      // Generate AI auto-reply for WhatsApp
+      const autoReplyEnabled = await isAutoReplyEnabled(existingTicket.id);
+
+      if (autoReplyEnabled && !customerWantsHuman) {
+        console.log('Generating AI auto-reply for WhatsApp');
+
+        const messages = await getTicketMessages(existingTicket.id);
+        const aiResult = await generateAutoReply({
+          customerMessage: messageContent,
+          customerName: profileName || phoneNumber,
+          ticketSubject: existingTicket.subject,
+          conversationHistory: messages,
+          isWhatsApp: true,
+        });
+
+        if (aiResult.success && aiResult.content) {
+          // Send AI reply via WhatsApp
+          const whatsappResult = await sendWhatsAppMessage({
+            to: phoneNumber,
+            message: aiResult.content,
+            ticketNumber: existingTicket.ticketNumber,
+          });
+
+          if (whatsappResult.success) {
+            // Save AI message in database
+            await createMessage({
+              ticketId: existingTicket.id,
+              content: aiResult.content,
+              sender: 'admin',
+              senderName: 'FIT INN Assistent',
+              senderEmail: process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
+              channel: 'whatsapp',
+              whatsappMessageId: whatsappResult.messageSid,
+              deliveryChannel: 'whatsapp',
+            });
+            console.log('AI auto-reply sent via WhatsApp');
+          }
+        }
+      } else if (customerWantsHuman) {
+        // Send confirmation that human was requested
+        const humanMessage = 'Ich habe einen Mitarbeiter benachrichtigt. Jemand aus unserem Team wird sich in Kurze bei dir melden. Vielen Dank fur deine Geduld!';
+
+        const whatsappResult = await sendWhatsAppMessage({
+          to: phoneNumber,
+          message: humanMessage,
+          ticketNumber: existingTicket.ticketNumber,
+        });
+
+        if (whatsappResult.success) {
+          await createMessage({
+            ticketId: existingTicket.id,
+            content: humanMessage,
+            sender: 'admin',
+            senderName: 'FIT INN Assistent',
+            senderEmail: process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
+            channel: 'whatsapp',
+            whatsappMessageId: whatsappResult.messageSid,
+            deliveryChannel: 'whatsapp',
+          });
+        }
+      }
 
       return new Response(
         '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
@@ -198,6 +268,70 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`New WhatsApp ticket created: ${ticket.ticketNumber}`);
+
+    // Check if customer wants to talk to a human
+    const customerWantsHuman = wantsHuman(messageContent);
+    if (customerWantsHuman) {
+      await markHumanRequested(ticket.id);
+    }
+
+    // Generate AI auto-reply for new WhatsApp ticket
+    if (!customerWantsHuman) {
+      console.log('Generating AI auto-reply for new WhatsApp ticket');
+
+      const aiResult = await generateAutoReply({
+        customerMessage: messageContent,
+        customerName: profileName || phoneNumber,
+        ticketSubject: ticket.subject,
+        isWhatsApp: true,
+      });
+
+      if (aiResult.success && aiResult.content) {
+        // Send AI reply via WhatsApp
+        const whatsappResult = await sendWhatsAppMessage({
+          to: phoneNumber,
+          message: aiResult.content,
+          ticketNumber: ticket.ticketNumber,
+        });
+
+        if (whatsappResult.success) {
+          // Save AI message in database
+          await createMessage({
+            ticketId: ticket.id,
+            content: aiResult.content,
+            sender: 'admin',
+            senderName: 'FIT INN Assistent',
+            senderEmail: process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
+            channel: 'whatsapp',
+            whatsappMessageId: whatsappResult.messageSid,
+            deliveryChannel: 'whatsapp',
+          });
+          console.log('AI auto-reply sent via WhatsApp for new ticket');
+        }
+      }
+    } else {
+      // Customer wants human - send confirmation
+      const humanMessage = 'Vielen Dank fur deine Nachricht! Ich habe ein Ticket fur dich erstellt und einen Mitarbeiter benachrichtigt. Jemand aus unserem Team wird sich in Kurze bei dir melden.';
+
+      const whatsappResult = await sendWhatsAppMessage({
+        to: phoneNumber,
+        message: humanMessage,
+        ticketNumber: ticket.ticketNumber,
+      });
+
+      if (whatsappResult.success) {
+        await createMessage({
+          ticketId: ticket.id,
+          content: humanMessage,
+          sender: 'admin',
+          senderName: 'FIT INN Assistent',
+          senderEmail: process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
+          channel: 'whatsapp',
+          whatsappMessageId: whatsappResult.messageSid,
+          deliveryChannel: 'whatsapp',
+        });
+      }
+    }
 
     return new Response(
       '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',

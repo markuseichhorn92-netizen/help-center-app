@@ -47,6 +47,8 @@ export interface TicketMessage {
   deliveredAt?: string;
   readAt?: string;
   failureReason?: string;
+  // Smart channel selection: how the admin message was delivered
+  deliveryChannel?: 'live' | 'email' | 'whatsapp';
 }
 
 // Helper: Generate ticket number
@@ -290,6 +292,7 @@ export async function createMessage(data: {
   whatsappMessageId?: string;
   channel?: 'email' | 'whatsapp' | 'web';
   attachments?: Attachment[];
+  deliveryChannel?: 'live' | 'email' | 'whatsapp';
 }): Promise<TicketMessage> {
   const messageId = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -307,6 +310,7 @@ export async function createMessage(data: {
     ...(data.whatsappMessageId && { whatsappMessageId: data.whatsappMessageId }),
     ...(data.channel && { channel: data.channel }),
     ...(data.attachments && data.attachments.length > 0 && { attachments: data.attachments }),
+    ...(data.deliveryChannel && { deliveryChannel: data.deliveryChannel }),
   };
 
   // Filter out undefined/null values for Redis

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-FIT INN Help Center - A Next.js 16 application for customer support with knowledge base articles and a ticket system with email integration. Deployed on Vercel.
+FIT INN Help Center - A Next.js 16 application for customer support with knowledge base articles and a multi-channel ticket system (Email, WhatsApp). Deployed on Vercel.
 
 ## Development Commands
 
@@ -22,24 +22,33 @@ npm run lint     # ESLint
 - **Styling**: Tailwind CSS v4 with custom theme
 - **Storage**: Vercel KV (Redis)
 - **Email**: Resend (outbound), IMAP/IONOS (inbound)
+- **WhatsApp**: Twilio API
 - **AI**: Anthropic Claude API
 
 ### Key Directories
 - `src/app/` - Next.js App Router pages and API routes
-- `src/app/admin/` - Admin dashboard, article editor, categories, analytics
-- `src/app/admin/login/` - Admin login page
-- `src/app/articles/[id]/` - Article detail page with TOC
-- `src/lib/` - Service modules (tickets.ts, categories.ts, analytics.ts, feedback.ts, imap.ts, resend.ts)
-- `src/components/` - Reusable React components
-- `src/middleware.ts` - Cookie-based auth for /admin routes
+- `src/app/admin/` - Admin dashboard with dedicated layout and header
+- `src/lib/` - Service modules (tickets.ts, categories.ts, analytics.ts, feedback.ts, imap.ts, resend.ts, whatsapp.ts)
+- `src/components/` - Reusable React components including AdminHeader
+
+### Admin Layout Structure
+- `src/app/admin/layout.tsx` - Shared layout with AdminHeader (excludes login page)
+- `src/components/AdminHeader.tsx` - Navigation between: Artikel, Tickets, Kategorien, Analytics, Knowledge
+- All admin pages use `max-w-7xl` container for consistent width
+- Public Header/Footer automatically hidden on `/admin/*` routes
 
 ### Data Layer (Vercel KV)
 
 **Tickets & Messages:**
-- `ticket:{id}` - Hash with ticket data
+- `ticket:{id}` - Hash with ticket data (includes `channel: 'email' | 'whatsapp' | 'web'`)
 - `tickets:ids` - Set of all ticket IDs
 - `ticket:{id}:messages` - Set of message IDs per ticket
-- `message:{id}` - Hash with message data
+- `message:{id}` - Hash with message data (includes `status`, `emailMessageId`, `whatsappMessageId`)
+
+**Message Status Tracking:**
+- `status`: `'sent' | 'delivered' | 'read' | 'failed'`
+- `deliveredAt`, `readAt`, `failureReason` timestamps
+- Updated via webhooks from Resend (email) and Twilio (WhatsApp)
 
 **Articles:**
 - `article:{id}` - Hash: { id, title, slug, content, category, published, createdAt, updatedAt }
@@ -50,119 +59,89 @@ npm run lint     # ESLint
 - `categories:ids` - Set of all category IDs
 - Icons: `card`, `dumbbell`, `building`, `user`, `more`
 
-**Analytics:**
-- `article:{id}:views:total` - Integer: total view count
-- `article:{id}:views:daily` - Sorted Set: { "2024-01-26": count }
-- `analytics:popular` - Sorted Set: { articleId: totalViews }
+**Knowledge Base (Crawler):**
+- `knowledge:{id}` - Hash: { id, url, title, content, description, keywords, lastCrawled }
+- Used for AI-powered responses in ticket system
 
-**Feedback:**
-- `article:{id}:feedback:helpful` - Integer: helpful votes
-- `article:{id}:feedback:not_helpful` - Integer: not helpful votes
-- `article:{id}:feedback:voters` - Set of visitor hashes (duplicate prevention)
+**Analytics & Feedback:**
+- `article:{id}:views:total` - Integer
+- `article:{id}:views:daily` - Sorted Set
+- `article:{id}:feedback:helpful` / `not_helpful` - Integers
+- `article:{id}:feedback:voters` - Set of visitor hashes
 
 ### Authentication
 
-**Admin Login Page** (`/admin/login`):
-- Cookie-based session authentication
-- Session cookie `admin_session` valid for 24 hours
-- Login API: `POST /api/admin/auth/login`
-- Logout API: `POST /api/admin/auth/logout`
+**Cookie-based Session** (primary):
+- Login: `POST /api/admin/auth/login` → Sets `admin_session` cookie (24h)
+- Logout: `POST /api/admin/auth/logout`
+- Middleware checks cookie on `/admin/*` and `/api/admin/*` routes
 
-**Middleware** (`src/middleware.ts`):
-- Protects `/admin/*` routes (except `/admin/login`)
-- Protects `/api/admin/*` routes (except `/api/admin/auth/*`)
-- Redirects unauthenticated users to login page
-- Falls back to Basic Auth for API compatibility
+**Basic Auth** (fallback for API compatibility):
+- Header: `Authorization: Basic base64(user:pass)`
 
 ### API Structure
-- **Public**: `/api/articles`, `/api/categories`, `/api/search`, `/api/tickets` (POST)
-- **Public Article APIs**: `/api/articles/{id}/view` (POST), `/api/articles/{id}/feedback`
-- **Protected**: `/api/admin/*` - requires session cookie or Basic Auth
-- **Auth**: `/api/admin/auth/login`, `/api/admin/auth/logout`
-- **Cron**: `/api/cron/fetch-emails` - scheduled email fetching
-- **Webhooks**: `/api/webhooks/resend`, `/api/webhooks/whatsapp`
+- **Public**: `/api/articles`, `/api/categories`, `/api/search`, `/api/tickets`
+- **Protected**: `/api/admin/*` - requires session cookie
+- **Webhooks**:
+  - `/api/webhooks/resend` - Email delivery/open tracking
+  - `/api/webhooks/whatsapp-status` - WhatsApp delivery/read receipts
+  - `/api/webhooks/whatsapp` - Incoming WhatsApp messages
+- **Cron**: `/api/cron/fetch-emails`, `/api/cron/crawl`
 
-### Email Integration
-- Incoming emails fetched via IMAP from IONOS, processed in `src/lib/imap.ts`
-- Outgoing emails sent via Resend in `src/lib/resend.ts`
-- Ticket numbers (TKT-XXX) in subject lines link replies to existing tickets
+### Multi-Channel Messaging
 
-## Mobile-First Design
+**Email (Resend + IMAP):**
+- Outbound: `src/lib/resend.ts` - HTML templates with logo
+- Inbound: `src/lib/imap.ts` - Parses HTML content, sanitizes scripts/styles
+- Tracking: Webhook receives `email.delivered`, `email.opened`, `email.bounced`
 
-All pages are optimized for mobile devices:
+**WhatsApp (Twilio):**
+- Outbound: `src/lib/whatsapp.ts` - Includes `StatusCallback` URL for tracking
+- Inbound: `/api/webhooks/whatsapp` - Creates tickets from WhatsApp messages
+- Tracking: `/api/webhooks/whatsapp-status` - Receives `sent`, `delivered`, `read`, `failed`
 
-### Responsive Patterns
-- **Grid layouts**: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`
-- **Category grid**: `grid-cols-2 md:grid-cols-3 lg:grid-cols-5`
-- **Typography**: `text-3xl sm:text-4xl lg:text-5xl`
-- **Spacing**: `py-8 md:py-12`, `px-4 sm:px-6 lg:px-8`
-- **Flex wrap**: `flex flex-wrap gap-2 sm:gap-3`
-
-### Mobile-Specific Features
-- **Header**: Hamburger menu on mobile (`sm:hidden`), desktop nav hidden (`hidden sm:flex`)
-- **Admin Navigation**: Icon-only buttons on mobile, text visible on `sm:` breakpoint
-- **Article TOC**: Inline on mobile (`lg:hidden`), sticky sidebar on desktop (`hidden lg:block`)
-- **Footer**: 2-column grid on mobile, 4-column on desktop
-
-### Breakpoints
-- `sm`: 640px (small tablets)
-- `md`: 768px (tablets)
-- `lg`: 1024px (desktop)
-
-## Code Patterns
-
-### Cookie-based Authentication (Middleware)
-```typescript
-const sessionCookie = req.cookies.get('admin_session');
-if (!sessionCookie?.value) {
-  return NextResponse.redirect(new URL('/admin/login', req.url));
-}
-```
-
-### API Route Authentication (Fallback)
-```typescript
-function isAuthenticated(req: NextRequest): boolean {
-  const basicAuth = req.headers.get('authorization');
-  if (!basicAuth || !basicAuth.startsWith('Basic ')) return false;
-  const [user, pass] = Buffer.from(basicAuth.split(' ')[1], 'base64').toString().split(':');
-  return user === process.env.ADMIN_USER && pass === process.env.ADMIN_PASS;
-}
-```
-
-### Vercel KV Operations
-Uses `@vercel/kv` client with `hmset`, `hgetall`, `sadd`, `smembers`, `srem`, `del`, `incr`, `zincrby`, `zrange` operations.
-
-### Callout Blocks
-Article content supports callout blocks with CSS styling:
-- Attributes: `data-callout="true"`, `data-callout-type="info|success|warning|danger"`
-- CSS in `globals.css` handles icon display via `::before` pseudo-element
+**Real-time Status Updates:**
+- Ticket detail page polls messages every 3 seconds
+- Status icons: Single checkmark (sent), Double checkmark (delivered), Blue double checkmark (read)
 
 ## Environment Variables
 
-Required for full functionality:
-- `ANTHROPIC_API_KEY` - Claude AI
-- `ADMIN_USER`, `ADMIN_PASS` - Admin auth
-- `NEXT_PUBLIC_ADMIN_USER`, `NEXT_PUBLIC_ADMIN_PASS` - Client-side admin auth (legacy)
+Required:
+- `ADMIN_USER`, `ADMIN_PASS` - Admin credentials
 - `KV_REST_API_URL`, `KV_REST_API_TOKEN` - Vercel KV
 - `RESEND_API_KEY`, `SUPPORT_EMAIL` - Email sending
 - `IMAP_HOST`, `IMAP_USER`, `IMAP_PASS` - Email fetching
-- `CRON_SECRET` - Cron job auth
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_NUMBER` - WhatsApp
+- `NEXT_PUBLIC_BASE_URL` - Required for webhook callbacks (e.g., `https://hilfe.fit-inn-trier.de`)
+- `ANTHROPIC_API_KEY` - Claude AI for ticket responses
+- `CRON_SECRET` - Cron job authentication
 
 ## Styling
 
-Custom Tailwind theme with:
-- Brand color: `brand` (#0a4958), `brand-dark`
-- Gray scale: `apple-gray-50` through `apple-gray-600`
-- Border radius: `rounded-apple`, `rounded-apple-lg`, `rounded-apple-xl`
-- Shadows: `shadow-card`, `shadow-apple`, `shadow-apple-lg`
-- Gradient: `bg-hero-gradient`
-- Glass effect: `glass` class for header
+Custom Tailwind theme:
+- Brand: `brand` (#0a4958), `brand-dark`
+- Grays: `apple-gray-50` through `apple-gray-600`
+- Radius: `rounded-apple`, `rounded-apple-lg`, `rounded-apple-xl`
+- Shadows: `shadow-card`, `shadow-apple`
+- Effects: `glass` (header), `bg-hero-gradient`
 
-## Key Components
+## Code Patterns
 
-- `Header.tsx` - Responsive header with mobile menu
-- `SearchAutocomplete.tsx` - Search with autocomplete suggestions
-- `FeedbackWidget.tsx` - Article helpful/not helpful voting
-- `RelatedArticles.tsx` - Shows related articles by category
-- `ContactCTA.tsx` - Contact support call-to-action
-- `editor/RichTextEditor.tsx` - TipTap-based article editor with callout support
+### Cookie Auth Check (API Routes)
+```typescript
+const sessionCookie = req.cookies.get('admin_session');
+if (!sessionCookie?.value) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+}
+```
+
+### Message Status Icon Component
+Located in `src/app/admin/tickets/[id]/page.tsx`:
+- Shows delivery status for admin messages only
+- Uses SVG checkmarks with different colors/counts
+
+### Email HTML Processing
+In `src/lib/imap.ts`:
+- Prefers HTML content over plaintext
+- Sanitizes: removes `<script>`, `<style>`, event handlers
+- Plaintext fallback: escapes HTML entities, converts `\n` to `<br>`

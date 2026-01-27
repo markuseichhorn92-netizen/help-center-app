@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTicket, createMessage, getTicketMessages, updateTicket, Attachment } from '@/lib/tickets';
 import { sendTicketReply } from '@/lib/resend';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
-import { generatePortalToken } from '@/lib/portal';
+import { generatePortalToken, getCustomerPresence } from '@/lib/portal';
 
 export async function POST(
   req: NextRequest,
@@ -83,35 +83,61 @@ export async function POST(
         whatsappMessageId: whatsappResult.messageSid,
         channel: 'whatsapp',
         attachments: attachments || [],
+        deliveryChannel: 'whatsapp',
       });
 
       return NextResponse.json({
         message,
         whatsappSent: whatsappResult.success,
         whatsappError: whatsappResult.error,
+        deliveryChannel: 'whatsapp',
       }, { status: 201 });
     } else {
-      // Send via Email
-      console.log('Sending email to:', ticket.customerEmail);
-      console.log('RESEND_API_KEY configured:', !!process.env.RESEND_API_KEY);
-      console.log('SUPPORT_EMAIL:', process.env.SUPPORT_EMAIL);
+      // Check if customer is currently online in the portal
+      const customerPresence = await getCustomerPresence(ticket.customerEmail);
+      const isCustomerOnline = customerPresence.online;
 
-      // Generate portal token for direct access
-      const portalToken = await generatePortalToken(ticket.customerEmail, id);
+      console.log('Customer presence:', customerPresence);
+      console.log('Customer is online:', isCustomerOnline);
 
-      const emailResult = await sendTicketReply(
-        ticket.customerEmail,
-        ticket.customerName,
-        ticket.ticketNumber,
-        ticket.subject,
-        content,
-        lastMessage?.emailMessageId,
-        attachments,
-        messages, // Pass conversation history
-        portalToken.token
-      );
+      // Determine delivery channel based on customer presence
+      // If online -> live chat (no email), if offline -> email
+      const deliveryChannel = isCustomerOnline ? 'live' : 'email';
 
-      console.log('Email result:', emailResult);
+      let emailResult: { success: boolean; messageId?: string; error?: string } = { success: false };
+
+      if (!isCustomerOnline) {
+        // Customer is offline - send via Email
+        console.log('Sending email to:', ticket.customerEmail);
+        console.log('RESEND_API_KEY configured:', !!process.env.RESEND_API_KEY);
+        console.log('SUPPORT_EMAIL:', process.env.SUPPORT_EMAIL);
+
+        // Generate portal token for direct access
+        const portalToken = await generatePortalToken(ticket.customerEmail, id);
+
+        const sendResult = await sendTicketReply(
+          ticket.customerEmail,
+          ticket.customerName,
+          ticket.ticketNumber,
+          ticket.subject,
+          content,
+          lastMessage?.emailMessageId,
+          attachments,
+          messages, // Pass conversation history
+          portalToken.token
+        );
+
+        emailResult = {
+          success: sendResult.success,
+          messageId: sendResult.messageId,
+          error: sendResult.error,
+        };
+
+        console.log('Email result:', emailResult);
+      } else {
+        console.log('Customer is online - skipping email, using live chat');
+        emailResult = { success: true };
+      }
 
       messageResult = {
         success: emailResult.success,
@@ -129,12 +155,15 @@ export async function POST(
         emailMessageId: emailResult.messageId,
         channel: 'email',
         attachments: attachments || [],
+        deliveryChannel,
       });
 
       return NextResponse.json({
         message,
-        emailSent: emailResult.success,
+        emailSent: !isCustomerOnline && emailResult.success,
         emailError: emailResult.error,
+        deliveryChannel,
+        customerOnline: isCustomerOnline,
       }, { status: 201 });
     }
 

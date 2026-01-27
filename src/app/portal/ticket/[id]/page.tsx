@@ -50,6 +50,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const exitHandlerCalled = useRef(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Exit handler function - sends session summary email
   const handleExit = useCallback(async () => {
@@ -161,6 +162,27 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
     return () => clearInterval(interval);
   }, []);
 
+  // Send customer presence heartbeat
+  useEffect(() => {
+    const sendHeartbeat = async () => {
+      try {
+        await fetch("/api/portal/presence/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticketId: resolvedParams.id }),
+        });
+      } catch {
+        // Silently fail
+      }
+    };
+
+    // Send immediately and then every 10 seconds
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 10000);
+
+    return () => clearInterval(interval);
+  }, [resolvedParams.id]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -209,11 +231,39 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  // Send typing indicator
+  const sendTypingIndicator = useCallback(async (isTyping: boolean) => {
+    try {
+      await fetch("/api/portal/typing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticketId: resolvedParams.id, isTyping }),
+      });
+    } catch {
+      // Silently fail
+    }
+  }, [resolvedParams.id]);
+
   // Handle textarea auto-resize
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setNewMessage(e.target.value);
     e.target.style.height = "auto";
     e.target.style.height = Math.min(e.target.scrollHeight, 150) + "px";
+
+    // Send typing indicator (debounced)
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    if (e.target.value.trim()) {
+      sendTypingIndicator(true);
+      // Clear typing indicator after 2 seconds of no input
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTypingIndicator(false);
+      }, 2000);
+    } else {
+      sendTypingIndicator(false);
+    }
   };
 
   // Handle Enter key (Shift+Enter for new line)
@@ -311,7 +361,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
   const status = statusLabels[ticket.status] || statusLabels.open;
 
   return (
-    <div className="min-h-screen bg-apple-gray-50 flex flex-col">
+    <div className="min-h-screen bg-apple-gray-50 flex flex-col overflow-x-hidden">
       {/* Header */}
       <header className="bg-white border-b border-apple-gray-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -414,7 +464,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 {/* Message Bubble */}
                 <div className={`flex ${isCustomer ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`max-w-[85%] sm:max-w-[70%] rounded-apple-lg px-4 py-3 ${
+                    className={`max-w-[85%] sm:max-w-[70%] rounded-apple-lg px-4 py-3 overflow-hidden ${
                       isCustomer
                         ? "bg-gradient-to-br from-brand to-brand-dark text-white rounded-br-md"
                         : "bg-white border border-apple-gray-200 text-apple-gray-600 rounded-bl-md"
@@ -496,7 +546,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
             )}
 
             <div className="flex items-end gap-3">
-              <div className="flex-1 relative">
+              <div className="flex-1 min-w-0 relative">
                 <textarea
                   ref={inputRef}
                   value={newMessage}
