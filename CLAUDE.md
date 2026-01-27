@@ -40,9 +40,10 @@ npm run lint     # ESLint
 ### Data Layer (Vercel KV)
 
 **Tickets & Messages:**
-- `ticket:{id}` - Hash with ticket data (includes `channel: 'email' | 'whatsapp' | 'web'`)
+- `ticket:{id}` - Hash with ticket data (includes `channel: 'email' | 'whatsapp' | 'web'`, `aiStatus: 'active' | 'escalated' | 'disabled'`)
 - `tickets:ids` - Set of all ticket IDs
 - `ticket:{id}:messages` - Set of message IDs per ticket
+- `ticket:{id}:human_requested` - Boolean flag for backwards compatibility with AI escalation
 - `message:{id}` - Hash with message data (includes `status`, `emailMessageId`, `whatsappMessageId`)
 
 **Message Status Tracking:**
@@ -80,8 +81,9 @@ npm run lint     # ESLint
 - Header: `Authorization: Basic base64(user:pass)`
 
 ### API Structure
-- **Public**: `/api/articles`, `/api/categories`, `/api/search`, `/api/tickets`
+- **Public**: `/api/articles`, `/api/categories`, `/api/search`, `/api/tickets`, `/api/chat`
 - **Protected**: `/api/admin/*` - requires session cookie
+  - `/api/admin/tickets/[id]/ai` - GET/POST for AI status control per ticket
 - **Webhooks**:
   - `/api/webhooks/resend` - Email delivery/open tracking
   - `/api/webhooks/whatsapp-status` - WhatsApp delivery/read receipts
@@ -97,12 +99,42 @@ npm run lint     # ESLint
 
 **WhatsApp (Twilio):**
 - Outbound: `src/lib/whatsapp.ts` - Includes `StatusCallback` URL for tracking
+- HTML stripped before sending via `stripHtmlForWhatsApp()` (converts HTML to plain text)
 - Inbound: `/api/webhooks/whatsapp` - Creates tickets from WhatsApp messages
 - Tracking: `/api/webhooks/whatsapp-status` - Receives `sent`, `delivered`, `read`, `failed`
 
 **Real-time Status Updates:**
 - Ticket detail page polls messages every 3 seconds
 - Status icons: Single checkmark (sent), Double checkmark (delivered), Blue double checkmark (read)
+
+### AI Autoreply System
+
+**KI-Handling Workflow:**
+- New tickets start with `aiStatus: 'active'` - AI responds automatically
+- Customer writes "Mitarbeiter" → `aiStatus: 'escalated'` - AI stops, ticket moves to "Offen"
+- Admin clicks "KI deaktivieren" → `aiStatus: 'disabled'` - AI stops, ticket moves to "Offen"
+- Admin can re-enable AI → `aiStatus: 'active'` - ticket moves back to "KI bearbeitet"
+
+**Files:**
+- `src/lib/ai-autoreply.ts` - AI response generation, status management
+- `src/app/api/admin/tickets/[id]/ai/route.ts` - API for toggling AI per ticket
+
+**Filter Logic:**
+- "KI bearbeitet" tab: Shows tickets where `aiStatus === 'active'`
+- "Offen" tab: Shows tickets where `aiStatus === 'escalated' || 'disabled'`
+
+### Dedicated AI Chat Page
+
+Located at `/chat` - standalone chat without login requirement:
+- User provides email for follow-up
+- AI answers questions based on knowledge base
+- Typing "Mitarbeiter" creates a ticket and escalates to human support
+- Chat history stored in `chat:session:{sessionId}`
+
+**Files:**
+- `src/app/chat/page.tsx` - Chat UI component
+- `src/app/api/chat/route.ts` - AI chat endpoint
+- `src/app/api/chat/escalate/route.ts` - Ticket creation from chat
 
 ## Environment Variables
 
@@ -145,3 +177,22 @@ In `src/lib/imap.ts`:
 - Prefers HTML content over plaintext
 - Sanitizes: removes `<script>`, `<style>`, event handlers
 - Plaintext fallback: escapes HTML entities, converts `\n` to `<br>`
+
+### AI Status Management
+```typescript
+import { getAIStatus, setAIStatus } from '@/lib/ai-autoreply';
+
+// Get current status
+const status = await getAIStatus(ticketId); // 'active' | 'escalated' | 'disabled'
+
+// Toggle AI for a ticket
+await setAIStatus(ticketId, 'disabled'); // Admin disables AI
+await setAIStatus(ticketId, 'active');   // Admin re-enables AI
+```
+
+### WhatsApp HTML Stripping
+In `src/lib/whatsapp.ts`:
+- Converts `<br>`, `</p>`, `</div>`, `</li>` to newlines
+- Removes all other HTML tags
+- Decodes HTML entities (including German umlauts)
+- Cleans up excessive newlines
