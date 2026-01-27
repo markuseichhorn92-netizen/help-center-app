@@ -16,6 +16,7 @@ interface Ticket {
   assignedTo?: string;
   unreadCount?: number;
   channel?: "email" | "whatsapp" | "web";
+  aiStatus?: "active" | "escalated" | "disabled";
 }
 
 // Channel icon component
@@ -306,9 +307,23 @@ export default function TicketsPage() {
         if ((t.unreadCount || 0) === 0) {
           return false;
         }
+      } else if (filterStatus === "ai_handling") {
+        // "KI bearbeitet" shows only tickets with aiStatus = 'active'
+        if (t.aiStatus !== "active") {
+          return false;
+        }
       } else if (filterStatus === "all") {
-        // "Alle" shows only active tickets (not closed or resolved)
+        // "Alle" shows only active tickets (not closed or resolved) that are NOT being handled by AI
         if (t.status === "closed" || t.status === "resolved") {
+          return false;
+        }
+        // Also exclude tickets that are currently being handled by AI
+        if (t.aiStatus === "active") {
+          return false;
+        }
+      } else if (filterStatus === "open") {
+        // "Offen" shows only tickets with status=open AND aiStatus != 'active'
+        if (t.status !== "open" || t.aiStatus === "active") {
           return false;
         }
       } else if (t.status !== filterStatus) {
@@ -359,10 +374,12 @@ export default function TicketsPage() {
 
   const stats = {
     total: tickets.length,
-    open: tickets.filter(t => t.status === "open").length,
+    // "open" count excludes tickets that are being handled by AI
+    open: tickets.filter(t => t.status === "open" && t.aiStatus !== "active").length,
     inProgress: tickets.filter(t => t.status === "in_progress").length,
     resolved: tickets.filter(t => t.status === "resolved").length,
     unread: tickets.filter(t => (t.unreadCount || 0) > 0).length,
+    aiHandling: tickets.filter(t => t.aiStatus === "active").length,
   };
 
   if (loading) {
@@ -594,6 +611,7 @@ export default function TicketsPage() {
         {[
           { value: "all", label: "Alle" },
           { value: "unread", label: "Neue Nachrichten", count: stats.unread },
+          { value: "ai_handling", label: "KI bearbeitet", count: stats.aiHandling, icon: "robot" },
           { value: "open", label: "Offen" },
           { value: "in_progress", label: "In Bearbeitung" },
           { value: "resolved", label: "Gelöst" },
@@ -604,16 +622,27 @@ export default function TicketsPage() {
             onClick={() => { setFilterStatus(filter.value); setSelectedTickets(new Set()); }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
               filterStatus === filter.value
-                ? filter.value === "unread" ? "bg-red-500 text-white" : "bg-brand text-white"
+                ? filter.value === "unread" ? "bg-red-500 text-white"
+                  : filter.value === "ai_handling" ? "bg-purple-600 text-white"
+                  : "bg-brand text-white"
                 : filter.value === "unread" && filter.count && filter.count > 0
                   ? "bg-red-50 text-red-600 hover:bg-red-100 ring-1 ring-red-200"
-                  : "bg-apple-gray-100 text-apple-gray-500 hover:bg-apple-gray-200"
+                  : filter.value === "ai_handling" && filter.count && filter.count > 0
+                    ? "bg-purple-50 text-purple-600 hover:bg-purple-100 ring-1 ring-purple-200"
+                    : "bg-apple-gray-100 text-apple-gray-500 hover:bg-apple-gray-200"
             }`}
           >
+            {filter.value === "ai_handling" && (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            )}
             {filter.label}
-            {filter.value === "unread" && filter.count !== undefined && filter.count > 0 && (
+            {(filter.value === "unread" || filter.value === "ai_handling") && filter.count !== undefined && filter.count > 0 && (
               <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full ${
-                filterStatus === "unread" ? "bg-white/20 text-white" : "bg-red-500 text-white"
+                filterStatus === filter.value ? "bg-white/20 text-white"
+                  : filter.value === "unread" ? "bg-red-500 text-white"
+                  : "bg-purple-500 text-white"
               }`}>
                 {filter.count > 99 ? '99+' : filter.count}
               </span>

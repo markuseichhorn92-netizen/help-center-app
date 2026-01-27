@@ -51,6 +51,7 @@ interface Ticket {
   channel?: 'email' | 'whatsapp' | 'web';
   phone?: string;
   tags?: string[];
+  aiStatus?: 'active' | 'escalated' | 'disabled';
 }
 
 interface TicketNote {
@@ -211,6 +212,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   // Human requested state (for AI auto-reply)
   const [humanRequested, setHumanRequested] = useState(false);
+
+  // AI status toggle state
+  const [aiStatusLoading, setAiStatusLoading] = useState(false);
 
   // Typing indicator state
   const [isCustomerTyping, setIsCustomerTyping] = useState(false);
@@ -682,6 +686,34 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       setTicket(updatedTicket);
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  // Toggle AI auto-reply for this ticket
+  const handleAIStatusToggle = async () => {
+    if (!ticket || aiStatusLoading) return;
+
+    setAiStatusLoading(true);
+    const currentStatus = ticket.aiStatus || 'active';
+    const newAction = currentStatus === 'active' ? 'disable' : 'enable';
+
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}/ai`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: newAction }),
+      });
+
+      if (!res.ok) throw new Error("Fehler beim Ändern des KI-Status");
+
+      const data = await res.json();
+      setTicket(prev => prev ? { ...prev, aiStatus: data.aiStatus } : null);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setAiStatusLoading(false);
     }
   };
 
@@ -1810,6 +1842,71 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <option key={value} value={value}>{config.label}</option>
               ))}
             </select>
+          </div>
+
+          {/* AI Auto-Reply Toggle */}
+          <div className={`rounded-apple-xl shadow-card border p-5 ${
+            ticket.aiStatus === 'active'
+              ? 'bg-purple-50 border-purple-200'
+              : ticket.aiStatus === 'escalated'
+                ? 'bg-amber-50 border-amber-200'
+                : 'bg-white border-apple-gray-100'
+          }`}>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className={`text-sm font-semibold uppercase tracking-wider flex items-center gap-2 ${
+                ticket.aiStatus === 'active'
+                  ? 'text-purple-700'
+                  : ticket.aiStatus === 'escalated'
+                    ? 'text-amber-700'
+                    : 'text-apple-gray-400'
+              }`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                KI-Assistent
+              </h3>
+              {ticket.aiStatus === 'escalated' && (
+                <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">Eskaliert</span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className={`text-sm ${
+                ticket.aiStatus === 'active'
+                  ? 'text-purple-600'
+                  : ticket.aiStatus === 'escalated'
+                    ? 'text-amber-600'
+                    : 'text-apple-gray-500'
+              }`}>
+                {ticket.aiStatus === 'active'
+                  ? 'KI bearbeitet Nachrichten'
+                  : ticket.aiStatus === 'escalated'
+                    ? 'Kunde wünscht Mitarbeiter'
+                    : 'KI deaktiviert'}
+              </span>
+
+              <button
+                onClick={handleAIStatusToggle}
+                disabled={aiStatusLoading}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                  ticket.aiStatus === 'active'
+                    ? 'bg-purple-600 focus:ring-purple-500'
+                    : 'bg-gray-300 focus:ring-gray-400'
+                } ${aiStatusLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    ticket.aiStatus === 'active' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {ticket.aiStatus === 'escalated' && (
+              <p className="text-xs text-amber-600 mt-2">
+                Der Kunde hat um einen menschlichen Mitarbeiter gebeten.
+              </p>
+            )}
           </div>
 
           {/* Tags */}

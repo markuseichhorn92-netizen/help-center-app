@@ -13,13 +13,55 @@ interface SendWhatsAppRequest {
   attachments?: Attachment[];
 }
 
+/**
+ * Strip HTML tags from a string and convert to plain text for WhatsApp
+ */
+function stripHtmlForWhatsApp(html: string): string {
+  return html
+    // Replace <br> and <br /> with newlines
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Replace </p> with double newlines (paragraph breaks)
+    .replace(/<\/p>/gi, '\n\n')
+    // Replace </div> with newlines
+    .replace(/<\/div>/gi, '\n')
+    // Replace </li> with newlines
+    .replace(/<\/li>/gi, '\n')
+    // Remove all remaining HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Decode common HTML entities
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&auml;/g, 'ä')
+    .replace(/&ouml;/g, 'ö')
+    .replace(/&uuml;/g, 'ü')
+    .replace(/&Auml;/g, 'Ä')
+    .replace(/&Ouml;/g, 'Ö')
+    .replace(/&Uuml;/g, 'Ü')
+    .replace(/&szlig;/g, 'ß')
+    // Clean up multiple consecutive newlines (max 2)
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim whitespace from each line
+    .split('\n')
+    .map(line => line.trim())
+    .join('\n')
+    // Trim start and end
+    .trim();
+}
+
 export async function sendWhatsAppMessage(
   data: SendWhatsAppRequest
 ): Promise<{ success: boolean; messageSid?: string; error?: string }> {
   try {
     const { to, message, ticketNumber, messageId, attachments } = data;
 
-    if (!to || !message) {
+    // Strip HTML tags from the message for WhatsApp (plain text only)
+    const cleanMessage = stripHtmlForWhatsApp(message);
+
+    if (!to || !cleanMessage) {
       return { success: false, error: "Missing 'to' or 'message'" };
     }
 
@@ -45,9 +87,9 @@ export async function sendWhatsAppMessage(
     }
 
     // Build message with ticket number if provided
-    let fullMessage = message;
+    let fullMessage = cleanMessage;
     if (ticketNumber) {
-      fullMessage = `[${ticketNumber}]\n\n${message}\n\n---\nFit-Inn Trier Hilfe-Center`;
+      fullMessage = `[${ticketNumber}]\n\n${cleanMessage}\n\n---\nFit-Inn Trier Hilfe-Center`;
     }
 
     console.log(`Sending WhatsApp from ${formattedFrom} to ${formattedTo}`);

@@ -38,8 +38,39 @@ export async function isHumanRequested(ticketId: string): Promise<boolean> {
  */
 export async function markHumanRequested(ticketId: string): Promise<void> {
   await kv.set(`ticket:${ticketId}:human_requested`, true);
-  // Also increase ticket priority
-  await kv.hset(`ticket:${ticketId}`, { priority: "high" });
+  // Also increase ticket priority and set aiStatus to escalated
+  await kv.hset(`ticket:${ticketId}`, { priority: "high", aiStatus: "escalated" });
+}
+
+/**
+ * Get the AI status for a ticket
+ */
+export async function getAIStatus(ticketId: string): Promise<'active' | 'escalated' | 'disabled'> {
+  const ticket = await kv.hgetall(`ticket:${ticketId}`);
+  if (!ticket) return 'active';
+
+  const aiStatus = (ticket as { aiStatus?: string }).aiStatus;
+  if (aiStatus === 'escalated' || aiStatus === 'disabled') {
+    return aiStatus;
+  }
+  return 'active';
+}
+
+/**
+ * Set the AI status for a ticket
+ */
+export async function setAIStatus(ticketId: string, status: 'active' | 'escalated' | 'disabled'): Promise<void> {
+  await kv.hset(`ticket:${ticketId}`, {
+    aiStatus: status,
+    updatedAt: new Date().toISOString()
+  });
+
+  // Also update the human_requested flag for backwards compatibility
+  if (status === 'active') {
+    await kv.del(`ticket:${ticketId}:human_requested`);
+  } else {
+    await kv.set(`ticket:${ticketId}:human_requested`, true);
+  }
 }
 
 /**
@@ -129,14 +160,11 @@ Antworte kurz und hilfreich auf diese Nachricht.`;
 
 /**
  * Check if AI auto-reply is enabled for this ticket
- * (Returns false if human was requested)
+ * (Returns false if human was requested or AI was disabled by admin)
  */
 export async function isAutoReplyEnabled(ticketId: string): Promise<boolean> {
-  const humanRequested = await isHumanRequested(ticketId);
-  if (humanRequested) {
-    return false;
-  }
+  const aiStatus = await getAIStatus(ticketId);
 
-  // Could add additional settings here (e.g., global toggle, per-ticket settings)
-  return true;
+  // AI is only enabled if status is 'active'
+  return aiStatus === 'active';
 }

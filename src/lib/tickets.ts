@@ -21,6 +21,7 @@ export interface Ticket {
   phone?: string;
   resolvedAt?: string; // Timestamp when ticket was marked as resolved (for auto-close)
   tags?: string[]; // Custom tags for categorization
+  aiStatus?: 'active' | 'escalated' | 'disabled'; // AI handling status
 }
 
 // Internal notes (only visible to admins)
@@ -94,6 +95,7 @@ export async function createTicket(data: {
     createdAt: now,
     updatedAt: now,
     channel: data.channel || 'web',
+    aiStatus: 'active', // AI handles new tickets by default
     ...(data.phone && { phone: data.phone }),
   };
 
