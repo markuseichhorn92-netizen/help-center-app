@@ -179,7 +179,7 @@ async function getRelevantArticles(query: string): Promise<string> {
         .map((a) => {
           const cleanContent = a.content
             .replace(/<[^>]*>/g, "")
-            .substring(0, 400)
+            .substring(0, 1000)
             .trim();
           return `Artikel: "${a.title}"\nInhalt: ${cleanContent}`;
         })
@@ -224,7 +224,7 @@ async function getRelevantArticles(query: string): Promise<string> {
       .map((a) => {
         const cleanContent = a.content
           .replace(/<[^>]*>/g, "")
-          .substring(0, 400)
+          .substring(0, 1000)
           .trim();
         return `Artikel: "${a.title}"\nInhalt: ${cleanContent}`;
       })
@@ -263,7 +263,7 @@ async function getKnowledgeBaseContext(query: string): Promise<string> {
     if (validEntries.length <= 5) {
       return validEntries
         .map((e) => {
-          const cleanContent = (e.content || "").substring(0, 500).trim();
+          const cleanContent = (e.content || "").substring(0, 1000).trim();
           return `Website-Info: "${e.title}"\nQuelle: ${e.url || "Website"}\nInhalt: ${cleanContent}`;
         })
         .join("\n\n---\n\n");
@@ -304,7 +304,7 @@ async function getKnowledgeBaseContext(query: string): Promise<string> {
 
     return relevant
       .map((e) => {
-        const cleanContent = (e.content || "").substring(0, 500).trim();
+        const cleanContent = (e.content || "").substring(0, 1000).trim();
         return `Website-Info: "${e.title}"\nQuelle: ${e.url || "Website"}\nInhalt: ${cleanContent}`;
       })
       .join("\n\n---\n\n");
@@ -332,6 +332,9 @@ export async function generateChatResponse(params: {
     // Check if user wants human support
     const wantsHuman = wantsHumanSupport(userMessage);
 
+    // DEBUG: Log what we're loading
+    console.log("[AI-Chat] User message:", userMessage);
+
     // Get session for conversation history
     const session = await getChatSession(sessionId);
     const conversationHistory = session?.messages || [];
@@ -341,6 +344,16 @@ export async function generateChatResponse(params: {
       getRelevantArticles(userMessage),
       getKnowledgeBaseContext(userMessage),
     ]);
+
+    // DEBUG: Log context lengths
+    console.log("[AI-Chat] Articles context length:", articlesContext.length);
+    console.log("[AI-Chat] Knowledge context length:", knowledgeContext.length);
+    if (articlesContext.length > 0) {
+      console.log("[AI-Chat] Articles preview:", articlesContext.substring(0, 200));
+    }
+    if (knowledgeContext.length > 0) {
+      console.log("[AI-Chat] Knowledge preview:", knowledgeContext.substring(0, 200));
+    }
 
     // Build conversation history for AI
     const historyMessages = conversationHistory.slice(-6).map((msg) => ({
