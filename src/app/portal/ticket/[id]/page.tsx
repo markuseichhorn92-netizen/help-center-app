@@ -47,8 +47,12 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
   const [error, setError] = useState<string | null>(null);
   const [isAdminOnline, setIsAdminOnline] = useState(false);
   const [hasSentMessage, setHasSentMessage] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const exitHandlerCalled = useRef(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -193,19 +197,113 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
     });
   }, [messages]);
 
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setUploadError(null);
+
+    // Validate files
+    const validFiles: File[] = [];
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/plain",
+    ];
+
+    for (const file of files) {
+      if (file.size > maxSize) {
+        setUploadError(`${file.name} ist zu groß (max. 5 MB)`);
+        continue;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        setUploadError(`${file.name}: Dateityp nicht erlaubt`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    // Limit to 3 files total
+    const newFiles = [...pendingFiles, ...validFiles].slice(0, 3);
+    setPendingFiles(newFiles);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Remove pending file
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+    setUploadError(null);
+  };
+
+  // Upload files and return URLs
+  const uploadFiles = async (): Promise<Array<{ filename: string; url: string }>> => {
+    const uploadedFiles: Array<{ filename: string; url: string }> = [];
+
+    for (const file of pendingFiles) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/portal/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Upload fehlgeschlagen");
+      }
+
+      const data = await response.json();
+      uploadedFiles.push({
+        filename: data.filename,
+        url: data.url,
+      });
+    }
+
+    return uploadedFiles;
+  };
+
   // Handle sending message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newMessage.trim() || isSending) return;
+    if ((!newMessage.trim() && pendingFiles.length === 0) || isSending) return;
 
     setIsSending(true);
+    setUploadError(null);
 
     try {
+      // Upload files first if any
+      let attachments: Array<{ filename: string; url: string }> = [];
+      if (pendingFiles.length > 0) {
+        setIsUploading(true);
+        try {
+          attachments = await uploadFiles();
+        } catch (uploadErr: unknown) {
+          setUploadError(uploadErr instanceof Error ? uploadErr.message : "Upload fehlgeschlagen");
+          setIsUploading(false);
+          setIsSending(false);
+          return;
+        }
+        setIsUploading(false);
+      }
+
       const response = await fetch(`/api/portal/tickets/${resolvedParams.id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newMessage.trim() }),
+        body: JSON.stringify({
+          content: newMessage.trim() || (attachments.length > 0 ? "Anhänge gesendet" : ""),
+          attachments: attachments.length > 0 ? attachments : undefined,
+        }),
       });
 
       if (response.status === 401) {
@@ -222,6 +320,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
       const data = await response.json();
       setMessages((prev) => [...prev, data.message]);
       setNewMessage("");
+      setPendingFiles([]); // Clear pending files after successful send
       setHasSentMessage(true); // Track that message was sent for exit handler
       inputRef.current?.focus();
 
@@ -552,6 +651,67 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
               </div>
             )}
 
+            {/* Upload Error */}
+            {uploadError && (
+              <div className="flex items-center gap-2 text-xs text-red-600 mb-2 bg-red-50 px-3 py-2 rounded-lg">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{uploadError}</span>
+                <button
+                  type="button"
+                  onClick={() => setUploadError(null)}
+                  className="ml-auto text-red-400 hover:text-red-600"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Pending Files Preview */}
+            {pendingFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {pendingFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 bg-apple-gray-100 px-3 py-2 rounded-lg text-sm"
+                  >
+                    {file.type.startsWith("image/") ? (
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    )}
+                    <span className="text-apple-gray-600 truncate max-w-[150px]">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePendingFile(index)}
+                      className="text-apple-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              multiple
+              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.txt"
+              className="hidden"
+            />
+
             <div className="flex items-end gap-3">
               <div className="flex-1 min-w-0 relative">
                 <textarea
@@ -568,10 +728,26 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                   ↵
                 </span>
               </div>
+
+              {/* Upload Button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={pendingFiles.length >= 3 || isSending}
+                className="p-3 text-apple-gray-400 hover:text-brand hover:bg-apple-gray-50 rounded-apple-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                title={pendingFiles.length >= 3 ? "Max. 3 Dateien" : "Datei anhängen"}
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
+
+              {/* Send Button */}
               <button
                 type="submit"
-                disabled={!newMessage.trim() || isSending}
+                disabled={(!newMessage.trim() && pendingFiles.length === 0) || isSending}
                 className="bg-brand text-white p-3 rounded-apple-lg hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                title={isUploading ? "Dateien werden hochgeladen..." : "Senden"}
               >
                 {isSending ? (
                   <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -602,7 +778,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
               </button>
             </div>
             <p className="text-xs text-apple-gray-300 mt-2">
-              Drücken Sie Enter zum Senden, Shift+Enter für eine neue Zeile
+              Enter zum Senden, Shift+Enter für neue Zeile. Max. 3 Dateien (je 5 MB).
             </p>
           </form>
         </div>

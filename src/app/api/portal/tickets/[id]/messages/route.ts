@@ -124,14 +124,34 @@ export async function POST(
       );
     }
 
-    // Get message content
-    const { content } = await req.json();
+    // Get message content and attachments
+    const { content, attachments } = await req.json();
 
-    if (!content || typeof content !== "string" || content.trim().length === 0) {
+    // Validate content (required unless attachments are provided)
+    const hasAttachments = Array.isArray(attachments) && attachments.length > 0;
+    if ((!content || typeof content !== "string" || content.trim().length === 0) && !hasAttachments) {
       return NextResponse.json(
         { error: "Nachricht darf nicht leer sein" },
         { status: 400 }
       );
+    }
+
+    // Validate attachments
+    if (hasAttachments) {
+      if (attachments.length > 3) {
+        return NextResponse.json(
+          { error: "Maximal 3 Anhänge pro Nachricht erlaubt" },
+          { status: 400 }
+        );
+      }
+      for (const att of attachments) {
+        if (!att.filename || !att.url) {
+          return NextResponse.json(
+            { error: "Ungültiges Anhang-Format" },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Limit message length
@@ -143,7 +163,8 @@ export async function POST(
     }
 
     // Check if customer wants to talk to a human
-    const customerWantsHuman = wantsHuman(content.trim());
+    const messageContent = content?.trim() || "";
+    const customerWantsHuman = messageContent ? wantsHuman(messageContent) : false;
     if (customerWantsHuman) {
       await markHumanRequested(id);
     }
@@ -151,11 +172,12 @@ export async function POST(
     // Create customer message
     const message = await createMessage({
       ticketId: id,
-      content: content.trim(),
+      content: messageContent || (hasAttachments ? "Anhänge gesendet" : ""),
       sender: "customer",
       senderName: ticket.customerName,
       senderEmail: ticket.customerEmail,
       channel: "web",
+      attachments: hasAttachments ? attachments : undefined,
     });
 
     // If ticket was resolved, reopen it
@@ -235,6 +257,7 @@ export async function POST(
         sender: message.sender,
         senderName: ticket.customerName,
         createdAt: message.createdAt,
+        attachments: message.attachments,
       },
       aiResponse,
       humanRequested: customerWantsHuman,

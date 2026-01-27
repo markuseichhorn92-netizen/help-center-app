@@ -20,6 +20,17 @@ export interface Ticket {
   channel?: 'email' | 'whatsapp' | 'web';
   phone?: string;
   resolvedAt?: string; // Timestamp when ticket was marked as resolved (for auto-close)
+  tags?: string[]; // Custom tags for categorization
+}
+
+// Internal notes (only visible to admins)
+export interface TicketNote {
+  [key: string]: string; // Index signature for KV storage
+  id: string;
+  ticketId: string;
+  content: string;
+  createdAt: string;
+  createdBy: string; // Admin username or email
 }
 
 export interface Attachment {
@@ -532,4 +543,119 @@ export async function findTicketByNumber(ticketNumber: string): Promise<Ticket |
 export function parseTicketNumberFromSubject(text: string): string | null {
   const match = text.match(/\[?(TKT-\d+)\]?/i);
   return match ? match[1].toUpperCase() : null;
+}
+
+// ============================================
+// TICKET NOTES (Internal Notes for Admins)
+// ============================================
+
+// Create a note for a ticket
+export async function createTicketNote(data: {
+  ticketId: string;
+  content: string;
+  createdBy: string;
+}): Promise<TicketNote> {
+  const noteId = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  const note: TicketNote = {
+    id: noteId,
+    ticketId: data.ticketId,
+    content: data.content,
+    createdAt: now,
+    createdBy: data.createdBy,
+  };
+
+  await kv.hmset(`note:${noteId}`, note);
+  await kv.lpush(`ticket:${data.ticketId}:notes`, noteId);
+
+  return note;
+}
+
+// Get all notes for a ticket (newest first)
+export async function getTicketNotes(ticketId: string): Promise<TicketNote[]> {
+  const noteIds: string[] = await kv.lrange(`ticket:${ticketId}:notes`, 0, -1);
+  if (noteIds.length === 0) {
+    return [];
+  }
+
+  const notes = await Promise.all(
+    noteIds.map(async (id) => {
+      const note = await kv.hgetall(`note:${id}`);
+      return note as unknown as TicketNote;
+    })
+  );
+
+  return notes.filter((n): n is TicketNote => n !== null && Object.keys(n).length > 0);
+}
+
+// Delete a note
+export async function deleteTicketNote(ticketId: string, noteId: string): Promise<boolean> {
+  try {
+    await kv.lrem(`ticket:${ticketId}:notes`, 0, noteId);
+    await kv.del(`note:${noteId}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ============================================
+// TICKET TAGS
+// ============================================
+
+// Default tags available in the system
+export const DEFAULT_TAGS = [
+  { id: "urgent", name: "Dringend", color: "red" },
+  { id: "callback", name: "Rückruf", color: "yellow" },
+  { id: "cancellation", name: "Kündigung", color: "orange" },
+  { id: "complaint", name: "Beschwerde", color: "purple" },
+  { id: "praise", name: "Lob", color: "green" },
+  { id: "billing", name: "Abrechnung", color: "blue" },
+  { id: "membership", name: "Mitgliedschaft", color: "teal" },
+];
+
+// Get all available tags
+export async function getAllTags(): Promise<Array<{ id: string; name: string; color: string }>> {
+  const customTags = await kv.smembers("admin:ticket-tags");
+
+  // Parse custom tags (stored as JSON strings)
+  const parsedCustomTags = customTags.map((tag: unknown) => {
+    if (typeof tag === 'string') {
+      try {
+        return JSON.parse(tag);
+      } catch {
+        return null;
+      }
+    }
+    return tag;
+  }).filter((t): t is { id: string; name: string; color: string } => t !== null);
+
+  return [...DEFAULT_TAGS, ...parsedCustomTags];
+}
+
+// Add a custom tag
+export async function addCustomTag(tag: { id: string; name: string; color: string }): Promise<void> {
+  await kv.sadd("admin:ticket-tags", JSON.stringify(tag));
+}
+
+// Remove a custom tag
+export async function removeCustomTag(tagId: string): Promise<void> {
+  const customTags = await kv.smembers("admin:ticket-tags");
+
+  for (const tag of customTags) {
+    const parsed = typeof tag === 'string' ? JSON.parse(tag) : tag;
+    if (parsed.id === tagId) {
+      await kv.srem("admin:ticket-tags", typeof tag === 'string' ? tag : JSON.stringify(tag));
+      break;
+    }
+  }
+}
+
+// Update ticket tags
+export async function updateTicketTags(ticketId: string, tags: string[]): Promise<void> {
+  await kv.hset(`ticket:${ticketId}`, {
+    tags: JSON.stringify(tags),
+    updatedAt: new Date().toISOString()
+  });
 }

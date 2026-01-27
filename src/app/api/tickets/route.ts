@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTicket } from '@/lib/tickets';
 import { ensureContactFromTicket } from '@/lib/contacts';
+import { sendNewTicketNotification } from '@/lib/resend';
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,6 +38,20 @@ export async function POST(req: NextRequest) {
       name: customerName,
       email: customerEmail,
     });
+
+    // Notify admin about new ticket
+    try {
+      await sendNewTicketNotification({
+        ticketNumber: ticket.ticketNumber,
+        customerName,
+        customerEmail,
+        subject,
+        channel: 'web',
+        isEscalation: false,
+      });
+    } catch (notifyError) {
+      console.error('Failed to send admin notification:', notifyError);
+    }
 
     return NextResponse.json(
       {

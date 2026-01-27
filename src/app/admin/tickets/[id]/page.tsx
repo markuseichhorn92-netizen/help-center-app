@@ -18,6 +18,21 @@ interface Ticket {
   assignedTo?: string;
   channel?: 'email' | 'whatsapp' | 'web';
   phone?: string;
+  tags?: string[];
+}
+
+interface TicketNote {
+  id: string;
+  ticketId: string;
+  content: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+interface TicketTag {
+  id: string;
+  name: string;
+  color: string;
 }
 
 interface Attachment {
@@ -194,6 +209,13 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [shareChannel, setShareChannel] = useState<'auto' | 'live' | 'email' | 'whatsapp'>('auto');
   const [sharingArticle, setSharingArticle] = useState(false);
 
+  // Tags and Notes state
+  const [availableTags, setAvailableTags] = useState<TicketTag[]>([]);
+  const [ticketNotes, setTicketNotes] = useState<TicketNote[]>([]);
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [savingTags, setSavingTags] = useState(false);
+
   useEffect(() => {
     const updateRows = () => {
       setTextareaRows(window.innerWidth < 640 ? 3 : 4);
@@ -282,9 +304,118 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     }
   };
 
+  // Load available tags
+  const loadTags = async () => {
+    try {
+      const res = await fetch('/api/admin/ticket-tags', {
+        headers: { Authorization: getAuthHeader() }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAvailableTags(data.tags || []);
+      }
+    } catch (err) {
+      console.error('Failed to load tags:', err);
+    }
+  };
+
+  // Load ticket notes
+  const loadNotes = async () => {
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}/notes`, {
+        headers: { Authorization: getAuthHeader() }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTicketNotes(data.notes || []);
+      }
+    } catch (err) {
+      console.error('Failed to load notes:', err);
+    }
+  };
+
+  // Toggle tag on ticket
+  const handleTagToggle = async (tagId: string) => {
+    if (!ticket || savingTags) return;
+
+    setSavingTags(true);
+    const currentTags = ticket.tags || [];
+    const newTags = currentTags.includes(tagId)
+      ? currentTags.filter(t => t !== tagId)
+      : [...currentTags, tagId];
+
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: getAuthHeader()
+        },
+        body: JSON.stringify({ tags: newTags })
+      });
+
+      if (res.ok) {
+        setTicket(prev => prev ? { ...prev, tags: newTags } : null);
+      }
+    } catch (err) {
+      console.error('Failed to update tags:', err);
+    } finally {
+      setSavingTags(false);
+    }
+  };
+
+  // Add a new note
+  const handleAddNote = async () => {
+    if (!newNoteContent.trim() || savingNote) return;
+
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}/notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: getAuthHeader()
+        },
+        body: JSON.stringify({ content: newNoteContent.trim() })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setTicketNotes(prev => [data.note, ...prev]);
+        setNewNoteContent("");
+      }
+    } catch (err) {
+      console.error('Failed to add note:', err);
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  // Delete a note
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}/notes`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: getAuthHeader()
+        },
+        body: JSON.stringify({ noteId })
+      });
+
+      if (res.ok) {
+        setTicketNotes(prev => prev.filter(n => n.id !== noteId));
+      }
+    } catch (err) {
+      console.error('Failed to delete note:', err);
+    }
+  };
+
   useEffect(() => {
     loadData();
     loadSidebarTickets();
+    loadTags();
+    loadNotes();
 
     // Auto-refresh messages every 3 seconds for real-time status updates
     const interval = setInterval(async () => {
@@ -1647,6 +1778,101 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <option key={value} value={value}>{config.label}</option>
               ))}
             </select>
+          </div>
+
+          {/* Tags */}
+          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+            <h3 className="text-sm font-semibold text-apple-gray-400 uppercase tracking-wider mb-3">Tags</h3>
+            <div className="flex flex-wrap gap-2">
+              {availableTags.map((tag) => {
+                const isSelected = ticket.tags?.includes(tag.id);
+                const colorClasses: Record<string, string> = {
+                  red: isSelected ? 'bg-red-100 text-red-700 ring-red-500' : 'bg-gray-50 text-gray-500 hover:bg-red-50',
+                  yellow: isSelected ? 'bg-yellow-100 text-yellow-700 ring-yellow-500' : 'bg-gray-50 text-gray-500 hover:bg-yellow-50',
+                  orange: isSelected ? 'bg-orange-100 text-orange-700 ring-orange-500' : 'bg-gray-50 text-gray-500 hover:bg-orange-50',
+                  purple: isSelected ? 'bg-purple-100 text-purple-700 ring-purple-500' : 'bg-gray-50 text-gray-500 hover:bg-purple-50',
+                  green: isSelected ? 'bg-green-100 text-green-700 ring-green-500' : 'bg-gray-50 text-gray-500 hover:bg-green-50',
+                  blue: isSelected ? 'bg-blue-100 text-blue-700 ring-blue-500' : 'bg-gray-50 text-gray-500 hover:bg-blue-50',
+                  teal: isSelected ? 'bg-teal-100 text-teal-700 ring-teal-500' : 'bg-gray-50 text-gray-500 hover:bg-teal-50',
+                  gray: isSelected ? 'bg-gray-200 text-gray-700 ring-gray-500' : 'bg-gray-50 text-gray-500 hover:bg-gray-100',
+                };
+                return (
+                  <button
+                    key={tag.id}
+                    onClick={() => handleTagToggle(tag.id)}
+                    disabled={savingTags}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                      isSelected ? 'ring-2' : ''
+                    } ${colorClasses[tag.color] || colorClasses.gray} disabled:opacity-50`}
+                  >
+                    {tag.name}
+                  </button>
+                );
+              })}
+              {availableTags.length === 0 && (
+                <p className="text-sm text-apple-gray-400">Keine Tags verfügbar</p>
+              )}
+            </div>
+          </div>
+
+          {/* Internal Notes */}
+          <div className="bg-yellow-50 rounded-apple-xl shadow-card border border-yellow-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-yellow-700 uppercase tracking-wider flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Interne Notizen
+              </h3>
+              <span className="text-xs text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">Nur für Admins</span>
+            </div>
+
+            {/* Add Note */}
+            <div className="mb-3">
+              <textarea
+                value={newNoteContent}
+                onChange={(e) => setNewNoteContent(e.target.value)}
+                placeholder="Notiz hinzufügen..."
+                rows={2}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-yellow-300 bg-white focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/20 outline-none resize-none"
+              />
+              <button
+                onClick={handleAddNote}
+                disabled={!newNoteContent.trim() || savingNote}
+                className="mt-2 w-full px-3 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingNote ? 'Speichern...' : 'Notiz hinzufügen'}
+              </button>
+            </div>
+
+            {/* Notes List */}
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {ticketNotes.length === 0 ? (
+                <p className="text-sm text-yellow-600 text-center py-2">Noch keine Notizen</p>
+              ) : (
+                ticketNotes.map((note) => (
+                  <div key={note.id} className="bg-white rounded-lg p-3 border border-yellow-200">
+                    <p className="text-sm text-apple-gray-600 whitespace-pre-wrap">{note.content}</p>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-yellow-100">
+                      <span className="text-xs text-apple-gray-400">
+                        {new Date(note.createdAt).toLocaleString('de-DE', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="text-xs text-red-500 hover:text-red-700 transition-colors"
+                      >
+                        Löschen
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {/* Customer Info */}

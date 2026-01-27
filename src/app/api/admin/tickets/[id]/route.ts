@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTicket, updateTicket, deleteTicket } from '@/lib/tickets';
+import { getTicket, updateTicket, deleteTicket, updateTicketTags } from '@/lib/tickets';
 
 export async function GET(
   req: NextRequest,
@@ -37,7 +37,12 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status, priority, assignedTo } = body;
+    const { status, priority, assignedTo, tags } = body;
+
+    // Handle tags separately if provided
+    if (tags !== undefined && Array.isArray(tags)) {
+      await updateTicketTags(id, tags);
+    }
 
     const updatedTicket = await updateTicket(id, { status, priority, assignedTo });
 

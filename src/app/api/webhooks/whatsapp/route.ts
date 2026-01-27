@@ -3,6 +3,7 @@ import { createTicket, createMessage, findTicketsByPhone, findTicketByNumber, pa
 import { ensureContactFromTicket, updateLastContact } from '@/lib/contacts';
 import { generateAutoReply, wantsHuman, markHumanRequested, isAutoReplyEnabled } from '@/lib/ai-autoreply';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
+import { sendNewTicketNotification } from '@/lib/resend';
 import crypto from 'crypto';
 
 // Validate Twilio request signature
@@ -268,6 +269,20 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`New WhatsApp ticket created: ${ticket.ticketNumber}`);
+
+    // Notify admin about new WhatsApp ticket
+    try {
+      await sendNewTicketNotification({
+        ticketNumber: ticket.ticketNumber,
+        customerName: profileName || phoneNumber,
+        customerEmail: `${phoneNumber}@whatsapp`,
+        subject: ticket.subject,
+        channel: 'whatsapp',
+        isEscalation: false,
+      });
+    } catch (notifyError) {
+      console.error('Failed to send admin notification:', notifyError);
+    }
 
     // Check if customer wants to talk to a human
     const customerWantsHuman = wantsHuman(messageContent);

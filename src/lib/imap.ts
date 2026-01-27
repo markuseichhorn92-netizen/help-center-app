@@ -3,7 +3,7 @@ import { simpleParser, ParsedMail } from 'mailparser';
 import { createClient } from '@vercel/kv';
 import { put } from '@vercel/blob';
 import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment } from './tickets';
-import { parseTicketNumberFromSubject, sendTicketConfirmation } from './resend';
+import { parseTicketNumberFromSubject, sendTicketConfirmation, sendNewTicketNotification } from './resend';
 import { ensureContactFromTicket, updateLastContact } from './contacts';
 import { generatePortalToken } from './portal';
 
@@ -289,6 +289,20 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             ticket.id,
             portalToken.token
           );
+
+          // Notify admin about new email ticket
+          try {
+            await sendNewTicketNotification({
+              ticketNumber: ticket.ticketNumber,
+              customerName: senderName,
+              customerEmail: senderEmail,
+              subject: cleanSubject,
+              channel: 'email',
+              isEscalation: false,
+            });
+          } catch (notifyError) {
+            console.error('Failed to send admin notification:', notifyError);
+          }
 
           console.log(`Created ticket ${ticket.ticketNumber} from email by ${senderEmail}`);
           results.processed++;

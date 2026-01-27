@@ -8,8 +8,8 @@ export default function Header() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Don't show header on admin pages
-  if (pathname?.startsWith("/admin")) {
+  // Don't show header on admin or chat pages
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/chat")) {
     return null;
   }
 
