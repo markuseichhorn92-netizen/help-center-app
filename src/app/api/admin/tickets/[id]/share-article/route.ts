@@ -15,7 +15,7 @@ interface Article {
 }
 
 // Generate beautiful Apple-style article card HTML for chat/email
-function generateArticleCardHTML(article: Article, baseUrl: string): string {
+function generateArticleCardHTML(article: Article, baseUrl: string, customText?: string): string {
   const articleUrl = `${baseUrl}/articles/${article.id}`;
 
   // Extract first 150 characters of content as preview (strip HTML)
@@ -25,7 +25,9 @@ function generateArticleCardHTML(article: Article, baseUrl: string): string {
     .trim()
     .substring(0, 150) + "...";
 
-  return `
+  const customTextHtml = customText ? `<p style="margin: 0 0 16px 0; font-size: 15px; color: #374151; line-height: 1.6;">${customText}</p>` : "";
+
+  return `${customTextHtml}
 <div style="margin: 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <a href="${articleUrl}" target="_blank" style="text-decoration: none; color: inherit; display: block;">
     <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; max-width: 400px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);">
@@ -66,7 +68,7 @@ function generateArticleCardHTML(article: Article, baseUrl: string): string {
 }
 
 // Generate WhatsApp-friendly text message
-function generateWhatsAppMessage(article: Article, baseUrl: string): string {
+function generateWhatsAppMessage(article: Article, baseUrl: string, customText?: string): string {
   const articleUrl = `${baseUrl}/articles/${article.id}`;
   const previewText = article.content
     .replace(/<[^>]*>/g, "")
@@ -74,11 +76,20 @@ function generateWhatsAppMessage(article: Article, baseUrl: string): string {
     .trim()
     .substring(0, 100) + "...";
 
-  return `📚 *${article.title}*
+  const parts: string[] = [];
 
-${previewText}
+  if (customText) {
+    parts.push(customText);
+    parts.push("");
+  }
 
-👉 ${articleUrl}`;
+  parts.push(`📚 *${article.title}*`);
+  parts.push("");
+  parts.push(previewText);
+  parts.push("");
+  parts.push(`👉 ${articleUrl}`);
+
+  return parts.join("\n");
 }
 
 export async function POST(
@@ -92,7 +103,7 @@ export async function POST(
 
   try {
     const { id } = await params;
-    const { articleId, channel } = await req.json();
+    const { articleId, channel, customText } = await req.json();
 
     if (!articleId) {
       return NextResponse.json({ error: "articleId is required" }, { status: 400 });
@@ -155,7 +166,7 @@ export async function POST(
 
     if (deliveryChannel === "whatsapp" && ticket.phone) {
       // Send via WhatsApp
-      messageContent = generateWhatsAppMessage(article, baseUrl);
+      messageContent = generateWhatsAppMessage(article, baseUrl, customText);
 
       const whatsappResult = await sendWhatsAppMessage({
         to: ticket.phone,
@@ -183,8 +194,11 @@ export async function POST(
 
     } else if (deliveryChannel === "email") {
       // Send via Email with beautiful HTML card
-      const articleCardHtml = generateArticleCardHTML(article, baseUrl);
-      messageContent = `Ich habe einen Hilfe-Artikel gefunden, der für Sie hilfreich sein könnte:\n\n${articleCardHtml}`;
+      const articleCardHtml = generateArticleCardHTML(article, baseUrl, customText);
+      // If custom text is provided, it's already in the card HTML
+      messageContent = customText
+        ? articleCardHtml
+        : `Ich habe einen Hilfe-Artikel gefunden, der für Sie hilfreich sein könnte:\n\n${articleCardHtml}`;
 
       const messages = await getTicketMessages(id);
       const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
@@ -222,7 +236,7 @@ export async function POST(
 
     } else {
       // Live chat - just save the message with nice HTML card
-      const articleCardHtml = generateArticleCardHTML(article, baseUrl);
+      const articleCardHtml = generateArticleCardHTML(article, baseUrl, customText);
       messageContent = articleCardHtml;
 
       const message = await createMessage({

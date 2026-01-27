@@ -243,6 +243,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     slug: string;
   } | null>(null);
   const [shareChannel, setShareChannel] = useState<'auto' | 'live' | 'email' | 'whatsapp'>('auto');
+  const [shareCustomText, setShareCustomText] = useState("");
   const [sharingArticle, setSharingArticle] = useState(false);
 
   // Tags and Notes state
@@ -965,6 +966,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         body: JSON.stringify({
           articleId: selectedArticle.id,
           channel: shareChannel,
+          customText: shareCustomText.trim() || undefined,
         }),
       });
 
@@ -986,6 +988,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       setShowShareModal(false);
       setSelectedArticle(null);
       setShareChannel('auto');
+      setShareCustomText("");
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -2299,6 +2302,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               setShowShareModal(false);
               setSelectedArticle(null);
               setShareChannel('auto');
+              setShareCustomText("");
             }}
           />
           <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-md sm:w-full sm:mx-4">
@@ -2352,6 +2356,18 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* Custom Text */}
+                <div className="mb-5">
+                  <p className="text-xs font-medium text-apple-gray-400 uppercase tracking-wider mb-2">Eigener Text (optional)</p>
+                  <textarea
+                    value={shareCustomText}
+                    onChange={(e) => setShareCustomText(e.target.value)}
+                    placeholder="Füge hier einen eigenen Text hinzu, der zusammen mit dem Artikel gesendet wird..."
+                    className="w-full p-3 border border-apple-gray-200 rounded-xl text-sm text-apple-gray-600 placeholder:text-apple-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
+                    rows={3}
+                  />
                 </div>
 
                 {/* Channel Selection */}
