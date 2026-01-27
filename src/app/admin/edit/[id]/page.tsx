@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import RichTextEditor from "@/components/editor/RichTextEditor";
+import RichTextEditor from "@/components/editor/LazyRichTextEditor";
 
 interface Article {
   id: string;

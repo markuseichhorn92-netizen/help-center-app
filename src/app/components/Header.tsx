@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
@@ -19,7 +20,14 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <img src="https://cdn.sanity.io/images/6qiktmvm/production/e33b949b11d3aa8b60befb3f5f537803a8c48700-2917x486.png" alt="FIT INN Logo" className="h-8 w-auto transition-transform duration-300 group-hover:scale-105" />
+            <Image
+              src="https://cdn.sanity.io/images/6qiktmvm/production/e33b949b11d3aa8b60befb3f5f537803a8c48700-2917x486.png"
+              alt="FIT INN Logo"
+              width={192}
+              height={32}
+              className="h-8 w-auto transition-transform duration-300 group-hover:scale-105"
+              priority
+            />
             <span className="text-lg font-semibold text-apple-gray-600 tracking-tight">Hilfe-Center</span>
           </Link>
 

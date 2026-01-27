@@ -280,7 +280,7 @@ export default function AdminHeader() {
             {/* Push Debug Link */}
             <Link
               href="/admin/debug-push"
-              className="p-2 text-apple-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
               title="Push Debug"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,7 +293,7 @@ export default function AdminHeader() {
               <button
                 onClick={togglePush}
                 disabled={pushLoading || pushStatus === "denied"}
-                className={`p-2 rounded-lg transition-all ${
+                className={`p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-all ${
                   pushStatus === "enabled"
                     ? "text-brand bg-brand/10 hover:bg-brand/20"
                     : pushStatus === "denied"
@@ -349,7 +349,7 @@ export default function AdminHeader() {
               href="https://fitinntrierdashboard.org/admin"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
               title="Dashboard"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,7 +360,7 @@ export default function AdminHeader() {
             {/* Home Link */}
             <Link
               href="/"
-              className="p-2 text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg transition-colors"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg transition-colors"
               title="Zur Website"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -371,7 +371,7 @@ export default function AdminHeader() {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
               title="Abmelden"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -382,7 +382,7 @@ export default function AdminHeader() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg transition-colors"
+              className="md:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg transition-colors"
             >
               {mobileMenuOpen ? (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

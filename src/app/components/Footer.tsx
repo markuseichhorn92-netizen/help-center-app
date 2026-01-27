@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 export default function Footer() {
@@ -17,7 +18,13 @@ export default function Footer() {
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-10 md:gap-12">
           {/* Column 1: Logo & Address */}
           <div className="md:col-span-1 space-y-4">
-            <img src="https://cdn.sanity.io/images/6qiktmvm/production/e33b949b11d3aa8b60befb3f5f537803a8c48700-2917x486.png" alt="FIT INN Logo" className="h-9 w-auto brightness-0 invert" />
+            <Image
+              src="https://cdn.sanity.io/images/6qiktmvm/production/e33b949b11d3aa8b60befb3f5f537803a8c48700-2917x486.png"
+              alt="FIT INN Logo"
+              width={216}
+              height={36}
+              className="h-9 w-auto brightness-0 invert"
+            />
             <div className="text-apple-gray-300 text-sm leading-relaxed">
               <p>Fit-Inn Trier</p>
               <p>Auf Hirtenberg 8</p>

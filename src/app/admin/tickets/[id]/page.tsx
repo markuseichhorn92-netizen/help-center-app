@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, use } from "react";
-import RichTextEditor from "@/components/editor/RichTextEditor";
+import RichTextEditor from "@/components/editor/LazyRichTextEditor";
 
 // Format message content based on channel and content type
 function formatMessageContent(content: string | null | undefined, channel?: string): string {
@@ -462,7 +462,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     loadTags();
     loadNotes();
 
-    // Auto-refresh messages every 3 seconds for real-time status updates
+    // Auto-refresh messages every 5 seconds for real-time status updates
     const interval = setInterval(async () => {
       try {
         const messagesRes = await fetch(`/api/admin/tickets/${id}/messages`, {
@@ -496,7 +496,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       } catch (err) {
         console.error('Auto-refresh messages failed:', err);
       }
-    }, 3000); // 3 seconds for faster status updates
+    }, 5000); // 5 seconds - optimized for performance
 
     return () => clearInterval(interval);
   }, [id]);
@@ -530,7 +530,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     };
 
     checkCustomerPresence();
-    const interval = setInterval(checkCustomerPresence, 5000); // Check every 5s
+    const interval = setInterval(checkCustomerPresence, 10000); // Check every 10s - optimized
 
     return () => clearInterval(interval);
   }, [id]);
@@ -571,8 +571,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       }
     };
 
-    // Check frequently for typing indicator
-    const interval = setInterval(checkTyping, 1000);
+    // Check typing indicator every 3s - optimized for performance
+    const interval = setInterval(checkTyping, 3000);
 
     return () => clearInterval(interval);
   }, [id]);

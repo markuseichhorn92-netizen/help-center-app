@@ -115,17 +115,17 @@ export default function TicketsPage() {
     initLoad();
   }, []);
 
-  // Auto-refresh tickets every 10 seconds + fetch emails every 30 seconds
+  // Auto-refresh tickets every 15 seconds + fetch emails every 60 seconds (optimized)
   useEffect(() => {
     if (!autoRefresh) return;
 
-    // Ticket refresh every 10 seconds
+    // Ticket refresh every 15 seconds - optimized for performance
     const ticketInterval = setInterval(async () => {
       try {
         const fetchedTickets = await fetchTickets();
-        
+
         // Check if there are new tickets or updates
-        const hasNewItems = fetchedTickets.length > tickets.length || 
+        const hasNewItems = fetchedTickets.length > tickets.length ||
           fetchedTickets.some((ft, idx) => {
             const existingTicket = tickets[idx];
             return existingTicket && (
@@ -133,25 +133,25 @@ export default function TicketsPage() {
               (ft.unreadCount || 0) > (existingTicket.unreadCount || 0)
             );
           });
-        
+
         if (hasNewItems) {
           setNewItemsAvailable(true);
         }
-        
+
         setTickets(fetchedTickets);
         setLastRefresh(new Date());
       } catch (err) {
         console.error('Auto-refresh failed:', err);
       }
-    }, 10000);
+    }, 15000);
 
-    // Email fetch every 30 seconds
+    // Email fetch every 60 seconds - optimized for performance
     const emailInterval = setInterval(async () => {
       await fetchEmailsInBackground();
       const fetchedTickets = await fetchTickets();
       setTickets(fetchedTickets);
       setLastRefresh(new Date());
-    }, 30000);
+    }, 60000);
 
     return () => {
       clearInterval(ticketInterval);
@@ -528,16 +528,16 @@ export default function TicketsPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
         {[
           { label: "Gesamt", value: stats.total, color: "bg-apple-gray-100 text-apple-gray-600" },
           { label: "Offen", value: stats.open, color: "bg-blue-100 text-blue-600" },
           { label: "In Bearbeitung", value: stats.inProgress, color: "bg-amber-100 text-amber-600" },
           { label: "Gelöst", value: stats.resolved, color: "bg-green-100 text-green-600" },
         ].map((stat) => (
-          <div key={stat.label} className="bg-white rounded-apple-lg shadow-card border border-apple-gray-100 p-4">
-            <p className="text-sm text-apple-gray-400 mb-1">{stat.label}</p>
-            <p className={`text-2xl font-bold ${stat.color.split(' ')[1]}`}>{stat.value}</p>
+          <div key={stat.label} className="bg-white rounded-apple-lg shadow-card border border-apple-gray-100 p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-apple-gray-400 mb-1">{stat.label}</p>
+            <p className={`text-xl sm:text-2xl font-bold ${stat.color.split(' ')[1]}`}>{stat.value}</p>
           </div>
         ))}
       </div>

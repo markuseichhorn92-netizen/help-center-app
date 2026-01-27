@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 /* Theme configuration for Tailwind v4 */
 @theme {
-  --font-family-sans: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-family-sans: var(--font-inter), 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
   /* FIT INN Brand colors */
   --color-brand: #0a4958;

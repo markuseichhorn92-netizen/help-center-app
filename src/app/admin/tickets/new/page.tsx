@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import RichTextEditor from "@/components/editor/RichTextEditor";
+import RichTextEditor from "@/components/editor/LazyRichTextEditor";
 
 function NewTicketForm() {
   const searchParams = useSearchParams();

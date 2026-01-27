@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieBanner from "@/components/CookieBanner";
+
+// Optimized font loading with next/font
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-inter",
+});
 
 export const metadata: Metadata = {
   title: "FIT INN Hilfe-Center",
@@ -35,8 +44,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de">
-      <body className="antialiased min-h-screen flex flex-col bg-apple-gray-50">
+    <html lang="de" className={inter.variable}>
+      <body className="antialiased min-h-screen flex flex-col bg-apple-gray-50 font-sans">
         {/* Glass Header */}
         <Header />
 
