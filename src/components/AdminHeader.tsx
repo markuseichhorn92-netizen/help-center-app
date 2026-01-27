@@ -117,6 +117,19 @@ export default function AdminHeader() {
               <span>Neuer Artikel</span>
             </Link>
 
+            {/* Dashboard Link */}
+            <a
+              href="https://fitinntrierdashboard.org/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+              title="Dashboard"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+              </svg>
+            </a>
+
             {/* Home Link */}
             <Link
               href="/"
@@ -186,6 +199,21 @@ export default function AdminHeader() {
                 </svg>
                 <span>Neuer Artikel</span>
               </Link>
+              <a
+                href="https://fitinntrierdashboard.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 mt-1 text-apple-gray-500 hover:bg-purple-50 hover:text-purple-600 rounded-lg text-sm font-medium transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                <span>Dashboard</span>
+                <svg className="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
             </nav>
           </div>
         )}
