@@ -23,150 +23,93 @@ interface TOCItem {
   level: number;
 }
 
-// Mobile TOC Component - Apple-style expandable
-function MobileTOC({
+// Collapsible TOC Component - Apple-style, above article
+function TableOfContents({
   toc,
   activeSection,
   scrollToSection,
-  scrollProgress
 }: {
   toc: TOCItem[];
   activeSection: string;
   scrollToSection: (id: string) => void;
-  scrollProgress: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-
-  const handleItemClick = (id: string) => {
-    scrollToSection(id);
-    setIsOpen(false);
-  };
 
   if (toc.length === 0) return null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className={`fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={() => setIsOpen(false)}
-      />
-
-      {/* Floating Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 z-50 lg:hidden flex items-center gap-2 px-4 py-3 bg-white rounded-full shadow-lg border border-apple-gray-200 transition-all duration-300 ${
-          isOpen ? 'scale-95 opacity-90' : 'hover:shadow-xl hover:scale-105'
-        }`}
-      >
-        <div className="relative w-5 h-5">
-          <svg
-            className={`w-5 h-5 text-apple-gray-600 absolute inset-0 transition-all duration-300 ${isOpen ? 'rotate-90 opacity-0' : 'rotate-0 opacity-100'}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
-          </svg>
-          <svg
-            className={`w-5 h-5 text-apple-gray-600 absolute inset-0 transition-all duration-300 ${isOpen ? 'rotate-0 opacity-100' : '-rotate-90 opacity-0'}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </div>
-        <span className="text-sm font-medium text-apple-gray-600">Inhalt</span>
-        <div className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center">
-          <span className="text-xs font-semibold text-brand">{Math.round(scrollProgress)}%</span>
-        </div>
-      </button>
-
-      {/* Expandable Panel */}
-      <div
-        className={`fixed bottom-24 right-6 z-50 lg:hidden w-[calc(100vw-3rem)] max-w-sm bg-white rounded-2xl shadow-2xl border border-apple-gray-200 overflow-hidden transition-all duration-500 ease-out origin-bottom-right ${
-          isOpen
-            ? 'opacity-100 scale-100 translate-y-0'
-            : 'opacity-0 scale-95 translate-y-4 pointer-events-none'
-        }`}
-      >
-        {/* Header */}
-        <div className="px-5 py-4 bg-gradient-to-r from-apple-gray-50 to-white border-b border-apple-gray-100">
-          <h3 className="text-sm font-semibold text-apple-gray-600 uppercase tracking-wider flex items-center gap-2">
-            <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
-            </svg>
-            Inhaltsverzeichnis
-          </h3>
-        </div>
-
-        {/* TOC Items */}
-        <nav className="max-h-[50vh] overflow-y-auto overscroll-contain">
-          <ul className="py-2">
-            {toc.map((item, index) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => handleItemClick(item.id)}
-                  className={`w-full text-left px-5 py-3 flex items-center gap-3 transition-all duration-200 ${
-                    item.level === 3 ? 'pl-9' : ''
-                  } ${
-                    activeSection === item.id
-                      ? 'bg-brand/5 border-l-2 border-brand'
-                      : 'hover:bg-apple-gray-50 border-l-2 border-transparent'
-                  }`}
-                  style={{
-                    animationDelay: `${index * 50}ms`,
-                    animation: isOpen ? 'slideInRight 0.3s ease-out forwards' : 'none'
-                  }}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                    activeSection === item.id ? 'bg-brand' : 'bg-apple-gray-300'
-                  }`} />
-                  <span className={`text-sm leading-snug ${
-                    activeSection === item.id
-                      ? 'text-brand font-medium'
-                      : 'text-apple-gray-600'
-                  }`}>
-                    {item.text}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Progress Bar */}
-        <div className="px-5 py-3 bg-apple-gray-50 border-t border-apple-gray-100">
+    <div className="mb-6">
+      <div className="bg-white rounded-2xl border border-apple-gray-100 shadow-sm overflow-hidden">
+        {/* Header - Always visible, clickable to toggle */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full px-5 py-4 flex items-center justify-between hover:bg-apple-gray-50/50 transition-colors duration-200"
+        >
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-1.5 bg-apple-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-brand to-brand-dark rounded-full transition-all duration-300"
-                style={{ width: `${scrollProgress}%` }}
-              />
+            <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center">
+              <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
             </div>
-            <span className="text-xs font-medium text-apple-gray-500 w-8">
-              {Math.round(scrollProgress)}%
+            <div className="text-left">
+              <h2 className="text-sm font-semibold text-apple-gray-600">Inhaltsverzeichnis</h2>
+              <p className="text-xs text-apple-gray-400">{toc.length} Abschnitte</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-apple-gray-400 hidden sm:inline">
+              {isOpen ? 'Einklappen' : 'Aufklappen'}
             </span>
+            <div className={`w-6 h-6 rounded-full bg-apple-gray-100 flex items-center justify-center transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+              <svg className="w-4 h-4 text-apple-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </button>
+
+        {/* Expandable Content */}
+        <div
+          className={`transition-all duration-300 ease-out overflow-hidden ${
+            isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="border-t border-apple-gray-100">
+            <nav className="p-4">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+                {toc.map((item, index) => (
+                  <li key={item.id}>
+                    <button
+                      onClick={() => {
+                        scrollToSection(item.id);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full text-left text-sm py-2.5 px-3 rounded-xl transition-all duration-200 flex items-center gap-2 group ${
+                        item.level === 3 ? 'pl-6' : ''
+                      } ${
+                        activeSection === item.id
+                          ? 'bg-brand/10 text-brand font-medium'
+                          : 'text-apple-gray-600 hover:bg-apple-gray-50 hover:text-apple-gray-700'
+                      }`}
+                      style={{
+                        animationDelay: `${index * 30}ms`,
+                      }}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all duration-200 ${
+                        activeSection === item.id
+                          ? 'bg-brand scale-125'
+                          : 'bg-apple-gray-300 group-hover:bg-apple-gray-400'
+                      }`} />
+                      <span className="leading-snug truncate">{item.text}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes slideInRight {
-          from {
-            opacity: 0;
-            transform: translateX(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-      `}</style>
-    </>
+    </div>
   );
 }
 
@@ -311,8 +254,8 @@ export default function ArticlePage() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
-        <div className="max-w-3xl mx-auto py-12 text-center">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+        <div className="py-12 text-center">
           <div className="inline-flex items-center gap-3 text-apple-gray-400">
             <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -327,7 +270,7 @@ export default function ArticlePage() {
 
   if (error || !article) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 text-center animate-fade-in">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 text-center animate-fade-in">
         <div className="w-20 h-20 bg-apple-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <svg className="w-10 h-10 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -360,7 +303,7 @@ export default function ArticlePage() {
         />
       </div>
 
-      <article className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
+      <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in">
         {/* Back Link */}
         <div className="mb-8">
           <Link
@@ -375,7 +318,7 @@ export default function ArticlePage() {
         </div>
 
         {/* Article Header */}
-        <header className="mb-10">
+        <header className="mb-8">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-apple-gray-600 tracking-tight leading-tight mb-4">
             {article.title}
           </h1>
@@ -402,116 +345,58 @@ export default function ArticlePage() {
           </div>
         </header>
 
-        <div className="flex items-start gap-8 lg:gap-10">
-          {/* Table of Contents - Desktop (sticky sidebar LEFT) */}
-          {toc.length > 0 && (
-            <aside className="hidden lg:block w-56 xl:w-64 flex-shrink-0 self-start sticky top-24">
-                <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-apple-gray-100 shadow-sm">
-                  <h2 className="text-xs font-semibold text-apple-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
-                    </svg>
-                    Inhalt
-                  </h2>
-                  <nav>
-                    <ul className="space-y-0.5">
-                      {toc.map((item) => (
-                        <li key={item.id}>
-                          <button
-                            onClick={() => scrollToSection(item.id)}
-                            className={`text-left w-full text-[13px] py-2 px-3 rounded-xl transition-all duration-200 flex items-center gap-2 ${
-                              item.level === 3 ? 'pl-6' : ''
-                            } ${
-                              activeSection === item.id
-                                ? 'bg-brand/10 text-brand font-medium shadow-sm'
-                                : 'text-apple-gray-500 hover:bg-apple-gray-50 hover:text-apple-gray-600'
-                            }`}
-                          >
-                            <span className={`w-1 h-1 rounded-full flex-shrink-0 transition-colors ${
-                              activeSection === item.id ? 'bg-brand' : 'bg-apple-gray-300'
-                            }`} />
-                            <span className="leading-snug">{item.text}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </nav>
-                </div>
-
-                {/* Scroll Progress */}
-                <div className="mt-4 px-2">
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-1 bg-apple-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-brand to-brand-dark rounded-full transition-all duration-300 ease-out"
-                        style={{ width: `${scrollProgress}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-medium text-apple-gray-400 tabular-nums">
-                      {Math.round(scrollProgress)}%
-                    </span>
-                  </div>
-                </div>
-            </aside>
-          )}
-
-          {/* Main Content */}
-          <div className="flex-1 min-w-0">
-            {/* Article Content */}
-            <div
-              ref={contentRef}
-              className="bg-white rounded-apple-xl shadow-card p-8 md:p-10 border border-apple-gray-100"
-            >
-              <div
-                className="prose prose-lg max-w-none text-apple-gray-500 leading-relaxed
-                           prose-headings:text-apple-gray-600 prose-headings:font-semibold prose-headings:tracking-tight
-                           prose-headings:scroll-mt-24
-                           prose-a:text-brand prose-a:no-underline hover:prose-a:underline
-                           prose-strong:text-apple-gray-600
-                           prose-ul:list-disc prose-ol:list-decimal
-                           prose-li:marker:text-apple-gray-400"
-                dangerouslySetInnerHTML={{ __html: processedHtml }}
-              />
-            </div>
-
-            {/* Feedback Widget */}
-            <div className="mt-8">
-              <FeedbackWidget articleId={id} />
-            </div>
-
-            {/* Related Articles */}
-            <RelatedArticles
-              currentArticleId={id}
-              category={article.category}
-            />
-
-            {/* Contact CTA */}
-            <div className="mt-8">
-              <ContactCTA articleId={id} articleTitle={article.title} />
-            </div>
-
-            {/* Bottom Navigation */}
-            <div className="mt-10 pt-8 border-t border-apple-gray-200">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 text-brand font-medium hover:gap-3 transition-all duration-200"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                </svg>
-                Alle Artikel anzeigen
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile TOC - Floating Apple-style */}
-        <MobileTOC
+        {/* Table of Contents - Above Article */}
+        <TableOfContents
           toc={toc}
           activeSection={activeSection}
           scrollToSection={scrollToSection}
-          scrollProgress={scrollProgress}
         />
+
+        {/* Article Content */}
+        <div
+          ref={contentRef}
+          className="bg-white rounded-apple-xl shadow-card p-6 sm:p-8 md:p-10 border border-apple-gray-100"
+        >
+          <div
+            className="prose prose-lg max-w-none text-apple-gray-500 leading-relaxed
+                       prose-headings:text-apple-gray-600 prose-headings:font-semibold prose-headings:tracking-tight
+                       prose-headings:scroll-mt-24
+                       prose-a:text-brand prose-a:no-underline hover:prose-a:underline
+                       prose-strong:text-apple-gray-600
+                       prose-ul:list-disc prose-ol:list-decimal
+                       prose-li:marker:text-apple-gray-400"
+            dangerouslySetInnerHTML={{ __html: processedHtml }}
+          />
+        </div>
+
+        {/* Feedback Widget */}
+        <div className="mt-8">
+          <FeedbackWidget articleId={id} />
+        </div>
+
+        {/* Related Articles */}
+        <RelatedArticles
+          currentArticleId={id}
+          category={article.category}
+        />
+
+        {/* Contact CTA */}
+        <div className="mt-8">
+          <ContactCTA articleId={id} articleTitle={article.title} />
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="mt-10 pt-8 border-t border-apple-gray-200">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-brand font-medium hover:gap-3 transition-all duration-200"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Alle Artikel anzeigen
+          </Link>
+        </div>
       </article>
     </>
   );
