@@ -23,6 +23,153 @@ interface TOCItem {
   level: number;
 }
 
+// Mobile TOC Component - Apple-style expandable
+function MobileTOC({
+  toc,
+  activeSection,
+  scrollToSection,
+  scrollProgress
+}: {
+  toc: TOCItem[];
+  activeSection: string;
+  scrollToSection: (id: string) => void;
+  scrollProgress: number;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleItemClick = (id: string) => {
+    scrollToSection(id);
+    setIsOpen(false);
+  };
+
+  if (toc.length === 0) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsOpen(false)}
+      />
+
+      {/* Floating Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`fixed bottom-6 right-6 z-50 lg:hidden flex items-center gap-2 px-4 py-3 bg-white rounded-full shadow-lg border border-apple-gray-200 transition-all duration-300 ${
+          isOpen ? 'scale-95 opacity-90' : 'hover:shadow-xl hover:scale-105'
+        }`}
+      >
+        <div className="relative w-5 h-5">
+          <svg
+            className={`w-5 h-5 text-apple-gray-600 absolute inset-0 transition-all duration-300 ${isOpen ? 'rotate-90 opacity-0' : 'rotate-0 opacity-100'}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
+          </svg>
+          <svg
+            className={`w-5 h-5 text-apple-gray-600 absolute inset-0 transition-all duration-300 ${isOpen ? 'rotate-0 opacity-100' : '-rotate-90 opacity-0'}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <span className="text-sm font-medium text-apple-gray-600">Inhalt</span>
+        <div className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center">
+          <span className="text-xs font-semibold text-brand">{Math.round(scrollProgress)}%</span>
+        </div>
+      </button>
+
+      {/* Expandable Panel */}
+      <div
+        className={`fixed bottom-24 right-6 z-50 lg:hidden w-[calc(100vw-3rem)] max-w-sm bg-white rounded-2xl shadow-2xl border border-apple-gray-200 overflow-hidden transition-all duration-500 ease-out origin-bottom-right ${
+          isOpen
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-95 translate-y-4 pointer-events-none'
+        }`}
+      >
+        {/* Header */}
+        <div className="px-5 py-4 bg-gradient-to-r from-apple-gray-50 to-white border-b border-apple-gray-100">
+          <h3 className="text-sm font-semibold text-apple-gray-600 uppercase tracking-wider flex items-center gap-2">
+            <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+            Inhaltsverzeichnis
+          </h3>
+        </div>
+
+        {/* TOC Items */}
+        <nav className="max-h-[50vh] overflow-y-auto overscroll-contain">
+          <ul className="py-2">
+            {toc.map((item, index) => (
+              <li key={item.id}>
+                <button
+                  onClick={() => handleItemClick(item.id)}
+                  className={`w-full text-left px-5 py-3 flex items-center gap-3 transition-all duration-200 ${
+                    item.level === 3 ? 'pl-9' : ''
+                  } ${
+                    activeSection === item.id
+                      ? 'bg-brand/5 border-l-2 border-brand'
+                      : 'hover:bg-apple-gray-50 border-l-2 border-transparent'
+                  }`}
+                  style={{
+                    animationDelay: `${index * 50}ms`,
+                    animation: isOpen ? 'slideInRight 0.3s ease-out forwards' : 'none'
+                  }}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                    activeSection === item.id ? 'bg-brand' : 'bg-apple-gray-300'
+                  }`} />
+                  <span className={`text-sm leading-snug ${
+                    activeSection === item.id
+                      ? 'text-brand font-medium'
+                      : 'text-apple-gray-600'
+                  }`}>
+                    {item.text}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Progress Bar */}
+        <div className="px-5 py-3 bg-apple-gray-50 border-t border-apple-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-1.5 bg-apple-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-brand to-brand-dark rounded-full transition-all duration-300"
+                style={{ width: `${scrollProgress}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-apple-gray-500 w-8">
+              {Math.round(scrollProgress)}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
+    </>
+  );
+}
+
 // Generate slug from text
 function generateSlug(text: string): string {
   return text
@@ -255,41 +402,63 @@ export default function ArticlePage() {
           </div>
         </header>
 
-        <div className="flex gap-8">
+        <div className="flex gap-8 lg:gap-10">
+          {/* Table of Contents - Desktop (sticky sidebar LEFT) */}
+          {toc.length > 0 && (
+            <aside className="hidden lg:block w-56 xl:w-64 flex-shrink-0">
+              <div className="sticky top-24">
+                <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-apple-gray-100 shadow-sm">
+                  <h2 className="text-xs font-semibold text-apple-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
+                    </svg>
+                    Inhalt
+                  </h2>
+                  <nav>
+                    <ul className="space-y-0.5">
+                      {toc.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            onClick={() => scrollToSection(item.id)}
+                            className={`text-left w-full text-[13px] py-2 px-3 rounded-xl transition-all duration-200 flex items-center gap-2 ${
+                              item.level === 3 ? 'pl-6' : ''
+                            } ${
+                              activeSection === item.id
+                                ? 'bg-brand/10 text-brand font-medium shadow-sm'
+                                : 'text-apple-gray-500 hover:bg-apple-gray-50 hover:text-apple-gray-600'
+                            }`}
+                          >
+                            <span className={`w-1 h-1 rounded-full flex-shrink-0 transition-colors ${
+                              activeSection === item.id ? 'bg-brand' : 'bg-apple-gray-300'
+                            }`} />
+                            <span className="leading-snug">{item.text}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </nav>
+                </div>
+
+                {/* Scroll Progress */}
+                <div className="mt-4 px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-1 bg-apple-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-brand to-brand-dark rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${scrollProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-medium text-apple-gray-400 tabular-nums">
+                      {Math.round(scrollProgress)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          )}
+
           {/* Main Content */}
           <div className="flex-1 min-w-0">
-            {/* Table of Contents - Mobile (inline) */}
-            {toc.length > 0 && (
-              <div className="lg:hidden mb-8 bg-apple-gray-50 rounded-apple-xl p-6 border border-apple-gray-100">
-                <h2 className="text-sm font-semibold text-apple-gray-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
-                  </svg>
-                  Inhalt
-                </h2>
-                <nav>
-                  <ul className="space-y-2">
-                    {toc.map((item) => (
-                      <li key={item.id}>
-                        <button
-                          onClick={() => scrollToSection(item.id)}
-                          className={`text-left w-full text-sm transition-colors hover:text-brand ${
-                            item.level === 3 ? 'pl-4' : ''
-                          } ${
-                            activeSection === item.id
-                              ? 'text-brand font-medium'
-                              : 'text-apple-gray-500'
-                          }`}
-                        >
-                          {item.text}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-              </div>
-            )}
-
             {/* Article Content */}
             <div
               ref={contentRef}
@@ -336,75 +505,15 @@ export default function ArticlePage() {
               </Link>
             </div>
           </div>
-
-          {/* Table of Contents - Desktop (sticky sidebar) */}
-          {toc.length > 0 && (
-            <aside className="hidden lg:block w-64 flex-shrink-0">
-              <div className="sticky top-20">
-                <div className="bg-apple-gray-50 rounded-apple-xl p-5 border border-apple-gray-100">
-                  <h2 className="text-xs font-semibold text-apple-gray-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
-                    </svg>
-                    Inhalt
-                  </h2>
-                  <nav>
-                    <ul className="space-y-1">
-                      {toc.map((item) => (
-                        <li key={item.id}>
-                          <button
-                            onClick={() => scrollToSection(item.id)}
-                            className={`text-left w-full text-sm py-1.5 px-2 rounded-lg transition-all ${
-                              item.level === 3 ? 'pl-5' : ''
-                            } ${
-                              activeSection === item.id
-                                ? 'bg-brand/10 text-brand font-medium'
-                                : 'text-apple-gray-500 hover:bg-apple-gray-100 hover:text-apple-gray-600'
-                            }`}
-                          >
-                            {item.text}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </nav>
-                </div>
-
-                {/* Scroll Progress Circle */}
-                <div className="mt-4 flex items-center justify-center">
-                  <div className="relative w-12 h-12">
-                    <svg className="w-12 h-12 transform -rotate-90">
-                      <circle
-                        cx="24"
-                        cy="24"
-                        r="20"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        fill="none"
-                        className="text-apple-gray-200"
-                      />
-                      <circle
-                        cx="24"
-                        cy="24"
-                        r="20"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        fill="none"
-                        className="text-brand transition-all duration-150"
-                        strokeDasharray={`${2 * Math.PI * 20}`}
-                        strokeDashoffset={`${2 * Math.PI * 20 * (1 - scrollProgress / 100)}`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-apple-gray-600">
-                      {Math.round(scrollProgress)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </aside>
-          )}
         </div>
+
+        {/* Mobile TOC - Floating Apple-style */}
+        <MobileTOC
+          toc={toc}
+          activeSection={activeSection}
+          scrollToSection={scrollToSection}
+          scrollProgress={scrollProgress}
+        />
       </article>
     </>
   );
