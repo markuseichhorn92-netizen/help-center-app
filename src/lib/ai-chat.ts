@@ -48,30 +48,33 @@ export function wantsHumanSupport(message: string): boolean {
  * Create a new chat session
  */
 export async function createChatSession(email?: string): Promise<ChatSession> {
-  console.log("createChatSession: Starting...");
   const sessionId = uuidv4();
-  console.log("createChatSession: Generated sessionId:", sessionId);
 
   const session: ChatSession = {
     sessionId,
-    email,
+    email: email || "", // KV doesn't support null values
     messages: [],
     createdAt: new Date().toISOString(),
     escalated: false,
   };
 
   // Store with messages as JSON string (like updateChatSession does)
-  const toStore = {
-    ...session,
+  // Filter out empty values to avoid KV issues
+  const toStore: Record<string, string | boolean> = {
+    sessionId: session.sessionId,
     messages: JSON.stringify(session.messages),
+    createdAt: session.createdAt,
+    escalated: session.escalated,
   };
 
-  console.log("createChatSession: Saving to KV...");
-  await kv.hset(`chat:session:${sessionId}`, toStore as Record<string, unknown>);
-  console.log("createChatSession: Setting expiry...");
+  // Only add email if it has a value
+  if (email) {
+    toStore.email = email;
+  }
+
+  await kv.hset(`chat:session:${sessionId}`, toStore);
   // Sessions expire after 24 hours
   await kv.expire(`chat:session:${sessionId}`, 24 * 60 * 60);
-  console.log("createChatSession: Done");
 
   return session;
 }
@@ -112,13 +115,22 @@ export async function updateChatSession(
 
   const updated = { ...current, ...updates };
 
-  // Stringify messages for storage
-  const toStore = {
-    ...updated,
+  // Build storage object, filtering out null/undefined values (KV doesn't support null)
+  const toStore: Record<string, string | boolean> = {
+    sessionId: updated.sessionId,
     messages: JSON.stringify(updated.messages),
+    createdAt: updated.createdAt,
+    escalated: updated.escalated,
   };
 
-  await kv.hset(`chat:session:${sessionId}`, toStore as Record<string, unknown>);
+  if (updated.email) {
+    toStore.email = updated.email;
+  }
+  if (updated.ticketId) {
+    toStore.ticketId = updated.ticketId;
+  }
+
+  await kv.hset(`chat:session:${sessionId}`, toStore);
 }
 
 /**
