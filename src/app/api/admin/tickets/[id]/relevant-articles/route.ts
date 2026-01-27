@@ -80,8 +80,11 @@ export async function GET(
       })
     );
 
+    // Filter published articles (published could be boolean or string "true")
     const publishedArticles = articles.filter(
-      (article): article is Article => article !== null && article.published
+      (article): article is Article =>
+        article !== null &&
+        (article.published === true || (article.published as unknown) === "true")
     );
 
     // Extract keywords from ticket subject and messages

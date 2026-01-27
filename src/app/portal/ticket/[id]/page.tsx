@@ -185,7 +185,12 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Use block: "end" and inline: "nearest" to prevent horizontal scroll
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+      inline: "nearest",
+    });
   }, [messages]);
 
   // Handle sending message

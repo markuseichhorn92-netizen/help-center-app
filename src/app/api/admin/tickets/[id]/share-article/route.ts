@@ -104,11 +104,27 @@ export async function POST(
     }
 
     // Get the article
-    const article = await kv.hgetall(`article:${articleId}`) as Article | null;
-    if (!article || !article.published) {
+    const articleData = await kv.hgetall(`article:${articleId}`);
+    console.log("Article data for ID", articleId, ":", articleData);
+
+    if (!articleData) {
       return NextResponse.json({ error: "Artikel nicht gefunden" }, { status: 404 });
     }
-    article.id = articleId;
+
+    // Check published status (could be boolean or string "true")
+    const isPublished = articleData.published === true || articleData.published === "true";
+    if (!isPublished) {
+      return NextResponse.json({ error: "Artikel ist nicht veröffentlicht" }, { status: 404 });
+    }
+
+    const article: Article = {
+      id: articleId,
+      title: articleData.title as string || "",
+      slug: articleData.slug as string || "",
+      content: articleData.content as string || "",
+      category: articleData.category as string || "Allgemein",
+      published: true,
+    };
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://hilfe.fit-inn-trier.de";
     const ticketChannel = (ticket as any).channel || "email";
