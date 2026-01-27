@@ -366,9 +366,9 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
   const status = statusLabels[ticket.status] || statusLabels.open;
 
   return (
-    <div className="min-h-screen bg-apple-gray-50 flex flex-col overflow-x-hidden">
+    <div className="h-[100dvh] bg-apple-gray-50 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-apple-gray-200 sticky top-0 z-10">
+      <header className="bg-white border-b border-apple-gray-200 flex-shrink-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Logo & Back */}
@@ -424,7 +424,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-4 w-full">
           {/* Welcome Message */}
           {messages.length === 0 && (
@@ -542,7 +542,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
 
       {/* Message Input */}
       {ticket.status !== "closed" ? (
-        <div className="bg-white border-t border-apple-gray-200 sticky bottom-0">
+        <div className="bg-white border-t border-apple-gray-200 flex-shrink-0">
           <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto px-4 py-4">
             {/* Admin Online Indicator */}
             {isAdminOnline && (
@@ -607,7 +607,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
           </form>
         </div>
       ) : (
-        <div className="bg-apple-gray-50 border-t border-apple-gray-200 sticky bottom-0">
+        <div className="bg-apple-gray-50 border-t border-apple-gray-200 flex-shrink-0">
           <div className="max-w-4xl mx-auto px-4 py-4 text-center">
             <p className="text-apple-gray-400 text-sm">
               Dieses Ticket wurde geschlossen.{" "}
