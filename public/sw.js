@@ -1,6 +1,6 @@
 // FIT INN Admin Service Worker for Push Notifications
 
-const CACHE_NAME = 'fitinn-admin-v1';
+const CACHE_NAME = 'fitinn-admin-v2';
 
 // Install event
 self.addEventListener('install', (event) => {
@@ -16,7 +16,7 @@ self.addEventListener('activate', (event) => {
 
 // Push event - receive push notifications
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push received:', event);
+  console.log('[SW] Push received');
 
   let data = {
     title: 'FIT INN Admin',
@@ -29,11 +29,20 @@ self.addEventListener('push', (event) => {
 
   if (event.data) {
     try {
-      data = { ...data, ...event.data.json() };
+      const textData = event.data.text();
+      console.log('[SW] Raw push data:', textData);
+      const jsonData = JSON.parse(textData);
+      console.log('[SW] Parsed push data:', JSON.stringify(jsonData));
+      data = { ...data, ...jsonData };
     } catch (e) {
-      data.body = event.data.text();
+      console.log('[SW] Parse error:', e.message);
+      data.body = event.data.text() || 'Neue Benachrichtigung';
     }
+  } else {
+    console.log('[SW] No event.data');
   }
+
+  console.log('[SW] Final notification data:', JSON.stringify(data));
 
   const options = {
     body: data.body,
