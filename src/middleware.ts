@@ -3,6 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Protect portal routes (except login page and auth API)
+  if (pathname.startsWith('/portal/ticket') || pathname.startsWith('/portal/tickets')) {
+    const portalSession = req.cookies.get('portal_session');
+
+    if (!portalSession?.value) {
+      // Redirect to portal login
+      return NextResponse.redirect(new URL('/portal', req.url));
+    }
+  }
+
   // Only protect admin routes (except login page and auth API)
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
     // Check for session cookie
@@ -54,5 +64,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/portal/ticket/:path*', '/portal/tickets/:path*'],
 };
