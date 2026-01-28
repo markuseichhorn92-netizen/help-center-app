@@ -68,14 +68,47 @@ export default function DocumentsPage() {
     invoiceVendor?: string;
   }>({});
 
+  // Invoice filter states
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [invoiceVendorFilter, setInvoiceVendorFilter] = useState("");
+  const [invoiceDateFrom, setInvoiceDateFrom] = useState("");
+  const [invoiceDateTo, setInvoiceDateTo] = useState("");
+  const [invoiceAmountMin, setInvoiceAmountMin] = useState("");
+  const [invoiceAmountMax, setInvoiceAmountMax] = useState("");
+  const [invoiceSortBy, setInvoiceSortBy] = useState<'date' | 'amount' | 'vendor' | ''>('');
+  const [invoiceSortOrder, setInvoiceSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [availableVendors, setAvailableVendors] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Share modal states
+  const [shareModalDoc, setShareModalDoc] = useState<Document | null>(null);
+  const [sharePassword, setSharePassword] = useState("");
+  const [shareExpiresIn, setShareExpiresIn] = useState<'none' | '1h' | '24h' | '7d' | '30d'>('none');
+  const [shareLinks, setShareLinks] = useState<Array<{ token: string; shareUrl: string; createdAt: string; expiresAt?: string; hasPassword: boolean; accessCount: number }>>([]);
+  const [creatingShare, setCreatingShare] = useState(false);
+  const [copiedShareUrl, setCopiedShareUrl] = useState<string | null>(null);
+
   // Load documents based on active tab and folder
   const loadData = useCallback(async (query?: string) => {
     try {
       setIsSearching(!!query);
 
       if (activeTab === 'invoices') {
-        // Load invoices grouped by month
-        const res = await fetch('/api/admin/documents/invoices', { credentials: 'same-origin' });
+        // Build query params for invoice filters
+        const params = new URLSearchParams();
+        if (invoiceSearch) params.set('q', invoiceSearch);
+        if (invoiceVendorFilter) params.set('vendor', invoiceVendorFilter);
+        if (invoiceDateFrom) params.set('dateFrom', invoiceDateFrom);
+        if (invoiceDateTo) params.set('dateTo', invoiceDateTo);
+        if (invoiceAmountMin) params.set('amountMin', invoiceAmountMin);
+        if (invoiceAmountMax) params.set('amountMax', invoiceAmountMax);
+        if (invoiceSortBy) {
+          params.set('sortBy', invoiceSortBy);
+          params.set('sortOrder', invoiceSortOrder);
+        }
+
+        const url = `/api/admin/documents/invoices${params.toString() ? '?' + params.toString() : ''}`;
+        const res = await fetch(url, { credentials: 'same-origin' });
         if (!res.ok) {
           if (res.status === 401) {
             window.location.href = '/admin/login';
@@ -86,6 +119,9 @@ export default function DocumentsPage() {
         const data = await res.json();
         setInvoicesByMonth(data.invoicesByMonth || {});
         setStats(data.stats || { total: 0, pending: 0, completed: 0, failed: 0, invoices: 0 });
+        if (data.vendors) {
+          setAvailableVendors(data.vendors);
+        }
       } else {
         // Load documents and folders
         const url = query
@@ -114,7 +150,7 @@ export default function DocumentsPage() {
       setLoading(false);
       setIsSearching(false);
     }
-  }, [activeTab, currentFolderId]);
+  }, [activeTab, currentFolderId, invoiceSearch, invoiceVendorFilter, invoiceDateFrom, invoiceDateTo, invoiceAmountMin, invoiceAmountMax, invoiceSortBy, invoiceSortOrder]);
 
   useEffect(() => {
     setLoading(true);
@@ -340,6 +376,94 @@ export default function DocumentsPage() {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
+  // Share link functions
+  const openShareModal = async (doc: Document) => {
+    setShareModalDoc(doc);
+    setSharePassword("");
+    setShareExpiresIn('none');
+    setCreatingShare(false);
+
+    // Load existing share links
+    try {
+      const res = await fetch(`/api/admin/documents/${doc.id}/share`, { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        setShareLinks(data.shares || []);
+      }
+    } catch (err) {
+      console.error('Error loading share links:', err);
+    }
+  };
+
+  const createShareLink = async () => {
+    if (!shareModalDoc) return;
+    setCreatingShare(true);
+
+    try {
+      let expiresAt: string | undefined;
+      if (shareExpiresIn !== 'none') {
+        const now = new Date();
+        switch (shareExpiresIn) {
+          case '1h': now.setHours(now.getHours() + 1); break;
+          case '24h': now.setHours(now.getHours() + 24); break;
+          case '7d': now.setDate(now.getDate() + 7); break;
+          case '30d': now.setDate(now.getDate() + 30); break;
+        }
+        expiresAt = now.toISOString();
+      }
+
+      const res = await fetch(`/api/admin/documents/${shareModalDoc.id}/share`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          expiresAt,
+          password: sharePassword || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        const newShare = await res.json();
+        setShareLinks(prev => [newShare, ...prev]);
+        setSharePassword("");
+        setShareExpiresIn('none');
+
+        // Copy to clipboard
+        await navigator.clipboard.writeText(newShare.shareUrl);
+        setCopiedShareUrl(newShare.shareUrl);
+        setTimeout(() => setCopiedShareUrl(null), 2000);
+      }
+    } catch (err) {
+      console.error('Error creating share link:', err);
+      alert('Fehler beim Erstellen des Share-Links');
+    } finally {
+      setCreatingShare(false);
+    }
+  };
+
+  const deleteShareLink = async (token: string) => {
+    if (!shareModalDoc) return;
+
+    try {
+      const res = await fetch(`/api/admin/documents/${shareModalDoc.id}/share?token=${token}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+
+      if (res.ok) {
+        setShareLinks(prev => prev.filter(s => s.token !== token));
+      }
+    } catch (err) {
+      console.error('Error deleting share link:', err);
+    }
+  };
+
+  const copyShareUrl = async (url: string) => {
+    await navigator.clipboard.writeText(url);
+    setCopiedShareUrl(url);
+    setTimeout(() => setCopiedShareUrl(null), 2000);
+  };
+
   const getOcrStatusBadge = (status: Document['ocrStatus']) => {
     const styles: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -374,6 +498,23 @@ export default function DocumentsPage() {
       return (
         <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    // Word documents
+    if (contentType.includes('word') || contentType.includes('document') || contentType === 'application/msword' || contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      return (
+        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <text x="9" y="10" className="text-[6px] font-bold fill-blue-600">W</text>
+        </svg>
+      );
+    }
+    // Excel documents
+    if (contentType.includes('excel') || contentType.includes('spreadsheet') || contentType === 'application/vnd.ms-excel' || contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      return (
+        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
         </svg>
       );
     }
@@ -418,7 +559,7 @@ export default function DocumentsPage() {
           <input
             type="file"
             multiple
-            accept="image/*,application/pdf"
+            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={handleUpload}
             className="hidden"
             disabled={uploading}
@@ -669,14 +810,35 @@ export default function DocumentsPage() {
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
                           className="p-2 text-apple-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
+                          title="Öffnen"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                           </svg>
                         </a>
+                        <a
+                          href={`/api/admin/documents/${doc.id}/download`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-2 text-apple-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Herunterladen"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                        </a>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openShareModal(doc); }}
+                          className="p-2 text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          title="Teilen"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                          </svg>
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
                           className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Löschen"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -702,9 +864,21 @@ export default function DocumentsPage() {
                     </button>
                   </div>
 
+                  {/* Image Preview */}
                   {selectedDoc.contentType.startsWith('image/') && (
                     <div className="mb-4">
                       <img src={selectedDoc.url} alt={selectedDoc.filename} className="w-full rounded-lg border border-apple-gray-100" />
+                    </div>
+                  )}
+
+                  {/* PDF Preview */}
+                  {selectedDoc.contentType === 'application/pdf' && (
+                    <div className="mb-4">
+                      <iframe
+                        src={selectedDoc.url}
+                        className="w-full h-96 rounded-lg border border-apple-gray-100"
+                        title={selectedDoc.filename}
+                      />
                     </div>
                   )}
 
@@ -741,6 +915,15 @@ export default function DocumentsPage() {
                     >
                       Öffnen
                     </a>
+                    <a
+                      href={`/api/admin/documents/${selectedDoc.id}/download`}
+                      className="px-4 py-2 border border-apple-gray-200 text-apple-gray-600 text-sm font-medium rounded-lg text-center hover:bg-apple-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download
+                    </a>
                   </div>
                 </div>
               </div>
@@ -752,6 +935,151 @@ export default function DocumentsPage() {
       {/* INVOICES TAB */}
       {activeTab === 'invoices' && (
         <div className="space-y-6">
+          {/* Filter Bar */}
+          <div className="bg-white rounded-xl border border-apple-gray-100 p-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Search Input */}
+              <div className="relative flex-1 min-w-[200px]">
+                <input
+                  type="text"
+                  value={invoiceSearch}
+                  onChange={(e) => setInvoiceSearch(e.target.value)}
+                  placeholder="Suchen (Dateiname, Lieferant, Nr.)..."
+                  className="w-full px-4 py-2 pl-10 border border-apple-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-sm"
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              {/* Filter Toggle Button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                  showFilters || invoiceVendorFilter || invoiceDateFrom || invoiceDateTo || invoiceAmountMin || invoiceAmountMax
+                    ? 'bg-brand/10 text-brand'
+                    : 'bg-apple-gray-100 text-apple-gray-600 hover:bg-apple-gray-200'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Filter
+                {(invoiceVendorFilter || invoiceDateFrom || invoiceDateTo || invoiceAmountMin || invoiceAmountMax) && (
+                  <span className="w-2 h-2 bg-brand rounded-full"></span>
+                )}
+              </button>
+
+              {/* Sort Dropdown */}
+              <select
+                value={invoiceSortBy}
+                onChange={(e) => setInvoiceSortBy(e.target.value as '' | 'date' | 'amount' | 'vendor')}
+                className="px-3 py-2 border border-apple-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/20"
+              >
+                <option value="">Sortierung</option>
+                <option value="date">Nach Datum</option>
+                <option value="amount">Nach Betrag</option>
+                <option value="vendor">Nach Lieferant</option>
+              </select>
+
+              {invoiceSortBy && (
+                <button
+                  onClick={() => setInvoiceSortOrder(invoiceSortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="p-2 border border-apple-gray-200 rounded-lg hover:bg-apple-gray-50"
+                  title={invoiceSortOrder === 'asc' ? 'Aufsteigend' : 'Absteigend'}
+                >
+                  <svg className={`w-4 h-4 transition-transform ${invoiceSortOrder === 'asc' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Expanded Filters */}
+            {showFilters && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-apple-gray-100">
+                {/* Vendor Filter */}
+                <div>
+                  <label className="block text-xs text-apple-gray-400 mb-1">Lieferant</label>
+                  <select
+                    value={invoiceVendorFilter}
+                    onChange={(e) => setInvoiceVendorFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  >
+                    <option value="">Alle Lieferanten</option>
+                    {availableVendors.map(v => (
+                      <option key={v} value={v}>{v}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date Range */}
+                <div>
+                  <label className="block text-xs text-apple-gray-400 mb-1">Von</label>
+                  <input
+                    type="date"
+                    value={invoiceDateFrom}
+                    onChange={(e) => setInvoiceDateFrom(e.target.value)}
+                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-apple-gray-400 mb-1">Bis</label>
+                  <input
+                    type="date"
+                    value={invoiceDateTo}
+                    onChange={(e) => setInvoiceDateTo(e.target.value)}
+                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  />
+                </div>
+
+                {/* Amount Range */}
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="block text-xs text-apple-gray-400 mb-1">Min €</label>
+                    <input
+                      type="number"
+                      value={invoiceAmountMin}
+                      onChange={(e) => setInvoiceAmountMin(e.target.value)}
+                      placeholder="0"
+                      className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs text-apple-gray-400 mb-1">Max €</label>
+                    <input
+                      type="number"
+                      value={invoiceAmountMax}
+                      onChange={(e) => setInvoiceAmountMax(e.target.value)}
+                      placeholder="∞"
+                      className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Clear Filters */}
+            {(invoiceSearch || invoiceVendorFilter || invoiceDateFrom || invoiceDateTo || invoiceAmountMin || invoiceAmountMax || invoiceSortBy) && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => {
+                    setInvoiceSearch('');
+                    setInvoiceVendorFilter('');
+                    setInvoiceDateFrom('');
+                    setInvoiceDateTo('');
+                    setInvoiceAmountMin('');
+                    setInvoiceAmountMax('');
+                    setInvoiceSortBy('');
+                  }}
+                  className="text-sm text-apple-gray-400 hover:text-apple-gray-600"
+                >
+                  Filter zurücksetzen
+                </button>
+              </div>
+            )}
+          </div>
+
           {Object.keys(invoicesByMonth).length === 0 ? (
             <div className="bg-white rounded-xl border border-apple-gray-100 p-8 text-center text-apple-gray-400">
               Noch keine Rechnungen vorhanden
@@ -764,7 +1092,43 @@ export default function DocumentsPage() {
                   {/* Month Header */}
                   <div className="px-6 py-4 bg-apple-gray-50 border-b border-apple-gray-100 flex items-center justify-between">
                     <h3 className="font-semibold text-apple-gray-600">{formatMonthYear(month)}</h3>
-                    <span className="text-sm text-apple-gray-400">{invoices.length} Rechnungen</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-apple-gray-400">{invoices.length} Rechnungen</span>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/admin/documents/export', {
+                              method: 'POST',
+                              credentials: 'same-origin',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ month, invoicesOnly: true }),
+                            });
+                            if (!res.ok) {
+                              const data = await res.json();
+                              alert(data.error || 'Export fehlgeschlagen');
+                              return;
+                            }
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `Rechnungen_${formatMonthYear(month).replace(' ', '_')}.zip`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          } catch (err) {
+                            console.error('Export error:', err);
+                            alert('Export fehlgeschlagen');
+                          }
+                        }}
+                        className="px-3 py-1 text-xs font-medium text-brand hover:bg-brand/10 rounded-lg transition-colors flex items-center gap-1"
+                        title="Monat als ZIP exportieren"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        ZIP
+                      </button>
+                    </div>
                   </div>
 
                   {/* Invoices in this month */}
@@ -886,9 +1250,19 @@ export default function DocumentsPage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-2 text-apple-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
+                                title="Öffnen"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                              </a>
+                              <a
+                                href={`/api/admin/documents/${invoice.id}/download`}
+                                className="p-2 text-apple-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Herunterladen"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
                               </a>
                               <button
@@ -908,6 +1282,136 @@ export default function DocumentsPage() {
                 </div>
               ))
           )}
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {shareModalDoc && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShareModalDoc(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-apple-gray-100">
+              <div>
+                <h3 className="text-lg font-semibold text-apple-gray-600">Dokument teilen</h3>
+                <p className="text-sm text-apple-gray-400 truncate max-w-xs">{shareModalDoc.filename}</p>
+              </div>
+              <button
+                onClick={() => setShareModalDoc(null)}
+                className="p-2 text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Create new share link */}
+            <div className="p-6 border-b border-apple-gray-100">
+              <h4 className="text-sm font-medium text-apple-gray-600 mb-4">Neuen Link erstellen</h4>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-apple-gray-400 mb-1">Gültigkeit</label>
+                  <select
+                    value={shareExpiresIn}
+                    onChange={(e) => setShareExpiresIn(e.target.value as typeof shareExpiresIn)}
+                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  >
+                    <option value="none">Unbegrenzt</option>
+                    <option value="1h">1 Stunde</option>
+                    <option value="24h">24 Stunden</option>
+                    <option value="7d">7 Tage</option>
+                    <option value="30d">30 Tage</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-apple-gray-400 mb-1">Passwort (optional)</label>
+                  <input
+                    type="text"
+                    value={sharePassword}
+                    onChange={(e) => setSharePassword(e.target.value)}
+                    placeholder="Leer für öffentlichen Zugang"
+                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  />
+                </div>
+                <button
+                  onClick={createShareLink}
+                  disabled={creatingShare}
+                  className="w-full px-4 py-2 bg-brand text-white font-medium rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {creatingShare ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  )}
+                  Link erstellen & kopieren
+                </button>
+              </div>
+            </div>
+
+            {/* Existing share links */}
+            <div className="p-6 max-h-64 overflow-y-auto">
+              <h4 className="text-sm font-medium text-apple-gray-600 mb-3">
+                Aktive Links ({shareLinks.length})
+              </h4>
+              {shareLinks.length === 0 ? (
+                <p className="text-sm text-apple-gray-400">Noch keine Links erstellt</p>
+              ) : (
+                <div className="space-y-3">
+                  {shareLinks.map((link) => (
+                    <div key={link.token} className="flex items-center gap-3 p-3 bg-apple-gray-50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 text-sm">
+                          {link.hasPassword && (
+                            <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            </svg>
+                          )}
+                          <span className="text-apple-gray-600 truncate font-mono text-xs">
+                            ...{link.token.slice(-8)}
+                          </span>
+                          <span className="text-apple-gray-400">•</span>
+                          <span className="text-apple-gray-400">{link.accessCount} Aufrufe</span>
+                        </div>
+                        <div className="text-xs text-apple-gray-400 mt-1">
+                          {link.expiresAt ? `Läuft ab: ${new Date(link.expiresAt).toLocaleDateString('de-DE')}` : 'Unbegrenzt'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => copyShareUrl(link.shareUrl)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          copiedShareUrl === link.shareUrl
+                            ? 'bg-green-100 text-green-600'
+                            : 'text-apple-gray-400 hover:text-brand hover:bg-brand/10'
+                        }`}
+                        title="Link kopieren"
+                      >
+                        {copiedShareUrl === link.shareUrl ? (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => deleteShareLink(link.token)}
+                        className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Link löschen"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

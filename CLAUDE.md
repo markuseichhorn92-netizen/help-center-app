@@ -244,3 +244,47 @@ In `src/lib/whatsapp.ts`:
 - Removes all other HTML tags
 - Decodes HTML entities (including German umlauts)
 - Cleans up excessive newlines
+
+## FitInn TV-Dashboard Integration
+
+Separate Admin-Sektion für das Fitnessstudio-TV-Display unter `/admin/fitinn-dashboard`.
+
+### Architektur
+- **Admin UI**: `src/app/admin/fitinn-dashboard/` - Verwaltung via Hilfe Seite
+- **TV Display**: Separates Projekt (`fitinndashboard-temp`) deployed auf `fitinndashboard.vercel.app`
+- **Shared Storage**: Beide nutzen dieselbe Vercel KV Datenbank
+
+### Dashboard KV-Keys (Namespace: `fitinn:`)
+- `fitinn:config` - Hauptkonfiguration (Layout, Wetter, Öffnungszeiten, QR-Code)
+- `fitinn:password` - Gehashtes Dashboard-Passwort
+- `fitinn:images` - Karussell-Bilder Metadaten
+- `fitinn:setup_complete` - Setup-Status
+
+### Separate KV-Verbindung
+Dashboard verwendet eigene KV-Credentials um Namespace-Konflikte zu vermeiden:
+```typescript
+// src/lib/dashboard/kv.ts
+const dashboardKv = createClient({
+  url: process.env.DASHBOARD_KV_KV_REST_API_URL!,
+  token: process.env.DASHBOARD_KV_KV_REST_API_TOKEN!,
+});
+```
+
+### Dashboard Features
+- **Layouts**: `fullscreen`, `split`, `ticker`
+- **Widgets**: Uhrzeit, Wetter (mit Apple-Style Animationen), Öffnungsstatus, QR-Code
+- **Karussell**: Wechsel zwischen Leaderboard und Bildern
+- **Öffnungszeiten**: Reguläre Zeiten + Feiertage/Sonderöffnungszeiten
+- **QR-Code**: Konfigurierbare URL mit App Store Badges
+
+### Dashboard API Routes
+- `GET/POST /api/dashboard/config` - Konfiguration lesen/speichern
+- `GET /api/dashboard/images` - Bilderliste
+- `POST /api/dashboard/upload-image` - Bild hochladen (Base64)
+- `POST /api/dashboard/delete-image` - Bild löschen
+- `POST /api/dashboard/password` - Passwort ändern
+- `POST /api/dashboard/login` / `logout` - Authentifizierung
+
+### Dashboard Environment Variables
+- `DASHBOARD_KV_KV_REST_API_URL` - KV URL für Dashboard
+- `DASHBOARD_KV_KV_REST_API_TOKEN` - KV Token für Dashboard
