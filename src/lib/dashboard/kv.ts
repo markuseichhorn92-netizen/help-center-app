@@ -1,10 +1,10 @@
 import { createClient } from '@vercel/kv';
 import { FitInnConfig, ImageInfo, DEFAULT_CONFIG, KV_KEYS } from './config';
 
-// Separate KV-Instanz für das Dashboard (nutzt DASHBOARD_KV_* Variablen)
+// Separate KV-Instanz für das Dashboard (nutzt DASHBOARD_KV_KV_* Variablen)
 const dashboardKv = createClient({
-  url: process.env.DASHBOARD_KV_REST_API_URL!,
-  token: process.env.DASHBOARD_KV_REST_API_TOKEN!,
+  url: process.env.DASHBOARD_KV_KV_REST_API_URL!,
+  token: process.env.DASHBOARD_KV_KV_REST_API_TOKEN!,
 });
 
 export async function getConfig(): Promise<FitInnConfig> {
