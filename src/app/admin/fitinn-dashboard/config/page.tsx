@@ -41,6 +41,9 @@ interface Config {
   transitionEffect: 'fade' | 'slide' | 'zoom' | 'none';
   tickerText: string;
   specialDays: SpecialDay[];
+  showQrCode: boolean;
+  qrCodeUrl: string;
+  qrCodeLabel: string;
 }
 
 interface ImageInfo {
@@ -208,7 +211,7 @@ export default function DashboardConfigPage() {
   const [config, setConfig] = useState<Config | null>(null);
   const [images, setImages] = useState<ImageInfo[]>([]);
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'display' | 'opening' | 'special' | 'images'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'display' | 'opening' | 'special' | 'images' | 'qrcode'>('general');
 
   // Form states
   const [newUrl, setNewUrl] = useState('');
@@ -232,6 +235,9 @@ export default function DashboardConfigPage() {
   const [transitionEffect, setTransitionEffect] = useState<'fade' | 'slide' | 'zoom' | 'none'>('fade');
   const [tickerText, setTickerText] = useState('');
   const [specialDays, setSpecialDays] = useState<SpecialDay[]>([]);
+  const [showQrCode, setShowQrCode] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [qrCodeLabel, setQrCodeLabel] = useState('Jetzt App laden');
 
   const showAlert = useCallback((message: string, type: 'success' | 'error') => {
     setAlert({ type, message });
@@ -259,6 +265,9 @@ export default function DashboardConfigPage() {
         setTransitionEffect(data.transitionEffect || 'fade');
         setTickerText(data.tickerText || '');
         setSpecialDays(data.specialDays || []);
+        setShowQrCode(data.showQrCode ?? false);
+        setQrCodeUrl(data.qrCodeUrl || '');
+        setQrCodeLabel(data.qrCodeLabel || 'Jetzt App laden');
       }
     } catch (err) {
       showAlert('Fehler beim Laden der Konfiguration', 'error');
@@ -369,6 +378,29 @@ export default function DashboardConfigPage() {
 
       if (response.ok) {
         showAlert('Feiertage gespeichert!', 'success');
+        loadConfig();
+      } else {
+        showAlert('Fehler beim Speichern', 'error');
+      }
+    } catch (err) {
+      showAlert('Verbindungsfehler', 'error');
+    }
+  };
+
+  const saveQrCodeSettings = async () => {
+    try {
+      const response = await fetch('/api/dashboard/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          showQrCode,
+          qrCodeUrl,
+          qrCodeLabel,
+        }),
+      });
+
+      if (response.ok) {
+        showAlert('QR-Code Einstellungen gespeichert!', 'success');
         loadConfig();
       } else {
         showAlert('Fehler beim Speichern', 'error');
@@ -601,6 +633,7 @@ export default function DashboardConfigPage() {
     { id: 'opening', label: 'Öffnungszeiten', icon: '🕐' },
     { id: 'special', label: 'Feiertage', icon: '🎄' },
     { id: 'images', label: 'Bilder', icon: '🖼️' },
+    { id: 'qrcode', label: 'QR-Code', icon: '📱' },
   ];
 
   return (
@@ -1253,6 +1286,82 @@ export default function DashboardConfigPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* QR-Code Tab */}
+      {activeTab === 'qrcode' && (
+        <div className="bg-white rounded-apple-xl shadow-card p-6">
+          <h2 className="text-lg font-semibold mb-5 pb-3 border-b border-apple-gray-100 text-apple-gray-600">
+            QR-Code Widget
+          </h2>
+          <p className="text-sm text-apple-gray-400 mb-5">
+            Zeige einen QR-Code auf dem TV-Display, den Besucher mit dem Handy scannen können.
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showQrCode}
+                  onChange={(e) => setShowQrCode(e.target.checked)}
+                  className="w-5 h-5 rounded accent-brand"
+                />
+                <span className="text-apple-gray-600">QR-Code auf dem Display anzeigen</span>
+              </label>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm text-apple-gray-400">Ziel-URL:</label>
+              <input
+                type="url"
+                value={qrCodeUrl}
+                onChange={(e) => setQrCodeUrl(e.target.value)}
+                placeholder="https://beispiel.de/app-download"
+                className="w-full p-3 border border-apple-gray-200 rounded-apple bg-white text-apple-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+              <p className="text-xs text-apple-gray-400 mt-1">
+                Die URL, zu der Besucher nach dem Scannen weitergeleitet werden.
+              </p>
+            </div>
+
+            <div>
+              <label className="block mb-2 text-sm text-apple-gray-400">Beschreibung:</label>
+              <input
+                type="text"
+                value={qrCodeLabel}
+                onChange={(e) => setQrCodeLabel(e.target.value)}
+                placeholder="Jetzt App laden"
+                className="w-full p-3 border border-apple-gray-200 rounded-apple bg-white text-apple-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+              <p className="text-xs text-apple-gray-400 mt-1">
+                Dieser Text wird unter dem QR-Code angezeigt.
+              </p>
+            </div>
+
+            {/* Preview */}
+            {showQrCode && qrCodeUrl && (
+              <div className="border-t border-apple-gray-100 pt-5">
+                <label className="block mb-3 text-sm text-apple-gray-400">Vorschau:</label>
+                <div className="inline-block bg-white rounded-xl p-6 shadow-lg border border-apple-gray-200">
+                  <div className="w-32 h-32 bg-apple-gray-100 rounded-lg flex items-center justify-center mb-3">
+                    <span className="text-4xl">📱</span>
+                  </div>
+                  <div className="text-center text-sm font-medium text-apple-gray-600">
+                    {qrCodeLabel || 'QR-Code'}
+                  </div>
+                </div>
+                <p className="text-xs text-apple-gray-400 mt-3">
+                  Der echte QR-Code wird auf dem TV-Display generiert.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button onClick={saveQrCodeSettings} className="bg-brand text-white px-6 py-3 rounded-apple hover:bg-brand-dark transition-colors mt-6">
+            QR-Code Einstellungen speichern
+          </button>
         </div>
       )}
     </div>

@@ -40,6 +40,9 @@ export interface FitInnConfig {
   maxImages: number;
   tickerText: string;
   specialDays: SpecialDay[];
+  showQrCode: boolean;
+  qrCodeUrl: string;
+  qrCodeLabel: string;
 }
 
 export interface ImageInfo {
@@ -68,6 +71,9 @@ export interface PublicConfig {
   transitionEffect: 'fade' | 'slide' | 'zoom' | 'none';
   tickerText: string;
   specialDays: SpecialDay[];
+  showQrCode: boolean;
+  qrCodeUrl: string;
+  qrCodeLabel: string;
 }
 
 export const DEFAULT_OPENING_HOURS: OpeningHours = {
@@ -99,6 +105,9 @@ export const DEFAULT_CONFIG: FitInnConfig = {
   maxImages: 10,
   tickerText: '',
   specialDays: [],
+  showQrCode: false,
+  qrCodeUrl: '',
+  qrCodeLabel: 'Jetzt App laden',
 };
 
 export const KV_KEYS = {
