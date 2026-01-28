@@ -60,7 +60,7 @@ export async function POST(
 
     // Generate the share URL
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const shareUrl = `${baseUrl}/api/documents/share/${shareLink.token}`;
+    const shareUrl = `${baseUrl}/share/${shareLink.token}`;
 
     return NextResponse.json({
       ...shareLink,
