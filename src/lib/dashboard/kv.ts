@@ -1,9 +1,15 @@
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
 import { FitInnConfig, ImageInfo, DEFAULT_CONFIG, KV_KEYS } from './config';
+
+// Separate KV-Instanz für das Dashboard (nutzt DASHBOARD_KV_* Variablen)
+const dashboardKv = createClient({
+  url: process.env.DASHBOARD_KV_REST_API_URL!,
+  token: process.env.DASHBOARD_KV_REST_API_TOKEN!,
+});
 
 export async function getConfig(): Promise<FitInnConfig> {
   try {
-    const config = await kv.get<FitInnConfig>(KV_KEYS.CONFIG);
+    const config = await dashboardKv.get<FitInnConfig>(KV_KEYS.CONFIG);
     if (!config) {
       return { ...DEFAULT_CONFIG };
     }
@@ -22,7 +28,7 @@ export async function saveConfig(config: Partial<FitInnConfig>): Promise<void> {
       ...config,
       lastModified: new Date().toISOString(),
     };
-    await kv.set(KV_KEYS.CONFIG, updatedConfig);
+    await dashboardKv.set(KV_KEYS.CONFIG, updatedConfig);
   } catch (error) {
     console.error('Error saving config to KV:', error);
     throw error;
@@ -31,7 +37,7 @@ export async function saveConfig(config: Partial<FitInnConfig>): Promise<void> {
 
 export async function getPasswordHash(): Promise<string | null> {
   try {
-    return await kv.get<string>(KV_KEYS.PASSWORD);
+    return await dashboardKv.get<string>(KV_KEYS.PASSWORD);
   } catch (error) {
     console.error('Error getting password from KV:', error);
     return null;
@@ -40,7 +46,7 @@ export async function getPasswordHash(): Promise<string | null> {
 
 export async function savePasswordHash(hash: string): Promise<void> {
   try {
-    await kv.set(KV_KEYS.PASSWORD, hash);
+    await dashboardKv.set(KV_KEYS.PASSWORD, hash);
   } catch (error) {
     console.error('Error saving password to KV:', error);
     throw error;
@@ -49,7 +55,7 @@ export async function savePasswordHash(hash: string): Promise<void> {
 
 export async function isSetupComplete(): Promise<boolean> {
   try {
-    const value = await kv.get<string>(KV_KEYS.SETUP_COMPLETE);
+    const value = await dashboardKv.get<string>(KV_KEYS.SETUP_COMPLETE);
     return value === 'true';
   } catch (error) {
     console.error('Error checking setup status:', error);
@@ -59,7 +65,7 @@ export async function isSetupComplete(): Promise<boolean> {
 
 export async function setSetupComplete(): Promise<void> {
   try {
-    await kv.set(KV_KEYS.SETUP_COMPLETE, 'true');
+    await dashboardKv.set(KV_KEYS.SETUP_COMPLETE, 'true');
   } catch (error) {
     console.error('Error setting setup complete:', error);
     throw error;
@@ -68,7 +74,7 @@ export async function setSetupComplete(): Promise<void> {
 
 export async function getImages(): Promise<ImageInfo[]> {
   try {
-    const images = await kv.get<ImageInfo[]>(KV_KEYS.IMAGES);
+    const images = await dashboardKv.get<ImageInfo[]>(KV_KEYS.IMAGES);
     return images || [];
   } catch (error) {
     console.error('Error getting images from KV:', error);
@@ -78,7 +84,7 @@ export async function getImages(): Promise<ImageInfo[]> {
 
 export async function saveImages(images: ImageInfo[]): Promise<void> {
   try {
-    await kv.set(KV_KEYS.IMAGES, images);
+    await dashboardKv.set(KV_KEYS.IMAGES, images);
     await saveConfig({});
   } catch (error) {
     console.error('Error saving images to KV:', error);
