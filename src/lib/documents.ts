@@ -69,14 +69,30 @@ export async function createDocument(data: {
     size: data.size,
     contentType: data.contentType,
     ocrStatus: isOcrSupported(data.contentType) ? 'pending' : 'skipped',
-    ticketId: data.ticketId,
     uploadedBy: data.uploadedBy,
     uploadedAt: now,
-    tags: data.tags || [],
   };
 
+  // Only add ticketId if provided (Redis doesn't support null values)
+  if (data.ticketId) {
+    document.ticketId = data.ticketId;
+  }
+
+  // Only add tags if provided and non-empty
+  if (data.tags && data.tags.length > 0) {
+    document.tags = data.tags;
+  }
+
+  // Filter out any null/undefined values before saving to KV
+  const cleanDocument: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(document)) {
+    if (value !== null && value !== undefined) {
+      cleanDocument[key] = value;
+    }
+  }
+
   // Save document
-  await kv.hset(`document:${id}`, document as Record<string, unknown>);
+  await kv.hset(`document:${id}`, cleanDocument);
 
   // Add to documents set
   await kv.sadd('documents:ids', id);
@@ -107,7 +123,16 @@ export async function updateDocument(
   }
 
   const updated = { ...existing, ...updates };
-  await kv.hset(`document:${id}`, updated as Record<string, unknown>);
+
+  // Filter out null/undefined values before saving to KV
+  const cleanDocument: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updated)) {
+    if (value !== null && value !== undefined) {
+      cleanDocument[key] = value;
+    }
+  }
+
+  await kv.hset(`document:${id}`, cleanDocument);
 
   return updated;
 }

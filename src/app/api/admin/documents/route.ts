@@ -82,16 +82,27 @@ export async function POST(req: NextRequest) {
       contentType: file.type,
     });
 
-    // Create document record
-    const document = await createDocument({
+    // Create document record (only pass ticketId and tags if they have values)
+    const documentData: Parameters<typeof createDocument>[0] = {
       filename: file.name,
       url: blob.url,
       size: file.size,
       contentType: file.type,
-      ticketId: ticketId || undefined,
       uploadedBy: 'admin',
-      tags: tags ? tags.split(',').map(t => t.trim()) : undefined,
-    });
+    };
+
+    if (ticketId) {
+      documentData.ticketId = ticketId;
+    }
+
+    if (tags) {
+      const parsedTags = tags.split(',').map(t => t.trim()).filter(t => t.length > 0);
+      if (parsedTags.length > 0) {
+        documentData.tags = parsedTags;
+      }
+    }
+
+    const document = await createDocument(documentData);
 
     return NextResponse.json(document);
   } catch (error: unknown) {
