@@ -355,7 +355,7 @@ export default function AdminHeader() {
 
             {/* Dashboard Link */}
             <a
-              href="https://fitinntrierdashboard.org/admin"
+              href="https://fitinndashboard.vercel.app/admin/dashboard"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
@@ -426,7 +426,7 @@ export default function AdminHeader() {
                 </Link>
               ))}
               <a
-                href="https://fitinntrierdashboard.org/admin"
+                href="https://fitinndashboard.vercel.app/admin/dashboard"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setMobileMenuOpen(false)}
