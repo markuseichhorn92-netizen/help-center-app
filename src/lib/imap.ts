@@ -7,6 +7,7 @@ import { parseTicketNumberFromSubject, sendTicketConfirmation, sendNewTicketNoti
 import { ensureContactFromTicket, updateLastContact } from './contacts';
 import { generatePortalToken } from './portal';
 import { notifyNewMessage, notifyNewTicket } from './push-notifications';
+import { createDocument } from './documents';
 
 const kv = createClient({
   url: process.env.KV_REST_API_URL || '',
@@ -69,6 +70,25 @@ async function processAttachments(parsed: ParsedMail): Promise<Attachment[]> {
   }
 
   return attachments;
+}
+
+// Create document entries for attachments (for OCR processing)
+async function createDocumentsFromAttachments(attachments: Attachment[], ticketId: string, uploaderEmail: string): Promise<void> {
+  for (const att of attachments) {
+    try {
+      await createDocument({
+        filename: att.filename,
+        url: att.url,
+        size: att.size,
+        contentType: att.contentType,
+        ticketId,
+        uploadedBy: uploaderEmail,
+        tags: ['email-anhang'],
+      });
+    } catch (error) {
+      console.error('Failed to create document entry:', error);
+    }
+  }
 }
 
 // Extract name and email from address
@@ -245,6 +265,11 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
               // Update contact last activity
               await updateLastContact(senderEmail);
 
+              // Create document entries for attachments (for OCR processing)
+              if (attachments.length > 0) {
+                await createDocumentsFromAttachments(attachments, existingTicket.id, senderEmail);
+              }
+
               // Send push notification for new message
               try {
                 await notifyNewMessage({
@@ -289,6 +314,11 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             name: senderName,
             email: senderEmail,
           });
+
+          // Create document entries for attachments (for OCR processing)
+          if (attachments.length > 0) {
+            await createDocumentsFromAttachments(attachments, ticket.id, senderEmail);
+          }
 
           // Generate portal token for direct access
           const portalToken = await generatePortalToken(senderEmail, ticket.id);

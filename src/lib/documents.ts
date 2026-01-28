@@ -1,0 +1,374 @@
+import { createClient } from '@vercel/kv';
+
+const kv = createClient({
+  url: process.env.KV_REST_API_URL || '',
+  token: process.env.KV_REST_API_TOKEN || '',
+});
+
+// Types
+export interface Document {
+  [key: string]: unknown; // Index signature for KV storage
+  id: string;
+  filename: string;
+  url: string;
+  size: number;
+  contentType: string;
+  ocrText?: string;
+  ocrStatus: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+  ocrError?: string;
+  ticketId?: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  processedAt?: string;
+  tags?: string[];
+}
+
+export interface DocumentSearchResult {
+  document: Document;
+  matchedText?: string;
+  score: number;
+}
+
+// Helper: Generate document ID
+function generateDocumentId(): string {
+  return `doc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+// Check if file type supports OCR
+function isOcrSupported(contentType: string): boolean {
+  const supportedTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/tiff',
+    'application/pdf',
+  ];
+  return supportedTypes.includes(contentType.toLowerCase());
+}
+
+// Document CRUD Operations
+
+export async function createDocument(data: {
+  filename: string;
+  url: string;
+  size: number;
+  contentType: string;
+  ticketId?: string;
+  uploadedBy: string;
+  tags?: string[];
+}): Promise<Document> {
+  const id = generateDocumentId();
+  const now = new Date().toISOString();
+
+  const document: Document = {
+    id,
+    filename: data.filename,
+    url: data.url,
+    size: data.size,
+    contentType: data.contentType,
+    ocrStatus: isOcrSupported(data.contentType) ? 'pending' : 'skipped',
+    ticketId: data.ticketId,
+    uploadedBy: data.uploadedBy,
+    uploadedAt: now,
+    tags: data.tags || [],
+  };
+
+  // Save document
+  await kv.hset(`document:${id}`, document as Record<string, unknown>);
+
+  // Add to documents set
+  await kv.sadd('documents:ids', id);
+
+  // If linked to ticket, add to ticket's documents
+  if (data.ticketId) {
+    await kv.sadd(`documents:ticket:${data.ticketId}`, id);
+  }
+
+  return document;
+}
+
+export async function getDocument(id: string): Promise<Document | null> {
+  const document = await kv.hgetall(`document:${id}`);
+  if (!document || Object.keys(document).length === 0) {
+    return null;
+  }
+  return document as unknown as Document;
+}
+
+export async function updateDocument(
+  id: string,
+  updates: Partial<Omit<Document, 'id' | 'uploadedAt' | 'uploadedBy'>>
+): Promise<Document | null> {
+  const existing = await getDocument(id);
+  if (!existing) {
+    return null;
+  }
+
+  const updated = { ...existing, ...updates };
+  await kv.hset(`document:${id}`, updated as Record<string, unknown>);
+
+  return updated;
+}
+
+export async function deleteDocument(id: string): Promise<boolean> {
+  const document = await getDocument(id);
+  if (!document) {
+    return false;
+  }
+
+  // Remove from main set
+  await kv.srem('documents:ids', id);
+
+  // Remove from ticket set if linked
+  if (document.ticketId) {
+    await kv.srem(`documents:ticket:${document.ticketId}`, id);
+  }
+
+  // Remove search index entries
+  if (document.ocrText) {
+    await removeFromSearchIndex(id, document.ocrText);
+  }
+
+  // Delete document
+  await kv.del(`document:${id}`);
+
+  return true;
+}
+
+export async function listDocuments(options?: {
+  ticketId?: string;
+  ocrStatus?: Document['ocrStatus'];
+  limit?: number;
+  offset?: number;
+}): Promise<{ documents: Document[]; total: number }> {
+  let documentIds: string[];
+
+  if (options?.ticketId) {
+    documentIds = await kv.smembers(`documents:ticket:${options.ticketId}`) as string[];
+  } else {
+    documentIds = await kv.smembers('documents:ids') as string[];
+  }
+
+  // Filter by OCR status if specified
+  let documents: Document[] = [];
+  for (const id of documentIds) {
+    const doc = await getDocument(id);
+    if (doc) {
+      if (!options?.ocrStatus || doc.ocrStatus === options.ocrStatus) {
+        documents.push(doc);
+      }
+    }
+  }
+
+  // Sort by upload date (newest first)
+  documents.sort((a, b) =>
+    new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+  );
+
+  const total = documents.length;
+
+  // Apply pagination
+  if (options?.offset !== undefined || options?.limit !== undefined) {
+    const start = options.offset || 0;
+    const end = options.limit ? start + options.limit : undefined;
+    documents = documents.slice(start, end);
+  }
+
+  return { documents, total };
+}
+
+// OCR Status Management
+
+export async function getDocumentsPendingOcr(limit: number = 10): Promise<Document[]> {
+  const { documents } = await listDocuments({ ocrStatus: 'pending', limit });
+  return documents;
+}
+
+export async function updateOcrStatus(
+  id: string,
+  status: Document['ocrStatus'],
+  ocrText?: string,
+  error?: string
+): Promise<Document | null> {
+  const updates: Partial<Document> = {
+    ocrStatus: status,
+    processedAt: new Date().toISOString(),
+  };
+
+  if (ocrText !== undefined) {
+    updates.ocrText = ocrText;
+    // Index the text for search
+    await indexDocumentText(id, ocrText);
+  }
+
+  if (error !== undefined) {
+    updates.ocrError = error;
+  }
+
+  return updateDocument(id, updates);
+}
+
+// Search Index Management
+
+async function indexDocumentText(documentId: string, text: string): Promise<void> {
+  // Extract keywords (words with 3+ characters)
+  const words = text
+    .toLowerCase()
+    .replace(/[^\wäöüß\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length >= 3);
+
+  // Get unique words
+  const uniqueWords = [...new Set(words)];
+
+  // Add document to search index for each word
+  for (const word of uniqueWords.slice(0, 500)) { // Limit to 500 keywords
+    await kv.sadd(`documents:search:${word}`, documentId);
+  }
+
+  // Store the full OCR text for display
+  await kv.set(`documents:ocrtext:${documentId}`, text);
+}
+
+async function removeFromSearchIndex(documentId: string, text: string): Promise<void> {
+  const words = text
+    .toLowerCase()
+    .replace(/[^\wäöüß\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length >= 3);
+
+  const uniqueWords = [...new Set(words)];
+
+  for (const word of uniqueWords.slice(0, 500)) {
+    await kv.srem(`documents:search:${word}`, documentId);
+  }
+
+  await kv.del(`documents:ocrtext:${documentId}`);
+}
+
+export async function searchDocuments(query: string): Promise<DocumentSearchResult[]> {
+  const searchTerms = query
+    .toLowerCase()
+    .replace(/[^\wäöüß\s]/g, ' ')
+    .split(/\s+/)
+    .filter(term => term.length >= 3);
+
+  if (searchTerms.length === 0) {
+    return [];
+  }
+
+  // Find documents matching each term
+  const matchingSets: Set<string>[] = [];
+  for (const term of searchTerms) {
+    const matches = await kv.smembers(`documents:search:${term}`) as string[];
+    matchingSets.push(new Set(matches));
+  }
+
+  // Find documents matching ALL terms (intersection)
+  let matchingIds: Set<string>;
+  if (matchingSets.length === 1) {
+    matchingIds = matchingSets[0];
+  } else {
+    matchingIds = matchingSets.reduce((acc, set) => {
+      return new Set([...acc].filter(id => set.has(id)));
+    });
+  }
+
+  // Get documents and calculate scores
+  const results: DocumentSearchResult[] = [];
+  for (const id of matchingIds) {
+    const document = await getDocument(id);
+    if (document) {
+      // Simple scoring: count term occurrences
+      const ocrText = (document.ocrText || '').toLowerCase();
+      let score = 0;
+      let matchedText = '';
+
+      for (const term of searchTerms) {
+        const regex = new RegExp(term, 'gi');
+        const matches = ocrText.match(regex);
+        if (matches) {
+          score += matches.length;
+        }
+      }
+
+      // Extract a snippet with context
+      if (document.ocrText) {
+        const firstTermIndex = ocrText.indexOf(searchTerms[0]);
+        if (firstTermIndex !== -1) {
+          const start = Math.max(0, firstTermIndex - 50);
+          const end = Math.min(document.ocrText.length, firstTermIndex + 150);
+          matchedText = document.ocrText.substring(start, end);
+          if (start > 0) matchedText = '...' + matchedText;
+          if (end < document.ocrText.length) matchedText = matchedText + '...';
+        }
+      }
+
+      results.push({ document, matchedText, score });
+    }
+  }
+
+  // Sort by score (highest first)
+  results.sort((a, b) => b.score - a.score);
+
+  return results;
+}
+
+// Get documents by ticket
+export async function getDocumentsByTicket(ticketId: string): Promise<Document[]> {
+  const { documents } = await listDocuments({ ticketId });
+  return documents;
+}
+
+// Link document to ticket
+export async function linkDocumentToTicket(documentId: string, ticketId: string): Promise<boolean> {
+  const document = await getDocument(documentId);
+  if (!document) {
+    return false;
+  }
+
+  // Update document
+  await updateDocument(documentId, { ticketId });
+
+  // Add to ticket's document set
+  await kv.sadd(`documents:ticket:${ticketId}`, documentId);
+
+  return true;
+}
+
+// Unlink document from ticket
+export async function unlinkDocumentFromTicket(documentId: string): Promise<boolean> {
+  const document = await getDocument(documentId);
+  if (!document || !document.ticketId) {
+    return false;
+  }
+
+  const ticketId = document.ticketId;
+
+  // Update document
+  await updateDocument(documentId, { ticketId: undefined });
+
+  // Remove from ticket's document set
+  await kv.srem(`documents:ticket:${ticketId}`, documentId);
+
+  return true;
+}
+
+// Statistics
+export async function getDocumentStats(): Promise<{
+  total: number;
+  pending: number;
+  completed: number;
+  failed: number;
+}> {
+  const { documents } = await listDocuments();
+
+  return {
+    total: documents.length,
+    pending: documents.filter(d => d.ocrStatus === 'pending').length,
+    completed: documents.filter(d => d.ocrStatus === 'completed').length,
+    failed: documents.filter(d => d.ocrStatus === 'failed').length,
+  };
+}
