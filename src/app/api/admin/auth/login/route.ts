@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,8 +9,8 @@ export async function POST(req: NextRequest) {
     const ADMIN_PASS = process.env.ADMIN_PASS || 'adminpass';
 
     if (username === ADMIN_USER && password === ADMIN_PASS) {
-      // Create a simple session token (in production, use proper JWT or session management)
-      const sessionToken = Buffer.from(`${username}:${Date.now()}`).toString('base64');
+      // Create a cryptographically secure session token
+      const sessionToken = randomBytes(32).toString('hex');
 
       const response = NextResponse.json({ success: true });
 

@@ -2,7 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
 
 // Debug endpoint to check what data is available for AI chat
+// PROTECTED: Requires admin session or cron secret
 export async function GET(req: NextRequest) {
+  // Security: Require admin session or cron secret
+  const sessionCookie = req.cookies.get('admin_session');
+  const cronSecret = req.headers.get('x-cron-secret') || req.nextUrl.searchParams.get('secret');
+  const expectedSecret = process.env.CRON_SECRET;
+
+  const isAdmin = sessionCookie?.value;
+  const isValidCronSecret = expectedSecret && cronSecret === expectedSecret;
+
+  if (!isAdmin && !isValidCronSecret) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const showContent = req.nextUrl.searchParams.get("content") === "true";
     const search = req.nextUrl.searchParams.get("search")?.toLowerCase();

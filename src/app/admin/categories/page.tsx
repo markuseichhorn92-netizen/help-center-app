@@ -33,8 +33,6 @@ function getIconEmoji(iconId: string): string {
   return AVAILABLE_ICONS.find(i => i.id === iconId)?.icon || '📄';
 }
 
-const authHeader = `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`;
-
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +51,7 @@ export default function CategoriesPage() {
   const loadCategories = async () => {
     try {
       const res = await fetch('/api/admin/categories', {
-        headers: { 'Authorization': authHeader }
+        credentials: 'same-origin'
       });
       if (!res.ok) throw new Error('Failed to fetch categories');
       const data = await res.json();
@@ -79,10 +77,8 @@ export default function CategoriesPage() {
 
       const res = await fetch(url, {
         method: editingCategory ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify(formData)
       });
 
@@ -105,7 +101,7 @@ export default function CategoriesPage() {
     try {
       const res = await fetch(`/api/admin/categories/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': authHeader }
+        credentials: 'same-origin'
       });
 
       if (!res.ok) throw new Error('Failed to delete category');
@@ -167,10 +163,8 @@ export default function CategoriesPage() {
     try {
       await fetch('/api/admin/categories/reorder', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader
-        },
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ orderedIds: newCategories.map(c => c.id) })
       });
     } catch (err) {

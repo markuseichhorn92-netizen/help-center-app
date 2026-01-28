@@ -115,9 +115,7 @@ const priorityConfig = {
   high: { label: "Hoch", color: "bg-red-100 text-red-600" },
 };
 
-function getAuthHeader() {
-  return `Basic ${btoa(`${process.env.NEXT_PUBLIC_ADMIN_USER}:${process.env.NEXT_PUBLIC_ADMIN_PASS}`)}`;
-}
+// Auth is handled via session cookie - no header needed
 
 // Status icon component for messages
 function MessageStatusIcon({ message }: { message: TicketMessage }) {
@@ -274,10 +272,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     try {
       const [ticketRes, messagesRes] = await Promise.all([
         fetch(`/api/admin/tickets/${id}`, {
-          headers: { Authorization: getAuthHeader() }
+          credentials: 'same-origin'
         }),
         fetch(`/api/admin/tickets/${id}/messages`, {
-          headers: { Authorization: getAuthHeader() }
+          credentials: 'same-origin'
         })
       ]);
 
@@ -300,8 +298,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: getAuthHeader()
-          },
+                      },
           body: JSON.stringify({
             messageIds: unreadCustomerMessages.map((m: TicketMessage) => m.id)
           })
@@ -329,7 +326,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const loadSidebarTickets = async () => {
     try {
       const res = await fetch('/api/admin/tickets', {
-        headers: { Authorization: getAuthHeader() }
+        credentials: 'same-origin'
       });
       if (res.ok) {
         const data = await res.json();
@@ -353,7 +350,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const loadTags = async () => {
     try {
       const res = await fetch('/api/admin/ticket-tags', {
-        headers: { Authorization: getAuthHeader() }
+        credentials: 'same-origin'
       });
       if (res.ok) {
         const data = await res.json();
@@ -368,7 +365,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const loadNotes = async () => {
     try {
       const res = await fetch(`/api/admin/tickets/${id}/notes`, {
-        headers: { Authorization: getAuthHeader() }
+        credentials: 'same-origin'
       });
       if (res.ok) {
         const data = await res.json();
@@ -394,8 +391,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: getAuthHeader()
-        },
+                  },
         body: JSON.stringify({ tags: newTags })
       });
 
@@ -419,8 +415,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: getAuthHeader()
-        },
+                  },
         body: JSON.stringify({ content: newNoteContent.trim() })
       });
 
@@ -443,8 +438,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: getAuthHeader()
-        },
+                  },
         body: JSON.stringify({ noteId })
       });
 
@@ -466,7 +460,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const interval = setInterval(async () => {
       try {
         const messagesRes = await fetch(`/api/admin/tickets/${id}/messages`, {
-          headers: { Authorization: getAuthHeader() }
+          credentials: 'same-origin'
         });
 
         if (messagesRes.ok) {
@@ -482,8 +476,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: getAuthHeader()
-              },
+                              },
               body: JSON.stringify({
                 messageIds: unreadCustomerMessages.map((m: TicketMessage) => m.id)
               })
@@ -515,7 +508,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const checkCustomerPresence = async () => {
       try {
         const res = await fetch(`/api/admin/tickets/${id}/customer-presence`, {
-          headers: { Authorization: getAuthHeader() }
+          credentials: 'same-origin'
         });
         if (res.ok) {
           const data = await res.json();
@@ -540,7 +533,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const checkHumanRequested = async () => {
       try {
         const res = await fetch(`/api/admin/tickets/${id}/human-requested`, {
-          headers: { Authorization: getAuthHeader() }
+          credentials: 'same-origin'
         });
         if (res.ok) {
           const data = await res.json();
@@ -560,7 +553,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const checkTyping = async () => {
       try {
         const res = await fetch(`/api/admin/tickets/${id}/typing`, {
-          headers: { Authorization: getAuthHeader() }
+          credentials: 'same-origin'
         });
         if (res.ok) {
           const data = await res.json();
@@ -582,7 +575,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const loadQuickReplies = async () => {
       try {
         const res = await fetch('/api/admin/quick-replies', {
-          headers: { Authorization: getAuthHeader() }
+          credentials: 'same-origin'
         });
         if (res.ok) {
           const data = await res.json();
@@ -601,7 +594,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const loadRelevantArticles = async () => {
       try {
         const res = await fetch(`/api/admin/tickets/${id}/relevant-articles`, {
-          headers: { Authorization: getAuthHeader() }
+          credentials: 'same-origin'
         });
         if (res.ok) {
           const data = await res.json();
@@ -655,8 +648,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: getAuthHeader(),
-        },
+                  },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -684,8 +676,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: getAuthHeader(),
-        },
+                  },
         body: JSON.stringify({ priority: newPriority }),
       });
 
@@ -740,8 +731,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: getAuthHeader(),
-        },
+                  },
         body: JSON.stringify({
           content: replyContent,
           senderName: "Support Team",
@@ -781,8 +771,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         const res = await fetch('/api/admin/upload', {
           method: 'POST',
           headers: {
-            Authorization: getAuthHeader(),
-          },
+                      },
           body: formData,
         });
 
@@ -827,8 +816,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: getAuthHeader(),
-        },
+                  },
         body: JSON.stringify({
           action: "ticket_reply",
           customerMessage: lastCustomerMessage?.content || ticket.subject,
@@ -858,8 +846,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: getAuthHeader(),
-        },
+                  },
         body: JSON.stringify({
           action: "ticket_correct",
           content: replyContent,
@@ -890,8 +877,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: getAuthHeader(),
-        },
+                  },
         body: JSON.stringify({
           action: "ticket_rewrite",
           content: replyContent,
@@ -920,8 +906,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: getAuthHeader(),
-        },
+                  },
         body: JSON.stringify({
           action: "ticket_custom",
           content: replyContent || "", // Can be empty - API will generate new text
@@ -969,8 +954,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: getAuthHeader(),
-        },
+                  },
         body: JSON.stringify({
           articleId: selectedArticle.id,
           channel: shareChannel,
@@ -986,7 +970,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       // Reload messages to show the shared article
       const messagesRes = await fetch(`/api/admin/tickets/${id}/messages`, {
-        headers: { Authorization: getAuthHeader() }
+        credentials: 'same-origin'
       });
       if (messagesRes.ok) {
         const messagesData = await messagesRes.json();
@@ -1012,7 +996,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     try {
       const res = await fetch(`/api/admin/tickets/${id}`, {
         method: "DELETE",
-        headers: { Authorization: getAuthHeader() },
+        credentials: 'same-origin',
       });
 
       if (!res.ok) throw new Error("Fehler beim Löschen");

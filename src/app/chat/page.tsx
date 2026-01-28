@@ -9,9 +9,20 @@ interface Message {
   timestamp: string;
 }
 
-// Simple markdown-to-HTML converter for chat messages
-function renderMarkdown(text: string): string {
+// Escape HTML entities to prevent XSS
+function escapeHtml(text: string): string {
   return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// Simple markdown-to-HTML converter for chat messages
+// SECURITY: Escapes HTML first, then applies safe markdown transformations
+function renderMarkdown(text: string): string {
+  return escapeHtml(text)
     // Bold: **text** or __text__
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/__(.+?)__/g, '<strong>$1</strong>')
