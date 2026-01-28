@@ -354,17 +354,19 @@ export default function AdminHeader() {
             </button>
 
             {/* Dashboard Link */}
-            <a
-              href="https://fitinndashboard.vercel.app/admin/dashboard"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-              title="Dashboard"
+            <Link
+              href="/admin/fitinn-dashboard"
+              className={`p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg transition-colors ${
+                pathname?.startsWith('/admin/fitinn-dashboard')
+                  ? 'text-purple-600 bg-purple-50'
+                  : 'text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50'
+              }`}
+              title="FitInn Dashboard"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
               </svg>
-            </a>
+            </Link>
 
             {/* Home Link */}
             <Link
@@ -425,21 +427,20 @@ export default function AdminHeader() {
                   <span>{item.name}</span>
                 </Link>
               ))}
-              <a
-                href="https://fitinndashboard.vercel.app/admin/dashboard"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/admin/fitinn-dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 mt-1 text-apple-gray-500 hover:bg-purple-50 hover:text-purple-600 rounded-lg text-sm font-medium transition-colors"
+                className={`flex items-center gap-3 px-4 py-3 mt-1 rounded-lg text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/admin/fitinn-dashboard')
+                    ? 'bg-purple-50 text-purple-600'
+                    : 'text-apple-gray-500 hover:bg-purple-50 hover:text-purple-600'
+                }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
                 </svg>
-                <span>Dashboard</span>
-                <svg className="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
+                <span>FitInn TV</span>
+              </Link>
               <Link
                 href="/admin/debug-push"
                 onClick={() => setMobileMenuOpen(false)}
