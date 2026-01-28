@@ -31,6 +31,10 @@ export async function GET() {
       transitionEffect: config.transitionEffect,
       tickerText: config.tickerText,
       specialDays: config.specialDays || [],
+      // QR-Code
+      showQrCode: config.showQrCode ?? false,
+      qrCodeUrl: config.qrCodeUrl || '',
+      qrCodeLabel: config.qrCodeLabel || 'Jetzt App laden',
     };
 
     return NextResponse.json(publicConfig, {
@@ -68,6 +72,10 @@ export async function POST(request: NextRequest) {
     if (body.transitionEffect !== undefined) updates.transitionEffect = body.transitionEffect;
     if (body.tickerText !== undefined) updates.tickerText = body.tickerText;
     if (body.specialDays !== undefined) updates.specialDays = body.specialDays;
+    // QR-Code
+    if (body.showQrCode !== undefined) updates.showQrCode = Boolean(body.showQrCode);
+    if (body.qrCodeUrl !== undefined) updates.qrCodeUrl = body.qrCodeUrl;
+    if (body.qrCodeLabel !== undefined) updates.qrCodeLabel = body.qrCodeLabel;
 
     await saveConfig(updates);
     return NextResponse.json({ success: true });
