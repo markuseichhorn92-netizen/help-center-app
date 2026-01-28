@@ -1232,6 +1232,15 @@ export default function DocumentsPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                       </a>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openShareModal(doc); }}
+                        className="p-2 bg-white rounded-full text-apple-gray-600 hover:bg-blue-500 hover:text-white transition-colors"
+                        title="Teilen"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                      </button>
                     </div>
                     {/* OCR Badge */}
                     <div className="absolute top-2 right-2">
@@ -1583,6 +1592,15 @@ export default function DocumentsPage() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
                               </a>
+                              <button
+                                onClick={() => openShareModal(invoice)}
+                                className="p-2 sm:p-2.5 text-apple-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Teilen"
+                              >
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                </svg>
+                              </button>
                               <button
                                 onClick={() => handleDelete(invoice.id)}
                                 className="p-2 sm:p-2.5 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
