@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { getDocument, updateOcrStatus } from "./documents";
+import { getDocument, updateOcrStatus, updateDocument } from "./documents";
 
 const anthropic = new Anthropic();
 
@@ -220,4 +220,142 @@ export async function processOcrBatch(documentIds: string[]): Promise<{
   }
 
   return { processed, failed, errors };
+}
+
+// ==========================================
+// INVOICE DETECTION
+// ==========================================
+
+export interface InvoiceData {
+  isInvoice: boolean;
+  invoiceDate?: string;      // ISO format YYYY-MM-DD
+  invoiceNumber?: string;
+  invoiceAmount?: number;
+  invoiceVendor?: string;
+  confidence: number;        // 0-1
+}
+
+/**
+ * Analyze OCR text to detect if document is an invoice and extract invoice data
+ */
+export async function detectInvoiceFromText(ocrText: string): Promise<InvoiceData> {
+  if (!ocrText || ocrText.length < 50) {
+    return { isInvoice: false, confidence: 0 };
+  }
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1024,
+    messages: [
+      {
+        role: "user",
+        content: `Analysiere den folgenden Text und bestimme, ob es sich um eine Rechnung handelt.
+
+TEXT:
+${ocrText.substring(0, 4000)}
+
+Antworte NUR im folgenden JSON-Format (keine anderen Texte):
+{
+  "isInvoice": true/false,
+  "confidence": 0.0-1.0,
+  "invoiceDate": "YYYY-MM-DD" oder null,
+  "invoiceNumber": "Rechnungsnummer" oder null,
+  "invoiceAmount": Betrag als Zahl oder null,
+  "invoiceVendor": "Firmenname" oder null
+}
+
+Hinweise:
+- Typische Merkmale einer Rechnung: "Rechnung", "Invoice", "Rechnungsnummer", "Betrag", "MwSt", "USt", "Gesamtsumme", "Zahlbar bis"
+- Das invoiceDate ist das RECHNUNGSDATUM (nicht Lieferdatum oder Zahlungsziel)
+- invoiceAmount ist der Gesamtbetrag inkl. MwSt
+- Setze confidence auf 0.9+ wenn sehr sicher, 0.5-0.9 wenn wahrscheinlich, <0.5 wenn unsicher`,
+      },
+    ],
+  });
+
+  const textContent = message.content.find(block => block.type === 'text');
+  if (!textContent || textContent.type !== 'text') {
+    return { isInvoice: false, confidence: 0 };
+  }
+
+  try {
+    // Extract JSON from response (handle potential markdown code blocks)
+    let jsonStr = textContent.text.trim();
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+
+    const data = JSON.parse(jsonStr);
+
+    return {
+      isInvoice: data.isInvoice === true,
+      invoiceDate: data.invoiceDate || undefined,
+      invoiceNumber: data.invoiceNumber || undefined,
+      invoiceAmount: typeof data.invoiceAmount === 'number' ? data.invoiceAmount : undefined,
+      invoiceVendor: data.invoiceVendor || undefined,
+      confidence: typeof data.confidence === 'number' ? data.confidence : 0,
+    };
+  } catch {
+    console.error('Failed to parse invoice detection response:', textContent.text);
+    return { isInvoice: false, confidence: 0 };
+  }
+}
+
+/**
+ * Process OCR and invoice detection for a document
+ */
+export async function processDocumentWithInvoiceDetection(documentId: string): Promise<{
+  success: boolean;
+  text?: string;
+  invoiceData?: InvoiceData;
+  error?: string;
+}> {
+  // First, run standard OCR
+  const ocrResult = await processDocumentOcr(documentId);
+
+  if (!ocrResult.success || !ocrResult.text) {
+    return ocrResult;
+  }
+
+  // Then detect if it's an invoice
+  try {
+    const invoiceData = await detectInvoiceFromText(ocrResult.text);
+
+    // If it's likely an invoice (confidence > 0.6), update document
+    if (invoiceData.isInvoice && invoiceData.confidence > 0.6) {
+      const updates: Record<string, unknown> = {
+        isInvoice: true,
+      };
+
+      if (invoiceData.invoiceDate) {
+        updates.invoiceDate = invoiceData.invoiceDate;
+      }
+      if (invoiceData.invoiceNumber) {
+        updates.invoiceNumber = invoiceData.invoiceNumber;
+      }
+      if (invoiceData.invoiceAmount !== undefined) {
+        updates.invoiceAmount = invoiceData.invoiceAmount;
+      }
+      if (invoiceData.invoiceVendor) {
+        updates.invoiceVendor = invoiceData.invoiceVendor;
+      }
+
+      await updateDocument(documentId, updates);
+    }
+
+    return {
+      success: true,
+      text: ocrResult.text,
+      invoiceData,
+    };
+  } catch (error) {
+    // Invoice detection failed, but OCR succeeded
+    console.error('Invoice detection failed:', error);
+    return {
+      success: true,
+      text: ocrResult.text,
+      invoiceData: { isInvoice: false, confidence: 0 },
+    };
+  }
 }

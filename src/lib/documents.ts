@@ -21,6 +21,23 @@ export interface Document {
   uploadedAt: string;
   processedAt?: string;
   tags?: string[];
+  // Invoice fields
+  isInvoice?: boolean;
+  invoiceDate?: string; // ISO date string (YYYY-MM-DD)
+  invoiceNumber?: string;
+  invoiceAmount?: number;
+  invoiceVendor?: string;
+  // Folder organization
+  folderId?: string;
+}
+
+export interface Folder {
+  [key: string]: unknown;
+  id: string;
+  name: string;
+  parentId?: string; // For nested folders
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DocumentSearchResult {
@@ -387,6 +404,7 @@ export async function getDocumentStats(): Promise<{
   pending: number;
   completed: number;
   failed: number;
+  invoices: number;
 }> {
   const { documents } = await listDocuments();
 
@@ -395,5 +413,258 @@ export async function getDocumentStats(): Promise<{
     pending: documents.filter(d => d.ocrStatus === 'pending').length,
     completed: documents.filter(d => d.ocrStatus === 'completed').length,
     failed: documents.filter(d => d.ocrStatus === 'failed').length,
+    invoices: documents.filter(d => d.isInvoice).length,
   };
+}
+
+// ==========================================
+// FOLDER MANAGEMENT
+// ==========================================
+
+function generateFolderId(): string {
+  return `folder_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+export async function createFolder(data: {
+  name: string;
+  parentId?: string;
+}): Promise<Folder> {
+  const id = generateFolderId();
+  const now = new Date().toISOString();
+
+  const folder: Folder = {
+    id,
+    name: data.name,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  if (data.parentId) {
+    folder.parentId = data.parentId;
+  }
+
+  // Filter null/undefined before saving
+  const cleanFolder: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(folder)) {
+    if (value !== null && value !== undefined) {
+      cleanFolder[key] = value;
+    }
+  }
+
+  await kv.hset(`folder:${id}`, cleanFolder);
+  await kv.sadd('folders:ids', id);
+
+  if (data.parentId) {
+    await kv.sadd(`folder:${data.parentId}:children`, id);
+  } else {
+    await kv.sadd('folders:root', id);
+  }
+
+  return folder;
+}
+
+export async function getFolder(id: string): Promise<Folder | null> {
+  const folder = await kv.hgetall(`folder:${id}`);
+  if (!folder || Object.keys(folder).length === 0) {
+    return null;
+  }
+  return folder as unknown as Folder;
+}
+
+export async function updateFolder(id: string, updates: { name?: string }): Promise<Folder | null> {
+  const existing = await getFolder(id);
+  if (!existing) {
+    return null;
+  }
+
+  const updated = {
+    ...existing,
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const cleanFolder: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(updated)) {
+    if (value !== null && value !== undefined) {
+      cleanFolder[key] = value;
+    }
+  }
+
+  await kv.hset(`folder:${id}`, cleanFolder);
+  return updated;
+}
+
+export async function deleteFolder(id: string): Promise<boolean> {
+  const folder = await getFolder(id);
+  if (!folder) {
+    return false;
+  }
+
+  // Get all documents in this folder and move them to root
+  const documentIds = await kv.smembers(`folder:${id}:documents`) as string[];
+  for (const docId of documentIds) {
+    await updateDocument(docId, { folderId: undefined });
+  }
+
+  // Get child folders and move them to root or parent
+  const childIds = await kv.smembers(`folder:${id}:children`) as string[];
+  for (const childId of childIds) {
+    if (folder.parentId) {
+      await kv.sadd(`folder:${folder.parentId}:children`, childId);
+      await updateFolder(childId, {}); // Trigger update with parent
+    } else {
+      await kv.sadd('folders:root', childId);
+    }
+  }
+
+  // Remove from parent or root
+  if (folder.parentId) {
+    await kv.srem(`folder:${folder.parentId}:children`, id);
+  } else {
+    await kv.srem('folders:root', id);
+  }
+
+  // Clean up
+  await kv.del(`folder:${id}`);
+  await kv.del(`folder:${id}:documents`);
+  await kv.del(`folder:${id}:children`);
+  await kv.srem('folders:ids', id);
+
+  return true;
+}
+
+export async function listFolders(parentId?: string): Promise<Folder[]> {
+  let folderIds: string[];
+
+  if (parentId) {
+    folderIds = await kv.smembers(`folder:${parentId}:children`) as string[];
+  } else {
+    folderIds = await kv.smembers('folders:root') as string[];
+  }
+
+  const folders: Folder[] = [];
+  for (const id of folderIds) {
+    const folder = await getFolder(id);
+    if (folder) {
+      folders.push(folder);
+    }
+  }
+
+  // Sort alphabetically
+  folders.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+  return folders;
+}
+
+export async function moveDocumentToFolder(documentId: string, folderId: string | null): Promise<boolean> {
+  const document = await getDocument(documentId);
+  if (!document) {
+    return false;
+  }
+
+  // Remove from current folder
+  if (document.folderId) {
+    await kv.srem(`folder:${document.folderId}:documents`, documentId);
+  }
+
+  // Add to new folder or root
+  if (folderId) {
+    const folder = await getFolder(folderId);
+    if (!folder) {
+      return false;
+    }
+    await kv.sadd(`folder:${folderId}:documents`, documentId);
+    await updateDocument(documentId, { folderId });
+  } else {
+    await updateDocument(documentId, { folderId: undefined });
+  }
+
+  return true;
+}
+
+export async function getDocumentsInFolder(folderId: string | null): Promise<Document[]> {
+  if (folderId) {
+    const documentIds = await kv.smembers(`folder:${folderId}:documents`) as string[];
+    const documents: Document[] = [];
+    for (const id of documentIds) {
+      const doc = await getDocument(id);
+      if (doc && !doc.isInvoice) {
+        documents.push(doc);
+      }
+    }
+    return documents.sort((a, b) =>
+      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    );
+  } else {
+    // Root documents (no folder, not invoices)
+    const { documents } = await listDocuments();
+    return documents.filter(d => !d.folderId && !d.isInvoice);
+  }
+}
+
+// ==========================================
+// INVOICE MANAGEMENT
+// ==========================================
+
+export async function listInvoices(): Promise<Document[]> {
+  const { documents } = await listDocuments();
+  return documents.filter(d => d.isInvoice);
+}
+
+export async function getInvoicesByMonth(): Promise<Record<string, Document[]>> {
+  const invoices = await listInvoices();
+  const grouped: Record<string, Document[]> = {};
+
+  for (const invoice of invoices) {
+    // Use invoiceDate if available, otherwise uploadedAt
+    const dateStr = invoice.invoiceDate || invoice.uploadedAt;
+    const date = new Date(dateStr);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+    if (!grouped[monthKey]) {
+      grouped[monthKey] = [];
+    }
+    grouped[monthKey].push(invoice);
+  }
+
+  // Sort invoices within each month by date (newest first)
+  for (const month of Object.keys(grouped)) {
+    grouped[month].sort((a, b) => {
+      const dateA = new Date(a.invoiceDate || a.uploadedAt);
+      const dateB = new Date(b.invoiceDate || b.uploadedAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }
+
+  return grouped;
+}
+
+export async function markAsInvoice(
+  documentId: string,
+  invoiceData: {
+    invoiceDate?: string;
+    invoiceNumber?: string;
+    invoiceAmount?: number;
+    invoiceVendor?: string;
+  }
+): Promise<Document | null> {
+  return updateDocument(documentId, {
+    isInvoice: true,
+    ...invoiceData,
+  });
+}
+
+export async function unmarkAsInvoice(documentId: string): Promise<Document | null> {
+  const doc = await getDocument(documentId);
+  if (!doc) return null;
+
+  // We need to remove invoice fields - but KV doesn't support removing fields
+  // So we'll set them to undefined and filter on save
+  return updateDocument(documentId, {
+    isInvoice: false,
+    invoiceDate: undefined,
+    invoiceNumber: undefined,
+    invoiceAmount: undefined,
+    invoiceVendor: undefined,
+  });
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocument, updateDocument, deleteDocument, linkDocumentToTicket, unlinkDocumentFromTicket } from '@/lib/documents';
-import { processDocumentOcr } from '@/lib/ocr';
+import { processDocumentWithInvoiceDetection } from '@/lib/ocr';
 
 // GET: Get single document
 export async function GET(
@@ -58,9 +58,33 @@ export async function PUT(
     }
 
     // Handle other updates
-    const updates: Partial<typeof document> = {};
+    const updates: Record<string, unknown> = {};
+
     if (body.tags !== undefined) {
       updates.tags = body.tags;
+    }
+
+    // Invoice fields
+    if (body.isInvoice !== undefined) {
+      updates.isInvoice = body.isInvoice;
+    }
+    if (body.invoiceDate !== undefined) {
+      updates.invoiceDate = body.invoiceDate || undefined;
+    }
+    if (body.invoiceNumber !== undefined) {
+      updates.invoiceNumber = body.invoiceNumber || undefined;
+    }
+    if (body.invoiceAmount !== undefined) {
+      updates.invoiceAmount = body.invoiceAmount || undefined;
+    }
+    if (body.invoiceVendor !== undefined) {
+      updates.invoiceVendor = body.invoiceVendor || undefined;
+    }
+
+    // Folder
+    if (body.folderId !== undefined) {
+      const { moveDocumentToFolder } = await import('@/lib/documents');
+      await moveDocumentToFolder(id, body.folderId || null);
     }
 
     if (Object.keys(updates).length > 0) {
@@ -123,8 +147,8 @@ export async function POST(
       return NextResponse.json({ error: 'Dokument nicht gefunden' }, { status: 404 });
     }
 
-    // Trigger OCR processing
-    const result = await processDocumentOcr(id);
+    // Trigger OCR processing with invoice detection
+    const result = await processDocumentWithInvoiceDetection(id);
 
     if (result.success) {
       const updated = await getDocument(id);

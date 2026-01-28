@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
-import { createDocument, listDocuments, getDocumentStats, searchDocuments } from '@/lib/documents';
+import { createDocument, listDocuments, getDocumentStats, searchDocuments, listFolders, getDocumentsInFolder, moveDocumentToFolder } from '@/lib/documents';
 
 // GET: List documents or search
 export async function GET(req: NextRequest) {
@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
     const ticketId = searchParams.get('ticketId');
+    const folderId = searchParams.get('folderId');
     const ocrStatus = searchParams.get('ocrStatus') as 'pending' | 'processing' | 'completed' | 'failed' | 'skipped' | null;
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined;
     const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : undefined;
@@ -26,23 +27,42 @@ export async function GET(req: NextRequest) {
           matchedText: r.matchedText,
           score: r.score,
         })),
+        folders: [],
         total: results.length,
       });
     }
 
-    // Otherwise, list documents
-    const { documents, total } = await listDocuments({
-      ticketId: ticketId || undefined,
-      ocrStatus: ocrStatus || undefined,
-      limit,
-      offset,
-    });
+    // Get folders in current location (only for folder-based browsing)
+    const folders = folderId !== undefined
+      ? await listFolders(folderId || undefined)
+      : await listFolders(undefined);
+
+    // Get documents - either in folder or all (excluding invoices)
+    let documents;
+    let total;
+
+    if (ticketId) {
+      // Get documents by ticket
+      const result = await listDocuments({ ticketId, ocrStatus: ocrStatus || undefined, limit, offset });
+      documents = result.documents;
+      total = result.total;
+    } else if (folderId !== undefined) {
+      // Get documents in specific folder (or root if empty string)
+      documents = await getDocumentsInFolder(folderId || null);
+      total = documents.length;
+    } else {
+      // Get all documents
+      const result = await listDocuments({ ocrStatus: ocrStatus || undefined, limit, offset });
+      documents = result.documents.filter(d => !d.isInvoice);
+      total = result.total;
+    }
 
     // Get stats
     const stats = await getDocumentStats();
 
     return NextResponse.json({
       documents,
+      folders,
       total,
       stats,
     });
@@ -65,6 +85,8 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const ticketId = formData.get('ticketId') as string | null;
+    const folderId = formData.get('folderId') as string | null;
+    const isInvoice = formData.get('isInvoice') as string | null;
     const tags = formData.get('tags') as string | null;
 
     if (!file) {
@@ -82,7 +104,7 @@ export async function POST(req: NextRequest) {
       contentType: file.type,
     });
 
-    // Create document record (only pass ticketId and tags if they have values)
+    // Create document record (only pass fields if they have values)
     const documentData: Parameters<typeof createDocument>[0] = {
       filename: file.name,
       url: blob.url,
@@ -103,6 +125,17 @@ export async function POST(req: NextRequest) {
     }
 
     const document = await createDocument(documentData);
+
+    // Move to folder if specified
+    if (folderId) {
+      await moveDocumentToFolder(document.id, folderId);
+    }
+
+    // Mark as invoice if specified
+    if (isInvoice === 'true') {
+      const { updateDocument } = await import('@/lib/documents');
+      await updateDocument(document.id, { isInvoice: true });
+    }
 
     return NextResponse.json(document);
   } catch (error: unknown) {

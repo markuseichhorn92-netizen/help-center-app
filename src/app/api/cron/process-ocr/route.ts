@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentsPendingOcr } from '@/lib/documents';
-import { processOcrBatch } from '@/lib/ocr';
+import { processDocumentWithInvoiceDetection } from '@/lib/ocr';
 
 // This endpoint processes pending OCR jobs
 // Recommended: Every 5-10 minutes via Vercel Cron
@@ -28,15 +28,32 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Process documents
-    const documentIds = pendingDocuments.map(doc => doc.id);
-    const result = await processOcrBatch(documentIds);
+    // Process documents with invoice detection
+    let processed = 0;
+    let failed = 0;
+    const errors: Array<{ documentId: string; error: string }> = [];
+
+    for (const doc of pendingDocuments) {
+      const result = await processDocumentWithInvoiceDetection(doc.id);
+
+      if (result.success) {
+        processed++;
+      } else {
+        failed++;
+        if (result.error) {
+          errors.push({ documentId: doc.id, error: result.error });
+        }
+      }
+
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
 
     return NextResponse.json({
       success: true,
-      processed: result.processed,
-      failed: result.failed,
-      errors: result.errors,
+      processed,
+      failed,
+      errors,
       timestamp: new Date().toISOString(),
     });
   } catch (error: unknown) {
