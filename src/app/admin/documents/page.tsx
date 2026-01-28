@@ -125,13 +125,46 @@ export default function DocumentsPage() {
     return () => clearTimeout(timer);
   }, [invoiceSearch]);
 
-  // Load documents based on active tab and folder
+  // Load documents (not invoices - those are handled separately)
   const loadData = useCallback(async (query?: string) => {
     try {
       setIsSearching(!!query);
 
-      if (activeTab === 'invoices') {
-        // Build query params for invoice filters
+      // Load documents and folders
+      const url = query
+        ? `/api/admin/documents?q=${encodeURIComponent(query)}`
+        : `/api/admin/documents?folderId=${currentFolderId || ''}`;
+
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = '/admin/login';
+          return;
+        }
+        throw new Error('Failed to load documents');
+      }
+
+      const data = await res.json();
+      setDocuments(data.documents || []);
+      setFolders(data.folders || []);
+      if (data.stats) {
+        setStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Load error:', err);
+    } finally {
+      setLoading(false);
+      setIsSearching(false);
+    }
+  }, [currentFolderId]);
+
+  // Separate effect for invoice filters with debounced search
+  useEffect(() => {
+    if (activeTab !== 'invoices') return;
+
+    const fetchInvoices = async () => {
+      setIsSearching(true);
+      try {
         const params = new URLSearchParams();
         if (debouncedInvoiceSearch) params.set('q', debouncedInvoiceSearch);
         if (invoiceVendorFilter) params.set('vendor', invoiceVendorFilter);
@@ -159,40 +192,61 @@ export default function DocumentsPage() {
         if (data.vendors) {
           setAvailableVendors(data.vendors);
         }
-      } else {
-        // Load documents and folders
-        const url = query
-          ? `/api/admin/documents?q=${encodeURIComponent(query)}`
-          : `/api/admin/documents?folderId=${currentFolderId || ''}`;
+      } catch (err) {
+        console.error('Load error:', err);
+      } finally {
+        setIsSearching(false);
+      }
+    };
 
-        const res = await fetch(url, { credentials: 'same-origin' });
-        if (!res.ok) {
-          if (res.status === 401) {
-            window.location.href = '/admin/login';
-            return;
-          }
-          throw new Error('Failed to load documents');
-        }
+    fetchInvoices();
+  }, [activeTab, debouncedInvoiceSearch, invoiceVendorFilter, invoiceDateFrom, invoiceDateTo, invoiceAmountMin, invoiceAmountMax, invoiceSortBy, invoiceSortOrder]);
 
+  // Reload invoices function (for use after mutations)
+  const reloadInvoices = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      if (debouncedInvoiceSearch) params.set('q', debouncedInvoiceSearch);
+      if (invoiceVendorFilter) params.set('vendor', invoiceVendorFilter);
+      if (invoiceDateFrom) params.set('dateFrom', invoiceDateFrom);
+      if (invoiceDateTo) params.set('dateTo', invoiceDateTo);
+      if (invoiceAmountMin) params.set('amountMin', invoiceAmountMin);
+      if (invoiceAmountMax) params.set('amountMax', invoiceAmountMax);
+      if (invoiceSortBy) {
+        params.set('sortBy', invoiceSortBy);
+        params.set('sortOrder', invoiceSortOrder);
+      }
+
+      const url = `/api/admin/documents/invoices${params.toString() ? '?' + params.toString() : ''}`;
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (res.ok) {
         const data = await res.json();
-        setDocuments(data.documents || []);
-        setFolders(data.folders || []);
-        if (data.stats) {
-          setStats(data.stats);
+        setInvoicesByMonth(data.invoicesByMonth || {});
+        setStats(data.stats || { total: 0, pending: 0, completed: 0, failed: 0, invoices: 0 });
+        if (data.vendors) {
+          setAvailableVendors(data.vendors);
         }
       }
     } catch (err) {
-      console.error('Load error:', err);
-    } finally {
-      setLoading(false);
-      setIsSearching(false);
+      console.error('Reload invoices error:', err);
     }
-  }, [activeTab, currentFolderId, debouncedInvoiceSearch, invoiceVendorFilter, invoiceDateFrom, invoiceDateTo, invoiceAmountMin, invoiceAmountMax, invoiceSortBy, invoiceSortOrder]);
+  }, [debouncedInvoiceSearch, invoiceVendorFilter, invoiceDateFrom, invoiceDateTo, invoiceAmountMin, invoiceAmountMax, invoiceSortBy, invoiceSortOrder]);
 
+  // Reload based on active tab
+  const reloadCurrentView = useCallback(async () => {
+    if (activeTab === 'invoices') {
+      await reloadInvoices();
+    } else {
+      await loadData();
+    }
+  }, [activeTab, loadData, reloadInvoices]);
+
+  // Initial load effect
   useEffect(() => {
+    if (activeTab === 'invoices') return; // Handled by separate effect
     setLoading(true);
     loadData();
-  }, [loadData]);
+  }, [loadData, activeTab]);
 
   // Build folder path for breadcrumb
   const loadFolderPath = useCallback(async (folderId: string | null) => {
@@ -401,7 +455,7 @@ export default function DocumentsPage() {
       }
     }
 
-    await loadData();
+    await reloadCurrentView();
     setUploading(false);
 
     // Auto-hide after 3 seconds if all completed
@@ -435,7 +489,7 @@ export default function DocumentsPage() {
 
       if (!res.ok) throw new Error('Delete failed');
 
-      await loadData();
+      await reloadCurrentView();
       if (selectedDoc?.id === id) {
         setSelectedDoc(null);
       }
@@ -523,7 +577,9 @@ export default function DocumentsPage() {
       });
 
       if (!res.ok) throw new Error('Update failed');
+      // Reload both views since this changes document type
       await loadData();
+      await reloadInvoices();
     } catch (err) {
       console.error('Update error:', err);
       alert('Fehler beim Aktualisieren');
@@ -547,7 +603,7 @@ export default function DocumentsPage() {
 
       if (!res.ok) throw new Error('Update failed');
       setEditingInvoice(null);
-      await loadData();
+      await reloadInvoices();
     } catch (err) {
       console.error('Update error:', err);
       alert('Fehler beim Speichern');
