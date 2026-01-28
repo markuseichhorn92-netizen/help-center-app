@@ -107,6 +107,18 @@ export default function DocumentsPage() {
   // Preview modal state
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
 
+  // Multi-select states
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+
+  // Bulk share modal states
+  const [showBulkShareModal, setShowBulkShareModal] = useState(false);
+  const [bulkShareTitle, setBulkShareTitle] = useState('');
+  const [bulkSharePassword, setBulkSharePassword] = useState('');
+  const [bulkShareExpiresIn, setBulkShareExpiresIn] = useState<'none' | '1h' | '24h' | '7d' | '30d'>('none');
+  const [creatingBulkShare, setCreatingBulkShare] = useState(false);
+  const [bulkShareUrl, setBulkShareUrl] = useState<string | null>(null);
+
   // Drag & Drop states
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
@@ -722,6 +734,90 @@ export default function DocumentsPage() {
     setTimeout(() => setCopiedShareUrl(null), 2000);
   };
 
+  // Multi-select functions
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    if (activeTab === 'documents') {
+      const allDocIds = documents.filter(d => !d.isInvoice).map(d => d.id);
+      setSelectedIds(new Set(allDocIds));
+    } else {
+      const allInvoiceIds = Object.values(invoicesByMonth).flat().map(d => d.id);
+      setSelectedIds(new Set(allInvoiceIds));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  };
+
+  const openBulkShareModal = () => {
+    if (selectedIds.size === 0) return;
+    setBulkShareTitle('');
+    setBulkSharePassword('');
+    setBulkShareExpiresIn('none');
+    setBulkShareUrl(null);
+    setShowBulkShareModal(true);
+  };
+
+  const createBulkShare = async () => {
+    if (selectedIds.size === 0) return;
+
+    setCreatingBulkShare(true);
+    try {
+      let expiresAt: string | undefined;
+      if (bulkShareExpiresIn !== 'none') {
+        const now = new Date();
+        switch (bulkShareExpiresIn) {
+          case '1h': now.setHours(now.getHours() + 1); break;
+          case '24h': now.setHours(now.getHours() + 24); break;
+          case '7d': now.setDate(now.getDate() + 7); break;
+          case '30d': now.setDate(now.getDate() + 30); break;
+        }
+        expiresAt = now.toISOString();
+      }
+
+      const res = await fetch('/api/admin/documents/bulk-share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          documentIds: Array.from(selectedIds),
+          password: bulkSharePassword || undefined,
+          expiresAt,
+          title: bulkShareTitle || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Fehler beim Erstellen');
+      }
+
+      const data = await res.json();
+      setBulkShareUrl(data.shareUrl);
+
+      // Copy to clipboard
+      await navigator.clipboard.writeText(data.shareUrl);
+    } catch (err) {
+      console.error('Bulk share error:', err);
+      alert(err instanceof Error ? err.message : 'Fehler beim Erstellen des Share-Links');
+    } finally {
+      setCreatingBulkShare(false);
+    }
+  };
+
   const getOcrStatusBadge = (status: Document['ocrStatus']) => {
     const styles: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-800',
@@ -1091,6 +1187,40 @@ export default function DocumentsPage() {
         </form>
       )}
 
+      {/* Selection Toolbar */}
+      {selectionMode && selectedIds.size > 0 && (
+        <div className="bg-brand/10 border border-brand/20 rounded-xl p-3 sm:p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="font-medium text-brand">
+              {selectedIds.size} ausgewählt
+            </span>
+            <button
+              onClick={selectAll}
+              className="text-sm text-brand hover:underline"
+            >
+              Alle auswählen
+            </button>
+            <button
+              onClick={clearSelection}
+              className="text-sm text-apple-gray-500 hover:text-apple-gray-700"
+            >
+              Auswahl aufheben
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openBulkShareModal}
+              className="flex items-center gap-2 bg-brand text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-dark transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              Auswahl teilen
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* DOCUMENTS TAB */}
       {activeTab === 'documents' && (
         <>
@@ -1120,18 +1250,36 @@ export default function DocumentsPage() {
               ))}
             </div>
 
-            {/* New Folder Button */}
-            {!creatingFolder ? (
+            {/* Actions */}
+            <div className="flex items-center gap-3">
+              {/* Selection Mode Toggle */}
               <button
-                onClick={() => setCreatingFolder(true)}
-                className="text-sm text-apple-gray-400 hover:text-brand flex items-center gap-1 py-2 sm:py-0"
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  if (selectionMode) setSelectedIds(new Set());
+                }}
+                className={`text-sm flex items-center gap-1 py-2 sm:py-0 ${
+                  selectionMode ? 'text-brand font-medium' : 'text-apple-gray-400 hover:text-brand'
+                }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                 </svg>
-                Neuer Ordner
+                {selectionMode ? 'Auswahl beenden' : 'Auswählen'}
               </button>
-            ) : (
+
+              {/* New Folder Button */}
+              {!creatingFolder ? (
+                <button
+                  onClick={() => setCreatingFolder(true)}
+                  className="text-sm text-apple-gray-400 hover:text-brand flex items-center gap-1 py-2 sm:py-0"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                  </svg>
+                  Neuer Ordner
+                </button>
+              ) : (
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -1155,7 +1303,8 @@ export default function DocumentsPage() {
                   Abbrechen
                 </button>
               </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Folders - Grid Layout */}
@@ -1202,16 +1351,34 @@ export default function DocumentsPage() {
               {documents.filter(d => !d.isInvoice).map((doc) => (
                 <div
                   key={doc.id}
-                  onClick={() => setPreviewDoc(doc)}
-                  className={`bg-white rounded-xl border border-apple-gray-100 overflow-hidden cursor-pointer hover:shadow-md hover:border-brand/30 transition-all group ${
-                    selectedDoc?.id === doc.id ? 'ring-2 ring-brand' : ''
+                  onClick={() => selectionMode ? toggleSelection(doc.id) : setPreviewDoc(doc)}
+                  className={`bg-white rounded-xl border overflow-hidden cursor-pointer hover:shadow-md transition-all group ${
+                    selectedIds.has(doc.id) ? 'ring-2 ring-brand border-brand' : 'border-apple-gray-100 hover:border-brand/30'
                   }`}
                 >
                   {/* Thumbnail */}
                   <div className="aspect-square overflow-hidden bg-apple-gray-50 relative">
                     {getDocumentThumbnail(doc)}
+                    {/* Selection Checkbox */}
+                    {selectionMode && (
+                      <div className="absolute top-2 left-2 z-10">
+                        <div
+                          className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                            selectedIds.has(doc.id)
+                              ? 'bg-brand border-brand text-white'
+                              : 'bg-white/90 border-apple-gray-300 hover:border-brand'
+                          }`}
+                        >
+                          {selectedIds.has(doc.id) && (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {/* Hover Actions */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <div className={`absolute inset-0 bg-black/50 transition-opacity flex items-center justify-center gap-2 ${selectionMode ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}>
                       <button
                         onClick={(e) => { e.stopPropagation(); setPreviewDoc(doc); }}
                         className="p-2 bg-white rounded-full text-apple-gray-600 hover:bg-brand hover:text-white transition-colors"
@@ -1290,6 +1457,22 @@ export default function DocumentsPage() {
 
               {/* Filter & Sort Buttons */}
               <div className="flex items-center gap-2">
+                {/* Selection Mode Toggle */}
+                <button
+                  onClick={() => {
+                    setSelectionMode(!selectionMode);
+                    if (selectionMode) setSelectedIds(new Set());
+                  }}
+                  className={`px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                    selectionMode ? 'bg-brand/10 text-brand' : 'bg-apple-gray-100 text-apple-gray-600 hover:bg-apple-gray-200'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                  <span className="hidden sm:inline">{selectionMode ? 'Beenden' : 'Auswählen'}</span>
+                </button>
+
                 {/* Filter Toggle Button */}
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -1477,7 +1660,13 @@ export default function DocumentsPage() {
                   {/* Invoices in this month */}
                   <div className="divide-y divide-apple-gray-100">
                     {invoices.map((invoice) => (
-                      <div key={invoice.id} className="p-3 sm:p-4 hover:bg-apple-gray-50 transition-colors">
+                      <div
+                        key={invoice.id}
+                        className={`p-3 sm:p-4 hover:bg-apple-gray-50 transition-colors ${
+                          selectedIds.has(invoice.id) ? 'bg-brand/5' : ''
+                        }`}
+                        onClick={selectionMode ? () => toggleSelection(invoice.id) : undefined}
+                      >
                         {editingInvoice === invoice.id ? (
                           /* Edit Mode */
                           <div className="space-y-3">
@@ -1538,13 +1727,30 @@ export default function DocumentsPage() {
                         ) : (
                           /* View Mode */
                           <div className="flex items-center gap-3 sm:gap-4">
+                            {/* Selection Checkbox */}
+                            {selectionMode && (
+                              <div
+                                onClick={(e) => { e.stopPropagation(); toggleSelection(invoice.id); }}
+                                className={`flex-shrink-0 w-6 h-6 rounded-md border-2 flex items-center justify-center cursor-pointer transition-colors ${
+                                  selectedIds.has(invoice.id)
+                                    ? 'bg-brand border-brand text-white'
+                                    : 'bg-white border-apple-gray-300 hover:border-brand'
+                                }`}
+                              >
+                                {selectedIds.has(invoice.id) && (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </div>
+                            )}
                             <div
                               className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-apple-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-apple-gray-200 transition-colors"
-                              onClick={() => setPreviewDoc(invoice)}
+                              onClick={(e) => { if (!selectionMode) { e.stopPropagation(); setPreviewDoc(invoice); } }}
                             >
                               {getFileIcon(invoice.contentType)}
                             </div>
-                            <div className="flex-1 min-w-0" onClick={() => setPreviewDoc(invoice)}>
+                            <div className="flex-1 min-w-0 cursor-pointer" onClick={(e) => { if (!selectionMode) { e.stopPropagation(); setPreviewDoc(invoice); } }}>
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-apple-gray-600 truncate text-sm sm:text-base">{invoice.filename}</span>
                                 <span className="hidden sm:inline">{getOcrStatusBadge(invoice.ocrStatus)}</span>
@@ -1856,6 +2062,140 @@ export default function DocumentsPage() {
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Share Modal */}
+      {showBulkShareModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowBulkShareModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-apple-gray-100">
+              <h2 className="text-xl font-semibold text-apple-gray-600">
+                {selectedIds.size} {selectedIds.size === 1 ? 'Dokument' : 'Dokumente'} teilen
+              </h2>
+              <p className="text-sm text-apple-gray-400 mt-1">
+                Erstelle einen Link zum Teilen der ausgewählten Dokumente
+              </p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {bulkShareUrl ? (
+                /* Success State */
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="font-semibold text-apple-gray-600 mb-2">Link erstellt & kopiert!</h3>
+                  <div className="bg-apple-gray-50 rounded-xl p-3 mb-4">
+                    <p className="text-sm text-apple-gray-500 break-all">{bulkShareUrl}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(bulkShareUrl);
+                        alert('Link kopiert!');
+                      }}
+                      className="flex-1 px-4 py-2.5 bg-brand text-white rounded-xl font-medium hover:bg-brand-dark transition-colors"
+                    >
+                      Erneut kopieren
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowBulkShareModal(false);
+                        setBulkShareUrl(null);
+                        clearSelection();
+                      }}
+                      className="px-4 py-2.5 bg-apple-gray-100 text-apple-gray-600 rounded-xl font-medium hover:bg-apple-gray-200 transition-colors"
+                    >
+                      Fertig
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Form State */
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-apple-gray-600 mb-1">
+                      Titel (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={bulkShareTitle}
+                      onChange={(e) => setBulkShareTitle(e.target.value)}
+                      placeholder="z.B. Rechnungen Januar 2024"
+                      className="w-full px-4 py-3 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-apple-gray-600 mb-1">
+                      Passwortschutz (optional)
+                    </label>
+                    <input
+                      type="password"
+                      value={bulkSharePassword}
+                      onChange={(e) => setBulkSharePassword(e.target.value)}
+                      placeholder="Passwort eingeben"
+                      className="w-full px-4 py-3 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-apple-gray-600 mb-1">
+                      Gültigkeit
+                    </label>
+                    <select
+                      value={bulkShareExpiresIn}
+                      onChange={(e) => setBulkShareExpiresIn(e.target.value as typeof bulkShareExpiresIn)}
+                      className="w-full px-4 py-3 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand bg-white"
+                    >
+                      <option value="none">Kein Ablaufdatum</option>
+                      <option value="1h">1 Stunde</option>
+                      <option value="24h">24 Stunden</option>
+                      <option value="7d">7 Tage</option>
+                      <option value="30d">30 Tage</option>
+                    </select>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setShowBulkShareModal(false)}
+                      className="flex-1 px-4 py-3 bg-apple-gray-100 text-apple-gray-600 rounded-xl font-medium hover:bg-apple-gray-200 transition-colors"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      onClick={createBulkShare}
+                      disabled={creatingBulkShare}
+                      className="flex-1 px-4 py-3 bg-brand text-white rounded-xl font-medium hover:bg-brand-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {creatingBulkShare ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                          Erstelle...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                          </svg>
+                          Link erstellen
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
