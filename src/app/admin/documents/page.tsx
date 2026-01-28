@@ -42,6 +42,21 @@ interface DocumentStats {
   invoices: number;
 }
 
+interface UploadProgress {
+  filename: string;
+  status: 'uploading' | 'processing' | 'completed' | 'failed';
+  progress?: number;
+  error?: string;
+  documentId?: string;
+}
+
+interface OcrProgress {
+  documentId: string;
+  filename: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+  error?: string;
+}
+
 type Tab = 'documents' | 'invoices';
 
 export default function DocumentsPage() {
@@ -96,6 +111,11 @@ export default function DocumentsPage() {
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload & OCR progress states
+  const [uploadQueue, setUploadQueue] = useState<UploadProgress[]>([]);
+  const [ocrQueue, setOcrQueue] = useState<OcrProgress[]>([]);
+  const [showProgressPanel, setShowProgressPanel] = useState(false);
 
   // Debounce invoice search - 300ms delay
   useEffect(() => {
@@ -210,6 +230,62 @@ export default function DocumentsPage() {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [previewDoc]);
 
+  // Poll OCR status for documents in queue
+  useEffect(() => {
+    if (ocrQueue.length === 0) return;
+
+    const pollInterval = setInterval(async () => {
+      const pendingItems = ocrQueue.filter(item => item.status === 'pending' || item.status === 'processing');
+      if (pendingItems.length === 0) {
+        clearInterval(pollInterval);
+        return;
+      }
+
+      for (const item of pendingItems) {
+        try {
+          const res = await fetch(`/api/admin/documents/${item.documentId}`, { credentials: 'same-origin' });
+          if (res.ok) {
+            const data = await res.json();
+            const newStatus = data.document?.ocrStatus || 'failed';
+
+            setOcrQueue(prev => prev.map(q =>
+              q.documentId === item.documentId
+                ? { ...q, status: newStatus, error: data.document?.ocrError }
+                : q
+            ));
+
+            // Also update upload queue if document was just uploaded
+            setUploadQueue(prev => prev.map(u =>
+              u.documentId === item.documentId
+                ? { ...u, status: newStatus === 'completed' ? 'completed' : newStatus === 'failed' ? 'failed' : u.status }
+                : u
+            ));
+
+            // Refresh data when OCR completes
+            if (newStatus === 'completed' || newStatus === 'failed') {
+              loadData();
+            }
+          }
+        } catch (err) {
+          console.error('Error polling OCR status:', err);
+        }
+      }
+
+      // Auto-hide panel when all done
+      const allDone = ocrQueue.every(item => item.status === 'completed' || item.status === 'failed' || item.status === 'skipped');
+      const uploadsAllDone = uploadQueue.every(item => item.status === 'completed' || item.status === 'failed');
+      if (allDone && uploadsAllDone) {
+        setTimeout(() => {
+          setShowProgressPanel(false);
+          setOcrQueue([]);
+          setUploadQueue([]);
+        }, 3000);
+      }
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [ocrQueue, uploadQueue, loadData]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     loadData(searchQuery.trim() || undefined);
@@ -255,8 +331,27 @@ export default function DocumentsPage() {
     if (files.length === 0) return;
 
     setUploading(true);
-    try {
-      for (const file of Array.from(files)) {
+    setShowProgressPanel(true);
+
+    // Initialize upload queue
+    const initialQueue: UploadProgress[] = Array.from(files).map(file => ({
+      filename: file.name,
+      status: 'uploading' as const,
+      progress: 0,
+    }));
+    setUploadQueue(initialQueue);
+
+    const fileArray = Array.from(files);
+
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+
+      // Update status to uploading
+      setUploadQueue(prev => prev.map((item, idx) =>
+        idx === i ? { ...item, status: 'uploading' as const, progress: 50 } : item
+      ));
+
+      try {
         const formData = new FormData();
         formData.append('file', file);
         if (currentFolderId) {
@@ -276,15 +371,50 @@ export default function DocumentsPage() {
           const error = await res.json();
           throw new Error(error.error || 'Upload failed');
         }
-      }
 
-      await loadData();
-    } catch (err) {
-      console.error('Upload error:', err);
-      alert('Fehler beim Hochladen: ' + (err as Error).message);
-    } finally {
-      setUploading(false);
+        const data = await res.json();
+
+        // Update to processing (OCR)
+        setUploadQueue(prev => prev.map((item, idx) =>
+          idx === i ? { ...item, status: 'processing' as const, progress: 100, documentId: data.document?.id } : item
+        ));
+
+        // Add to OCR queue if document has pending OCR
+        if (data.document?.ocrStatus === 'pending' || data.document?.ocrStatus === 'processing') {
+          setOcrQueue(prev => [...prev, {
+            documentId: data.document.id,
+            filename: file.name,
+            status: data.document.ocrStatus,
+          }]);
+        } else {
+          // Mark as completed
+          setUploadQueue(prev => prev.map((item, idx) =>
+            idx === i ? { ...item, status: 'completed' as const } : item
+          ));
+        }
+
+      } catch (err) {
+        console.error('Upload error:', err);
+        setUploadQueue(prev => prev.map((item, idx) =>
+          idx === i ? { ...item, status: 'failed' as const, error: (err as Error).message } : item
+        ));
+      }
     }
+
+    await loadData();
+    setUploading(false);
+
+    // Auto-hide after 3 seconds if all completed
+    setTimeout(() => {
+      setUploadQueue(prev => {
+        const allDone = prev.every(item => item.status === 'completed' || item.status === 'failed');
+        if (allDone && ocrQueue.length === 0) {
+          setShowProgressPanel(false);
+          return [];
+        }
+        return prev;
+      });
+    }, 3000);
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -743,6 +873,144 @@ export default function DocumentsPage() {
           <div className="text-xs sm:text-sm text-apple-gray-400">Rechnungen</div>
         </div>
       </div>
+
+      {/* Upload & OCR Progress Panel */}
+      {showProgressPanel && (uploadQueue.length > 0 || ocrQueue.length > 0) && (
+        <div className="mb-4 sm:mb-6 bg-white rounded-xl border border-apple-gray-100 overflow-hidden">
+          {/* Header */}
+          <div className="px-4 py-3 bg-apple-gray-50 border-b border-apple-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-brand/10 rounded-lg flex items-center justify-center">
+                {uploading || ocrQueue.some(q => q.status === 'processing' || q.status === 'pending') ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand border-t-transparent" />
+                ) : (
+                  <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <div>
+                <h3 className="font-medium text-apple-gray-600 text-sm">
+                  {uploading ? 'Dateien werden hochgeladen...' :
+                   ocrQueue.some(q => q.status === 'processing' || q.status === 'pending') ? 'OCR-Verarbeitung läuft...' :
+                   'Verarbeitung abgeschlossen'}
+                </h3>
+                <p className="text-xs text-apple-gray-400">
+                  {uploadQueue.filter(u => u.status === 'completed').length}/{uploadQueue.length} hochgeladen
+                  {ocrQueue.length > 0 && ` • ${ocrQueue.filter(o => o.status === 'completed').length}/${ocrQueue.length} OCR fertig`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowProgressPanel(false);
+                if (!uploading) {
+                  setUploadQueue([]);
+                  setOcrQueue([]);
+                }
+              }}
+              className="p-1.5 text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Progress Items */}
+          <div className="max-h-48 overflow-y-auto divide-y divide-apple-gray-100">
+            {uploadQueue.map((item, idx) => (
+              <div key={idx} className="px-4 py-2.5 flex items-center gap-3">
+                {/* Status Icon */}
+                <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                  {item.status === 'uploading' && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand border-t-transparent" />
+                  )}
+                  {item.status === 'processing' && (
+                    <div className="animate-pulse">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                  )}
+                  {item.status === 'completed' && (
+                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {item.status === 'failed' && (
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+
+                {/* Filename & Status */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-apple-gray-600 truncate">{item.filename}</p>
+                  <p className="text-xs text-apple-gray-400">
+                    {item.status === 'uploading' && 'Wird hochgeladen...'}
+                    {item.status === 'processing' && 'OCR-Verarbeitung...'}
+                    {item.status === 'completed' && 'Fertig'}
+                    {item.status === 'failed' && (item.error || 'Fehler')}
+                  </p>
+                </div>
+
+                {/* Progress Bar */}
+                {(item.status === 'uploading' || item.status === 'processing') && (
+                  <div className="w-20 h-1.5 bg-apple-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        item.status === 'uploading' ? 'bg-brand' : 'bg-blue-500'
+                      }`}
+                      style={{ width: item.status === 'processing' ? '100%' : `${item.progress || 0}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* OCR Queue Items (separate from upload) */}
+            {ocrQueue.filter(o => !uploadQueue.some(u => u.documentId === o.documentId)).map((item) => (
+              <div key={item.documentId} className="px-4 py-2.5 flex items-center gap-3">
+                <div className="w-6 h-6 flex-shrink-0 flex items-center justify-center">
+                  {(item.status === 'pending' || item.status === 'processing') && (
+                    <div className="animate-pulse">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                    </div>
+                  )}
+                  {item.status === 'completed' && (
+                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {item.status === 'failed' && (
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-apple-gray-600 truncate">{item.filename}</p>
+                  <p className="text-xs text-apple-gray-400">
+                    {item.status === 'pending' && 'OCR wartet...'}
+                    {item.status === 'processing' && 'OCR-Verarbeitung...'}
+                    {item.status === 'completed' && 'OCR fertig'}
+                    {item.status === 'failed' && (item.error || 'OCR fehlgeschlagen')}
+                  </p>
+                </div>
+                {(item.status === 'pending' || item.status === 'processing') && (
+                  <div className="w-20 h-1.5 bg-apple-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full animate-pulse w-full" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Search (Documents Tab only) */}
       {activeTab === 'documents' && (
