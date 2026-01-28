@@ -288,3 +288,87 @@ const dashboardKv = createClient({
 ### Dashboard Environment Variables
 - `DASHBOARD_KV_KV_REST_API_URL` - KV URL für Dashboard
 - `DASHBOARD_KV_KV_REST_API_TOKEN` - KV Token für Dashboard
+
+## Dokumentenmanagement-System
+
+Admin-Bereich für Dokumenten- und Rechnungsverwaltung unter `/admin/documents`.
+
+### Features
+- **Upload**: PDF, Bilder (JPG, PNG, GIF, WebP), Office-Formate (DOCX, XLSX, DOC, XLS)
+- **OCR**: Automatische Texterkennung via Claude Vision API
+- **Rechnungserkennung**: KI extrahiert Datum, Nummer, Betrag, Lieferant
+- **Ordner-System**: Verschachtelte Ordnerstruktur
+- **Volltext-Suche**: Über OCR-extrahierten Text
+- **Rechnungsansicht**: Gruppierung nach Monat mit Filtern
+- **Share-Links**: Dokumente per Link teilen (optional passwortgeschützt, mit Ablaufdatum)
+- **Massenexport**: ZIP-Download von Dokumenten/Rechnungen nach Monat/Jahr
+- **PDF-Vorschau**: Eingebettete Vorschau im Detail-Panel
+- **Einzeldownload**: Direkter Download einzelner Dokumente
+
+### Dateien
+- `src/app/admin/documents/page.tsx` - Haupt-UI mit Dokumentenliste, Rechnungsansicht, Upload
+- `src/lib/documents.ts` - Dokumenten-CRUD, OCR, Rechnungserkennung
+- `src/lib/share.ts` - Share-Link-Verwaltung (Token, Passwort, Ablauf)
+- `src/lib/export.ts` - ZIP-Archiv-Erstellung mit `archiver`
+
+### KV-Keys (Dokumente)
+- `document:{id}` - Hash: { id, filename, url, contentType, size, folderId, ocrText, isInvoice, invoiceDate, invoiceNumber, invoiceAmount, invoiceVendor, uploadedAt }
+- `documents:ids` - Set aller Dokument-IDs
+- `folder:{id}` - Hash: { id, name, parentId, createdAt }
+- `folders:ids` - Set aller Ordner-IDs
+
+### KV-Keys (Share-Links)
+- `share:{token}` - Hash: { token, documentId, createdAt, expiresAt?, passwordHash?, hasPassword, accessCount, createdBy }
+- `document:{id}:shares` - Set von Share-Tokens für ein Dokument
+
+### API Routes (Dokumente)
+- `GET/POST /api/admin/documents` - Liste/Upload
+- `GET/PUT/DELETE /api/admin/documents/[id]` - Einzelnes Dokument
+- `GET /api/admin/documents/[id]/download` - Download mit Content-Disposition
+- `GET/POST/DELETE /api/admin/documents/[id]/share` - Share-Links verwalten
+- `GET /api/admin/documents/invoices` - Rechnungsliste mit Filtern
+- `POST /api/admin/documents/export` - ZIP-Export
+
+### API Routes (Öffentlich)
+- `GET /api/documents/share/[token]` - Öffentlicher Zugriff auf geteilte Dokumente (keine Auth)
+  - Query-Parameter: `password` (wenn geschützt), `download=true` (für Download)
+
+### Rechnungsfilter (GET /api/admin/documents/invoices)
+Query-Parameter:
+- `q` - Volltextsuche
+- `vendor` - Nach Lieferant filtern
+- `dateFrom`, `dateTo` - Datumsbereich (ISO-Format)
+- `amountMin`, `amountMax` - Betragsbereich
+- `sortBy` - `date`, `amount`, `vendor` (Standard: `date`)
+- `sortOrder` - `asc`, `desc` (Standard: `desc`)
+
+### Export-Optionen (POST /api/admin/documents/export)
+Body:
+```json
+{
+  "documentIds": ["id1", "id2"],  // Spezifische Dokumente
+  "month": "2024-01",            // Oder nach Monat
+  "year": "2024",                // Oder nach Jahr
+  "invoicesOnly": true           // Nur Rechnungen
+}
+```
+- Limit: 50 Dokumente pro Export
+- maxDuration: 60 Sekunden
+
+### Share-Link-Beispiel
+```typescript
+import { createShareLink, validateShareAccess } from '@/lib/share';
+
+// Share-Link erstellen
+const shareLink = await createShareLink(documentId, {
+  expiresAt: '2024-12-31T23:59:59Z',  // Optional
+  password: 'geheim123',               // Optional
+  createdBy: 'admin',
+});
+
+// Zugriff validieren
+const result = await validateShareAccess(token, password);
+if (result.valid) {
+  // result.document enthält das Dokument
+}
+```

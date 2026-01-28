@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface Document {
   id: string;
@@ -70,6 +70,7 @@ export default function DocumentsPage() {
 
   // Invoice filter states
   const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [debouncedInvoiceSearch, setDebouncedInvoiceSearch] = useState("");
   const [invoiceVendorFilter, setInvoiceVendorFilter] = useState("");
   const [invoiceDateFrom, setInvoiceDateFrom] = useState("");
   const [invoiceDateTo, setInvoiceDateTo] = useState("");
@@ -88,6 +89,22 @@ export default function DocumentsPage() {
   const [creatingShare, setCreatingShare] = useState(false);
   const [copiedShareUrl, setCopiedShareUrl] = useState<string | null>(null);
 
+  // Preview modal state
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+
+  // Drag & Drop states
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCounter = useRef(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounce invoice search - 300ms delay
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedInvoiceSearch(invoiceSearch);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [invoiceSearch]);
+
   // Load documents based on active tab and folder
   const loadData = useCallback(async (query?: string) => {
     try {
@@ -96,7 +113,7 @@ export default function DocumentsPage() {
       if (activeTab === 'invoices') {
         // Build query params for invoice filters
         const params = new URLSearchParams();
-        if (invoiceSearch) params.set('q', invoiceSearch);
+        if (debouncedInvoiceSearch) params.set('q', debouncedInvoiceSearch);
         if (invoiceVendorFilter) params.set('vendor', invoiceVendorFilter);
         if (invoiceDateFrom) params.set('dateFrom', invoiceDateFrom);
         if (invoiceDateTo) params.set('dateTo', invoiceDateTo);
@@ -150,7 +167,7 @@ export default function DocumentsPage() {
       setLoading(false);
       setIsSearching(false);
     }
-  }, [activeTab, currentFolderId, invoiceSearch, invoiceVendorFilter, invoiceDateFrom, invoiceDateTo, invoiceAmountMin, invoiceAmountMax, invoiceSortBy, invoiceSortOrder]);
+  }, [activeTab, currentFolderId, debouncedInvoiceSearch, invoiceVendorFilter, invoiceDateFrom, invoiceDateTo, invoiceAmountMin, invoiceAmountMax, invoiceSortBy, invoiceSortOrder]);
 
   useEffect(() => {
     setLoading(true);
@@ -182,14 +199,60 @@ export default function DocumentsPage() {
     loadFolderPath(currentFolderId);
   }, [currentFolderId, loadFolderPath]);
 
+  // Close preview modal with Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && previewDoc) {
+        setPreviewDoc(null);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [previewDoc]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     loadData(searchQuery.trim() || undefined);
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Drag & Drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current++;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current--;
+    if (dragCounter.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounter.current = 0;
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFilesUpload(files);
+    }
+  };
+
+  const handleFilesUpload = async (files: FileList) => {
+    if (files.length === 0) return;
 
     setUploading(true);
     try {
@@ -221,8 +284,14 @@ export default function DocumentsPage() {
       alert('Fehler beim Hochladen: ' + (err as Error).message);
     } finally {
       setUploading(false);
-      e.target.value = '';
     }
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await handleFilesUpload(files);
+    e.target.value = '';
   };
 
   const handleDelete = async (id: string) => {
@@ -239,6 +308,9 @@ export default function DocumentsPage() {
       await loadData();
       if (selectedDoc?.id === id) {
         setSelectedDoc(null);
+      }
+      if (previewDoc?.id === id) {
+        setPreviewDoc(null);
       }
     } catch (err) {
       console.error('Delete error:', err);
@@ -486,17 +558,18 @@ export default function DocumentsPage() {
     );
   };
 
-  const getFileIcon = (contentType: string) => {
+  const getFileIcon = (contentType: string, large = false) => {
+    const size = large ? 'w-8 h-8' : 'w-5 h-5';
     if (contentType.startsWith('image/')) {
       return (
-        <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${size} text-purple-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       );
     }
     if (contentType === 'application/pdf') {
       return (
-        <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${size} text-red-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
       );
@@ -504,24 +577,41 @@ export default function DocumentsPage() {
     // Word documents
     if (contentType.includes('word') || contentType.includes('document') || contentType === 'application/msword' || contentType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       return (
-        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${size} text-blue-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          <text x="9" y="10" className="text-[6px] font-bold fill-blue-600">W</text>
         </svg>
       );
     }
     // Excel documents
     if (contentType.includes('excel') || contentType.includes('spreadsheet') || contentType === 'application/vnd.ms-excel' || contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
       return (
-        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`${size} text-green-600`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
         </svg>
       );
     }
     return (
-      <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className={`${size} text-gray-500`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
+    );
+  };
+
+  // Get thumbnail for document
+  const getDocumentThumbnail = (doc: Document) => {
+    if (doc.contentType.startsWith('image/')) {
+      return (
+        <img
+          src={doc.url}
+          alt={doc.filename}
+          className="w-full h-full object-cover"
+        />
+      );
+    }
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-apple-gray-100">
+        {getFileIcon(doc.contentType, true)}
+      </div>
     );
   };
 
@@ -536,42 +626,66 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header with Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-apple-gray-600">Dokumentenverwaltung</h1>
-          <p className="text-apple-gray-400 text-sm mt-1">
-            Dokumente und Rechnungen mit OCR-Texterkennung
-          </p>
+    <div
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag & Drop Overlay */}
+      {isDragging && (
+        <div className="fixed inset-0 bg-brand/10 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-xl border-2 border-dashed border-brand">
+            <div className="text-center">
+              <svg className="w-16 h-16 mx-auto text-brand mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="text-xl font-semibold text-apple-gray-600">Dateien hier ablegen</p>
+              <p className="text-sm text-apple-gray-400 mt-1">zum Hochladen</p>
+            </div>
+          </div>
         </div>
+      )}
 
-        {/* Upload Button */}
-        <label className="inline-flex items-center gap-2 px-4 py-2 bg-brand text-white font-medium rounded-xl cursor-pointer hover:bg-brand-dark transition-colors">
-          {uploading ? (
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-          ) : (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-          )}
-          <span>{uploading ? 'Lädt...' : activeTab === 'invoices' ? 'Rechnung hochladen' : 'Hochladen'}</span>
-          <input
-            type="file"
-            multiple
-            accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            onChange={handleUpload}
-            className="hidden"
-            disabled={uploading}
-          />
-        </label>
+      {/* Header with Tabs */}
+      <div className="flex flex-col gap-4 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-apple-gray-600">Dokumentenverwaltung</h1>
+            <p className="text-apple-gray-400 text-sm mt-1 hidden sm:block">
+              Dokumente und Rechnungen mit OCR-Texterkennung
+            </p>
+          </div>
+
+          {/* Upload Button */}
+          <label className="inline-flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-brand text-white font-medium rounded-xl cursor-pointer hover:bg-brand-dark transition-colors active:scale-95">
+            {uploading ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+            )}
+            <span>{uploading ? 'Lädt...' : activeTab === 'invoices' ? 'Rechnungen hochladen' : 'Hochladen'}</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              onChange={handleUpload}
+              className="hidden"
+              disabled={uploading}
+            />
+          </label>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-apple-gray-200">
+      <div className="flex gap-2 mb-4 sm:mb-6 border-b border-apple-gray-200 overflow-x-auto">
         <button
           onClick={() => { setActiveTab('documents'); setCurrentFolderId(null); }}
-          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'documents'
               ? 'border-brand text-brand'
               : 'border-transparent text-apple-gray-400 hover:text-apple-gray-600'
@@ -586,7 +700,7 @@ export default function DocumentsPage() {
         </button>
         <button
           onClick={() => setActiveTab('invoices')}
-          className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+          className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'invoices'
               ? 'border-brand text-brand'
               : 'border-transparent text-apple-gray-400 hover:text-apple-gray-600'
@@ -606,40 +720,40 @@ export default function DocumentsPage() {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white rounded-xl p-4 border border-apple-gray-100">
-          <div className="text-2xl font-bold text-apple-gray-600">{stats.total}</div>
-          <div className="text-sm text-apple-gray-400">Gesamt</div>
+      {/* Stats - Responsive Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-apple-gray-100">
+          <div className="text-xl sm:text-2xl font-bold text-apple-gray-600">{stats.total}</div>
+          <div className="text-xs sm:text-sm text-apple-gray-400">Gesamt</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-apple-gray-100">
-          <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-          <div className="text-sm text-apple-gray-400">OCR fertig</div>
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-apple-gray-100">
+          <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.completed}</div>
+          <div className="text-xs sm:text-sm text-apple-gray-400">OCR fertig</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-apple-gray-100">
-          <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          <div className="text-sm text-apple-gray-400">Ausstehend</div>
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-apple-gray-100">
+          <div className="text-xl sm:text-2xl font-bold text-yellow-600">{stats.pending}</div>
+          <div className="text-xs sm:text-sm text-apple-gray-400">Ausstehend</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-apple-gray-100">
-          <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
-          <div className="text-sm text-apple-gray-400">Fehler</div>
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-apple-gray-100">
+          <div className="text-xl sm:text-2xl font-bold text-red-600">{stats.failed}</div>
+          <div className="text-xs sm:text-sm text-apple-gray-400">Fehler</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-apple-gray-100">
-          <div className="text-2xl font-bold text-blue-600">{stats.invoices}</div>
-          <div className="text-sm text-apple-gray-400">Rechnungen</div>
+        <div className="bg-white rounded-xl p-3 sm:p-4 border border-apple-gray-100 col-span-2 sm:col-span-1">
+          <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.invoices}</div>
+          <div className="text-xs sm:text-sm text-apple-gray-400">Rechnungen</div>
         </div>
       </div>
 
       {/* Search (Documents Tab only) */}
       {activeTab === 'documents' && (
-        <form onSubmit={handleSearch} className="mb-6">
+        <form onSubmit={handleSearch} className="mb-4 sm:mb-6">
           <div className="relative">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="In OCR-Text suchen..."
-              className="w-full px-4 py-3 pl-11 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+              className="w-full px-4 py-3 pl-11 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-base"
             />
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -657,22 +771,22 @@ export default function DocumentsPage() {
       {activeTab === 'documents' && (
         <>
           {/* Breadcrumb & Folder Actions */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-4">
+            <div className="flex items-center gap-2 text-sm overflow-x-auto pb-2 sm:pb-0">
               <button
                 onClick={() => setCurrentFolderId(null)}
-                className={`hover:text-brand ${!currentFolderId ? 'font-medium text-brand' : 'text-apple-gray-400'}`}
+                className={`hover:text-brand whitespace-nowrap ${!currentFolderId ? 'font-medium text-brand' : 'text-apple-gray-400'}`}
               >
                 Alle Dokumente
               </button>
               {folderPath.map((folder, index) => (
                 <div key={folder.id} className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-apple-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 text-apple-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                   </svg>
                   <button
                     onClick={() => setCurrentFolderId(folder.id)}
-                    className={`hover:text-brand ${
+                    className={`hover:text-brand whitespace-nowrap ${
                       index === folderPath.length - 1 ? 'font-medium text-brand' : 'text-apple-gray-400'
                     }`}
                   >
@@ -686,7 +800,7 @@ export default function DocumentsPage() {
             {!creatingFolder ? (
               <button
                 onClick={() => setCreatingFolder(true)}
-                className="text-sm text-apple-gray-400 hover:text-brand flex items-center gap-1"
+                className="text-sm text-apple-gray-400 hover:text-brand flex items-center gap-1 py-2 sm:py-0"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
@@ -700,19 +814,19 @@ export default function DocumentsPage() {
                   value={newFolderName}
                   onChange={(e) => setNewFolderName(e.target.value)}
                   placeholder="Ordnername"
-                  className="px-3 py-1.5 text-sm border border-apple-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20"
+                  className="px-3 py-2 text-sm border border-apple-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 flex-1 sm:flex-none"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
                 />
                 <button
                   onClick={handleCreateFolder}
-                  className="px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark"
+                  className="px-3 py-2 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark"
                 >
                   Erstellen
                 </button>
                 <button
                   onClick={() => { setCreatingFolder(false); setNewFolderName(""); }}
-                  className="px-3 py-1.5 text-sm text-apple-gray-400 hover:text-apple-gray-600"
+                  className="px-3 py-2 text-sm text-apple-gray-400 hover:text-apple-gray-600"
                 >
                   Abbrechen
                 </button>
@@ -720,291 +834,183 @@ export default function DocumentsPage() {
             )}
           </div>
 
-          {/* Folders & Documents List */}
-          <div className="flex gap-6">
-            <div className="flex-1">
-              <div className="bg-white rounded-xl border border-apple-gray-100 divide-y divide-apple-gray-100">
-                {/* Folders */}
-                {folders.map((folder) => (
-                  <div
-                    key={folder.id}
-                    className="p-4 flex items-center gap-4 cursor-pointer hover:bg-apple-gray-50 transition-colors"
-                    onClick={() => setCurrentFolderId(folder.id)}
-                  >
-                    <div className="flex-shrink-0 w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Folders - Grid Layout */}
+          {folders.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 mb-4 sm:mb-6">
+              {folders.map((folder) => (
+                <div
+                  key={folder.id}
+                  className="bg-white rounded-xl border border-apple-gray-100 p-4 cursor-pointer hover:shadow-md hover:border-brand/30 transition-all group"
+                  onClick={() => setCurrentFolderId(folder.id)}
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-100 rounded-xl flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                       </svg>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-apple-gray-600">{folder.name}</span>
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
-                      className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    <span className="font-medium text-apple-gray-600 text-sm truncate w-full">{folder.name}</span>
                   </div>
-                ))}
-
-                {/* Documents */}
-                {documents.filter(d => !d.isInvoice).length === 0 && folders.length === 0 ? (
-                  <div className="p-8 text-center text-apple-gray-400">
-                    {searchQuery ? 'Keine Dokumente gefunden' : 'Dieser Ordner ist leer'}
-                  </div>
-                ) : (
-                  documents.filter(d => !d.isInvoice).map((doc) => (
-                    <div
-                      key={doc.id}
-                      onClick={() => setSelectedDoc(doc)}
-                      className={`p-4 flex items-center gap-4 cursor-pointer hover:bg-apple-gray-50 transition-colors ${
-                        selectedDoc?.id === doc.id ? 'bg-brand/5' : ''
-                      }`}
-                    >
-                      <div className="flex-shrink-0 w-10 h-10 bg-apple-gray-100 rounded-lg flex items-center justify-center">
-                        {getFileIcon(doc.contentType)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-apple-gray-600 truncate">{doc.filename}</span>
-                          {getOcrStatusBadge(doc.ocrStatus)}
-                        </div>
-                        <div className="text-sm text-apple-gray-400 flex items-center gap-2 mt-0.5">
-                          <span>{formatFileSize(doc.size)}</span>
-                          <span>•</span>
-                          <span>{formatDate(doc.uploadedAt)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleMarkAsInvoice(doc.id, true); }}
-                          className="p-2 text-apple-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Als Rechnung markieren"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                          </svg>
-                        </button>
-                        {(doc.ocrStatus === 'pending' || doc.ocrStatus === 'failed') && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleProcessOcr(doc.id); }}
-                            disabled={processingOcr === doc.id}
-                            className="p-2 text-brand hover:bg-brand/10 rounded-lg transition-colors disabled:opacity-50"
-                            title="OCR starten"
-                          >
-                            {processingOcr === doc.id ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-brand border-t-transparent" />
-                            ) : (
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                              </svg>
-                            )}
-                          </button>
-                        )}
-                        <a
-                          href={doc.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-2 text-apple-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
-                          title="Öffnen"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                        </a>
-                        <a
-                          href={`/api/admin/documents/${doc.id}/download`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="p-2 text-apple-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                          title="Herunterladen"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                        </a>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openShareModal(doc); }}
-                          className="p-2 text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                          title="Teilen"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
-                          className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Löschen"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
+                    className="absolute top-2 right-2 p-1.5 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
             </div>
+          )}
 
-            {/* Detail Panel */}
-            {selectedDoc && (
-              <div className="w-96 flex-shrink-0">
-                <div className="bg-white rounded-xl border border-apple-gray-100 p-6 sticky top-24">
-                  <div className="flex items-start justify-between mb-4">
-                    <h3 className="font-semibold text-apple-gray-600 truncate pr-4">{selectedDoc.filename}</h3>
-                    <button onClick={() => setSelectedDoc(null)} className="text-apple-gray-400 hover:text-apple-gray-600">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+          {/* Documents - Grid Layout (Dropbox-Style) */}
+          {documents.filter(d => !d.isInvoice).length === 0 && folders.length === 0 ? (
+            <div className="bg-white rounded-xl border border-apple-gray-100 p-8 text-center text-apple-gray-400">
+              <svg className="w-16 h-16 mx-auto text-apple-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p className="text-lg font-medium mb-1">{searchQuery ? 'Keine Dokumente gefunden' : 'Dieser Ordner ist leer'}</p>
+              <p className="text-sm">Ziehen Sie Dateien hierher oder klicken Sie auf Hochladen</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              {documents.filter(d => !d.isInvoice).map((doc) => (
+                <div
+                  key={doc.id}
+                  onClick={() => setPreviewDoc(doc)}
+                  className={`bg-white rounded-xl border border-apple-gray-100 overflow-hidden cursor-pointer hover:shadow-md hover:border-brand/30 transition-all group ${
+                    selectedDoc?.id === doc.id ? 'ring-2 ring-brand' : ''
+                  }`}
+                >
+                  {/* Thumbnail */}
+                  <div className="aspect-square overflow-hidden bg-apple-gray-50 relative">
+                    {getDocumentThumbnail(doc)}
+                    {/* Hover Actions */}
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setPreviewDoc(doc); }}
+                        className="p-2 bg-white rounded-full text-apple-gray-600 hover:bg-brand hover:text-white transition-colors"
+                        title="Vorschau"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                      <a
+                        href={`/api/admin/documents/${doc.id}/download`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 bg-white rounded-full text-apple-gray-600 hover:bg-green-500 hover:text-white transition-colors"
+                        title="Herunterladen"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </a>
+                    </div>
+                    {/* OCR Badge */}
+                    <div className="absolute top-2 right-2">
+                      {getOcrStatusBadge(doc.ocrStatus)}
+                    </div>
                   </div>
-
-                  {/* Image Preview */}
-                  {selectedDoc.contentType.startsWith('image/') && (
-                    <div className="mb-4">
-                      <img src={selectedDoc.url} alt={selectedDoc.filename} className="w-full rounded-lg border border-apple-gray-100" />
-                    </div>
-                  )}
-
-                  {/* PDF Preview */}
-                  {selectedDoc.contentType === 'application/pdf' && (
-                    <div className="mb-4">
-                      <iframe
-                        src={selectedDoc.url}
-                        className="w-full h-96 rounded-lg border border-apple-gray-100"
-                        title={selectedDoc.filename}
-                      />
-                    </div>
-                  )}
-
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-apple-gray-400">Größe</span>
-                      <span className="text-apple-gray-600">{formatFileSize(selectedDoc.size)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-apple-gray-400">Hochgeladen</span>
-                      <span className="text-apple-gray-600">{formatDate(selectedDoc.uploadedAt)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-apple-gray-400">OCR Status</span>
-                      {getOcrStatusBadge(selectedDoc.ocrStatus)}
-                    </div>
-                  </div>
-
-                  {selectedDoc.ocrText && (
-                    <div className="mt-6">
-                      <h4 className="text-sm font-medium text-apple-gray-600 mb-2">Erkannter Text</h4>
-                      <div className="bg-apple-gray-50 rounded-lg p-3 text-sm text-apple-gray-600 max-h-64 overflow-y-auto whitespace-pre-wrap">
-                        {selectedDoc.ocrText}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-6 flex gap-2">
-                    <a
-                      href={selectedDoc.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg text-center hover:bg-brand-dark transition-colors"
-                    >
-                      Öffnen
-                    </a>
-                    <a
-                      href={`/api/admin/documents/${selectedDoc.id}/download`}
-                      className="px-4 py-2 border border-apple-gray-200 text-apple-gray-600 text-sm font-medium rounded-lg text-center hover:bg-apple-gray-50 transition-colors flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      Download
-                    </a>
+                  {/* Info */}
+                  <div className="p-3">
+                    <p className="font-medium text-apple-gray-600 text-sm truncate" title={doc.filename}>
+                      {doc.filename}
+                    </p>
+                    <p className="text-xs text-apple-gray-400 mt-1">
+                      {formatFileSize(doc.size)} • {formatDate(doc.uploadedAt)}
+                    </p>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </>
       )}
 
       {/* INVOICES TAB */}
       {activeTab === 'invoices' && (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Filter Bar */}
-          <div className="bg-white rounded-xl border border-apple-gray-100 p-4">
-            <div className="flex items-center gap-4 flex-wrap">
+          <div className="bg-white rounded-xl border border-apple-gray-100 p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
               {/* Search Input */}
-              <div className="relative flex-1 min-w-[200px]">
+              <div className="relative flex-1">
                 <input
                   type="text"
                   value={invoiceSearch}
                   onChange={(e) => setInvoiceSearch(e.target.value)}
                   placeholder="Suchen (Dateiname, Lieferant, Nr.)..."
-                  className="w-full px-4 py-2 pl-10 border border-apple-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-sm"
+                  className="w-full px-4 py-3 pl-10 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand text-base"
                 />
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
+                {debouncedInvoiceSearch !== invoiceSearch && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-brand border-t-transparent" />
+                  </div>
+                )}
               </div>
 
-              {/* Filter Toggle Button */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
-                  showFilters || invoiceVendorFilter || invoiceDateFrom || invoiceDateTo || invoiceAmountMin || invoiceAmountMax
-                    ? 'bg-brand/10 text-brand'
-                    : 'bg-apple-gray-100 text-apple-gray-600 hover:bg-apple-gray-200'
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
-                Filter
-                {(invoiceVendorFilter || invoiceDateFrom || invoiceDateTo || invoiceAmountMin || invoiceAmountMax) && (
-                  <span className="w-2 h-2 bg-brand rounded-full"></span>
-                )}
-              </button>
-
-              {/* Sort Dropdown */}
-              <select
-                value={invoiceSortBy}
-                onChange={(e) => setInvoiceSortBy(e.target.value as '' | 'date' | 'amount' | 'vendor')}
-                className="px-3 py-2 border border-apple-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/20"
-              >
-                <option value="">Sortierung</option>
-                <option value="date">Nach Datum</option>
-                <option value="amount">Nach Betrag</option>
-                <option value="vendor">Nach Lieferant</option>
-              </select>
-
-              {invoiceSortBy && (
+              {/* Filter & Sort Buttons */}
+              <div className="flex items-center gap-2">
+                {/* Filter Toggle Button */}
                 <button
-                  onClick={() => setInvoiceSortOrder(invoiceSortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="p-2 border border-apple-gray-200 rounded-lg hover:bg-apple-gray-50"
-                  title={invoiceSortOrder === 'asc' ? 'Aufsteigend' : 'Absteigend'}
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${
+                    showFilters || invoiceVendorFilter || invoiceDateFrom || invoiceDateTo || invoiceAmountMin || invoiceAmountMax
+                      ? 'bg-brand/10 text-brand'
+                      : 'bg-apple-gray-100 text-apple-gray-600 hover:bg-apple-gray-200'
+                  }`}
                 >
-                  <svg className={`w-4 h-4 transition-transform ${invoiceSortOrder === 'asc' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                   </svg>
+                  <span className="hidden sm:inline">Filter</span>
+                  {(invoiceVendorFilter || invoiceDateFrom || invoiceDateTo || invoiceAmountMin || invoiceAmountMax) && (
+                    <span className="w-2 h-2 bg-brand rounded-full"></span>
+                  )}
                 </button>
-              )}
+
+                {/* Sort Dropdown */}
+                <select
+                  value={invoiceSortBy}
+                  onChange={(e) => setInvoiceSortBy(e.target.value as '' | 'date' | 'amount' | 'vendor')}
+                  className="px-3 py-3 border border-apple-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/20"
+                >
+                  <option value="">Sortierung</option>
+                  <option value="date">Nach Datum</option>
+                  <option value="amount">Nach Betrag</option>
+                  <option value="vendor">Nach Lieferant</option>
+                </select>
+
+                {invoiceSortBy && (
+                  <button
+                    onClick={() => setInvoiceSortOrder(invoiceSortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="p-3 border border-apple-gray-200 rounded-xl hover:bg-apple-gray-50"
+                    title={invoiceSortOrder === 'asc' ? 'Aufsteigend' : 'Absteigend'}
+                  >
+                    <svg className={`w-5 h-5 transition-transform ${invoiceSortOrder === 'asc' ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Expanded Filters */}
             {showFilters && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-apple-gray-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-4 pt-4 border-t border-apple-gray-100">
                 {/* Vendor Filter */}
                 <div>
                   <label className="block text-xs text-apple-gray-400 mb-1">Lieferant</label>
                   <select
                     value={invoiceVendorFilter}
                     onChange={(e) => setInvoiceVendorFilter(e.target.value)}
-                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-full px-3 py-3 border border-apple-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/20"
                   >
                     <option value="">Alle Lieferanten</option>
                     {availableVendors.map(v => (
@@ -1020,7 +1026,7 @@ export default function DocumentsPage() {
                     type="date"
                     value={invoiceDateFrom}
                     onChange={(e) => setInvoiceDateFrom(e.target.value)}
-                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-full px-3 py-3 border border-apple-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
                   />
                 </div>
                 <div>
@@ -1029,7 +1035,7 @@ export default function DocumentsPage() {
                     type="date"
                     value={invoiceDateTo}
                     onChange={(e) => setInvoiceDateTo(e.target.value)}
-                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-full px-3 py-3 border border-apple-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
                   />
                 </div>
 
@@ -1042,7 +1048,7 @@ export default function DocumentsPage() {
                       value={invoiceAmountMin}
                       onChange={(e) => setInvoiceAmountMin(e.target.value)}
                       placeholder="0"
-                      className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      className="w-full px-3 py-3 border border-apple-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
                     />
                   </div>
                   <div className="flex-1">
@@ -1052,7 +1058,7 @@ export default function DocumentsPage() {
                       value={invoiceAmountMax}
                       onChange={(e) => setInvoiceAmountMax(e.target.value)}
                       placeholder="∞"
-                      className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                      className="w-full px-3 py-3 border border-apple-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
                     />
                   </div>
                 </div>
@@ -1072,7 +1078,7 @@ export default function DocumentsPage() {
                     setInvoiceAmountMax('');
                     setInvoiceSortBy('');
                   }}
-                  className="text-sm text-apple-gray-400 hover:text-apple-gray-600"
+                  className="text-sm text-apple-gray-400 hover:text-apple-gray-600 py-2"
                 >
                   Filter zurücksetzen
                 </button>
@@ -1082,18 +1088,22 @@ export default function DocumentsPage() {
 
           {Object.keys(invoicesByMonth).length === 0 ? (
             <div className="bg-white rounded-xl border border-apple-gray-100 p-8 text-center text-apple-gray-400">
-              Noch keine Rechnungen vorhanden
+              <svg className="w-16 h-16 mx-auto text-apple-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+              </svg>
+              <p className="text-lg font-medium mb-1">Noch keine Rechnungen vorhanden</p>
+              <p className="text-sm">Laden Sie Rechnungen hoch um sie hier zu verwalten</p>
             </div>
           ) : (
             Object.entries(invoicesByMonth)
-              .sort(([a], [b]) => b.localeCompare(a)) // Sort by month descending
+              .sort(([a], [b]) => b.localeCompare(a))
               .map(([month, invoices]) => (
                 <div key={month} className="bg-white rounded-xl border border-apple-gray-100 overflow-hidden">
                   {/* Month Header */}
-                  <div className="px-6 py-4 bg-apple-gray-50 border-b border-apple-gray-100 flex items-center justify-between">
-                    <h3 className="font-semibold text-apple-gray-600">{formatMonthYear(month)}</h3>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-apple-gray-400">{invoices.length} Rechnungen</span>
+                  <div className="px-4 sm:px-6 py-3 sm:py-4 bg-apple-gray-50 border-b border-apple-gray-100 flex items-center justify-between">
+                    <h3 className="font-semibold text-apple-gray-600 text-sm sm:text-base">{formatMonthYear(month)}</h3>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <span className="text-xs sm:text-sm text-apple-gray-400">{invoices.length} Rechnungen</span>
                       <button
                         onClick={async () => {
                           try {
@@ -1120,13 +1130,13 @@ export default function DocumentsPage() {
                             alert('Export fehlgeschlagen');
                           }
                         }}
-                        className="px-3 py-1 text-xs font-medium text-brand hover:bg-brand/10 rounded-lg transition-colors flex items-center gap-1"
+                        className="px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand/10 rounded-lg transition-colors flex items-center gap-1"
                         title="Monat als ZIP exportieren"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        ZIP
+                        <span className="hidden sm:inline">ZIP</span>
                       </button>
                     </div>
                   </div>
@@ -1134,7 +1144,7 @@ export default function DocumentsPage() {
                   {/* Invoices in this month */}
                   <div className="divide-y divide-apple-gray-100">
                     {invoices.map((invoice) => (
-                      <div key={invoice.id} className="p-4 hover:bg-apple-gray-50 transition-colors">
+                      <div key={invoice.id} className="p-3 sm:p-4 hover:bg-apple-gray-50 transition-colors">
                         {editingInvoice === invoice.id ? (
                           /* Edit Mode */
                           <div className="space-y-3">
@@ -1145,7 +1155,7 @@ export default function DocumentsPage() {
                                   type="date"
                                   value={invoiceEditData.invoiceDate || ''}
                                   onChange={(e) => setInvoiceEditData({ ...invoiceEditData, invoiceDate: e.target.value })}
-                                  className="w-full px-3 py-1.5 text-sm border border-apple-gray-200 rounded-lg"
+                                  className="w-full px-3 py-2 text-sm border border-apple-gray-200 rounded-lg"
                                 />
                               </div>
                               <div>
@@ -1154,7 +1164,7 @@ export default function DocumentsPage() {
                                   type="text"
                                   value={invoiceEditData.invoiceNumber || ''}
                                   onChange={(e) => setInvoiceEditData({ ...invoiceEditData, invoiceNumber: e.target.value })}
-                                  className="w-full px-3 py-1.5 text-sm border border-apple-gray-200 rounded-lg"
+                                  className="w-full px-3 py-2 text-sm border border-apple-gray-200 rounded-lg"
                                 />
                               </div>
                               <div>
@@ -1164,7 +1174,7 @@ export default function DocumentsPage() {
                                   step="0.01"
                                   value={invoiceEditData.invoiceAmount || ''}
                                   onChange={(e) => setInvoiceEditData({ ...invoiceEditData, invoiceAmount: e.target.value })}
-                                  className="w-full px-3 py-1.5 text-sm border border-apple-gray-200 rounded-lg"
+                                  className="w-full px-3 py-2 text-sm border border-apple-gray-200 rounded-lg"
                                 />
                               </div>
                               <div>
@@ -1173,20 +1183,20 @@ export default function DocumentsPage() {
                                   type="text"
                                   value={invoiceEditData.invoiceVendor || ''}
                                   onChange={(e) => setInvoiceEditData({ ...invoiceEditData, invoiceVendor: e.target.value })}
-                                  className="w-full px-3 py-1.5 text-sm border border-apple-gray-200 rounded-lg"
+                                  className="w-full px-3 py-2 text-sm border border-apple-gray-200 rounded-lg"
                                 />
                               </div>
                             </div>
                             <div className="flex gap-2">
                               <button
                                 onClick={() => handleSaveInvoiceData(invoice.id)}
-                                className="px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark"
+                                className="px-4 py-2 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark"
                               >
                                 Speichern
                               </button>
                               <button
                                 onClick={() => setEditingInvoice(null)}
-                                className="px-3 py-1.5 text-sm text-apple-gray-400 hover:text-apple-gray-600"
+                                className="px-4 py-2 text-sm text-apple-gray-400 hover:text-apple-gray-600"
                               >
                                 Abbrechen
                               </button>
@@ -1194,31 +1204,35 @@ export default function DocumentsPage() {
                           </div>
                         ) : (
                           /* View Mode */
-                          <div className="flex items-center gap-4">
-                            <div className="flex-shrink-0 w-10 h-10 bg-apple-gray-100 rounded-lg flex items-center justify-center">
+                          <div className="flex items-center gap-3 sm:gap-4">
+                            <div
+                              className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-apple-gray-100 rounded-lg flex items-center justify-center cursor-pointer hover:bg-apple-gray-200 transition-colors"
+                              onClick={() => setPreviewDoc(invoice)}
+                            >
                               {getFileIcon(invoice.contentType)}
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0" onClick={() => setPreviewDoc(invoice)}>
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-apple-gray-600 truncate">{invoice.filename}</span>
-                                {getOcrStatusBadge(invoice.ocrStatus)}
+                                <span className="font-medium text-apple-gray-600 truncate text-sm sm:text-base">{invoice.filename}</span>
+                                <span className="hidden sm:inline">{getOcrStatusBadge(invoice.ocrStatus)}</span>
                               </div>
-                              <div className="text-sm text-apple-gray-400 flex items-center gap-3 mt-0.5">
+                              <div className="text-xs sm:text-sm text-apple-gray-400 flex flex-wrap items-center gap-2 sm:gap-3 mt-0.5">
                                 {invoice.invoiceDate && (
                                   <span>{formatDate(invoice.invoiceDate)}</span>
                                 )}
                                 {invoice.invoiceNumber && (
-                                  <span>Nr. {invoice.invoiceNumber}</span>
+                                  <span className="hidden sm:inline">Nr. {invoice.invoiceNumber}</span>
                                 )}
                                 {invoice.invoiceVendor && (
-                                  <span>{invoice.invoiceVendor}</span>
+                                  <span className="truncate max-w-[100px] sm:max-w-none">{invoice.invoiceVendor}</span>
                                 )}
                                 {invoice.invoiceAmount !== undefined && (
                                   <span className="font-medium text-apple-gray-600">{formatCurrency(invoice.invoiceAmount)}</span>
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
+                            {/* Actions */}
+                            <div className="flex items-center gap-1 sm:gap-2">
                               <button
                                 onClick={() => {
                                   setEditingInvoice(invoice.id);
@@ -1229,47 +1243,28 @@ export default function DocumentsPage() {
                                     invoiceVendor: invoice.invoiceVendor || '',
                                   });
                                 }}
-                                className="p-2 text-apple-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
+                                className="p-2 sm:p-2.5 text-apple-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
                                 title="Bearbeiten"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                               </button>
-                              <button
-                                onClick={() => handleMarkAsInvoice(invoice.id, false)}
-                                className="p-2 text-apple-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
-                                title="Keine Rechnung"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                </svg>
-                              </button>
-                              <a
-                                href={invoice.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-2 text-apple-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
-                                title="Öffnen"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
-                              </a>
                               <a
                                 href={`/api/admin/documents/${invoice.id}/download`}
-                                className="p-2 text-apple-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                className="p-2 sm:p-2.5 text-apple-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                 title="Herunterladen"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                 </svg>
                               </a>
                               <button
                                 onClick={() => handleDelete(invoice.id)}
-                                className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 sm:p-2.5 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Löschen"
                               >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                               </button>
@@ -1285,19 +1280,129 @@ export default function DocumentsPage() {
         </div>
       )}
 
+      {/* Preview Modal */}
+      {previewDoc && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4"
+          onClick={() => setPreviewDoc(null)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-apple-gray-100 flex-shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 bg-apple-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  {getFileIcon(previewDoc.contentType)}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-apple-gray-600 truncate">{previewDoc.filename}</h3>
+                  <p className="text-sm text-apple-gray-400">
+                    {formatFileSize(previewDoc.size)} • {formatDate(previewDoc.uploadedAt)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <a
+                  href={previewDoc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2.5 text-apple-gray-400 hover:text-brand hover:bg-brand/10 rounded-lg transition-colors"
+                  title="In neuem Tab öffnen"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+                <a
+                  href={`/api/admin/documents/${previewDoc.id}/download`}
+                  className="p-2.5 text-apple-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                  title="Herunterladen"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                </a>
+                <button
+                  onClick={() => openShareModal(previewDoc)}
+                  className="p-2.5 text-apple-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                  title="Teilen"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setPreviewDoc(null)}
+                  className="p-2.5 text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-4 sm:p-6 bg-apple-gray-50">
+              {previewDoc.contentType.startsWith('image/') ? (
+                <div className="flex items-center justify-center min-h-[50vh]">
+                  <img
+                    src={previewDoc.url}
+                    alt={previewDoc.filename}
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
+                  />
+                </div>
+              ) : previewDoc.contentType === 'application/pdf' ? (
+                <iframe
+                  src={previewDoc.url}
+                  className="w-full h-[80vh] rounded-lg border border-apple-gray-200"
+                  title={previewDoc.filename}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] text-apple-gray-400">
+                  <div className="w-20 h-20 bg-apple-gray-100 rounded-2xl flex items-center justify-center mb-4">
+                    {getFileIcon(previewDoc.contentType, true)}
+                  </div>
+                  <p className="text-lg font-medium mb-2">Vorschau nicht verfügbar</p>
+                  <p className="text-sm mb-4">Für diesen Dateityp gibt es keine Vorschau</p>
+                  <a
+                    href={`/api/admin/documents/${previewDoc.id}/download`}
+                    className="px-4 py-2 bg-brand text-white font-medium rounded-lg hover:bg-brand-dark transition-colors"
+                  >
+                    Datei herunterladen
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* OCR Text (if available) */}
+            {previewDoc.ocrText && (
+              <div className="p-4 sm:p-6 border-t border-apple-gray-100 max-h-48 overflow-y-auto flex-shrink-0">
+                <h4 className="text-sm font-medium text-apple-gray-600 mb-2">Erkannter Text (OCR)</h4>
+                <div className="bg-apple-gray-50 rounded-lg p-3 text-sm text-apple-gray-600 whitespace-pre-wrap">
+                  {previewDoc.ocrText}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Share Modal */}
       {shareModalDoc && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShareModalDoc(null)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-apple-gray-100">
-              <div>
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-apple-gray-100 flex-shrink-0">
+              <div className="min-w-0">
                 <h3 className="text-lg font-semibold text-apple-gray-600">Dokument teilen</h3>
-                <p className="text-sm text-apple-gray-400 truncate max-w-xs">{shareModalDoc.filename}</p>
+                <p className="text-sm text-apple-gray-400 truncate">{shareModalDoc.filename}</p>
               </div>
               <button
                 onClick={() => setShareModalDoc(null)}
-                className="p-2 text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg"
+                className="p-2 text-apple-gray-400 hover:text-apple-gray-600 hover:bg-apple-gray-100 rounded-lg flex-shrink-0"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -1306,7 +1411,7 @@ export default function DocumentsPage() {
             </div>
 
             {/* Create new share link */}
-            <div className="p-6 border-b border-apple-gray-100">
+            <div className="p-4 sm:p-6 border-b border-apple-gray-100">
               <h4 className="text-sm font-medium text-apple-gray-600 mb-4">Neuen Link erstellen</h4>
               <div className="space-y-4">
                 <div>
@@ -1314,7 +1419,7 @@ export default function DocumentsPage() {
                   <select
                     value={shareExpiresIn}
                     onChange={(e) => setShareExpiresIn(e.target.value as typeof shareExpiresIn)}
-                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-full px-3 py-3 border border-apple-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
                   >
                     <option value="none">Unbegrenzt</option>
                     <option value="1h">1 Stunde</option>
@@ -1330,18 +1435,18 @@ export default function DocumentsPage() {
                     value={sharePassword}
                     onChange={(e) => setSharePassword(e.target.value)}
                     placeholder="Leer für öffentlichen Zugang"
-                    className="w-full px-3 py-2 border border-apple-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    className="w-full px-3 py-3 border border-apple-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20"
                   />
                 </div>
                 <button
                   onClick={createShareLink}
                   disabled={creatingShare}
-                  className="w-full px-4 py-2 bg-brand text-white font-medium rounded-lg hover:bg-brand-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full px-4 py-3 bg-brand text-white font-medium rounded-xl hover:bg-brand-dark transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {creatingShare ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
                   ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
                   )}
@@ -1351,7 +1456,7 @@ export default function DocumentsPage() {
             </div>
 
             {/* Existing share links */}
-            <div className="p-6 max-h-64 overflow-y-auto">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1">
               <h4 className="text-sm font-medium text-apple-gray-600 mb-3">
                 Aktive Links ({shareLinks.length})
               </h4>
@@ -1360,11 +1465,11 @@ export default function DocumentsPage() {
               ) : (
                 <div className="space-y-3">
                   {shareLinks.map((link) => (
-                    <div key={link.token} className="flex items-center gap-3 p-3 bg-apple-gray-50 rounded-lg">
+                    <div key={link.token} className="flex items-center gap-3 p-3 bg-apple-gray-50 rounded-xl">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 text-sm">
                           {link.hasPassword && (
-                            <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                           )}
@@ -1380,7 +1485,7 @@ export default function DocumentsPage() {
                       </div>
                       <button
                         onClick={() => copyShareUrl(link.shareUrl)}
-                        className={`p-2 rounded-lg transition-colors ${
+                        className={`p-2.5 rounded-lg transition-colors ${
                           copiedShareUrl === link.shareUrl
                             ? 'bg-green-100 text-green-600'
                             : 'text-apple-gray-400 hover:text-brand hover:bg-brand/10'
@@ -1388,21 +1493,21 @@ export default function DocumentsPage() {
                         title="Link kopieren"
                       >
                         {copiedShareUrl === link.shareUrl ? (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                           </svg>
                         ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         )}
                       </button>
                       <button
                         onClick={() => deleteShareLink(link.token)}
-                        className="p-2 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2.5 text-apple-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                         title="Link löschen"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
