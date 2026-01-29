@@ -2,6 +2,20 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 interface AnalyticsSummary {
   articleId: string;
@@ -30,35 +44,68 @@ interface AnalyticsData {
   feedback: FeedbackTotals;
 }
 
+interface RatingWithContact {
+  id: string;
+  ticketId: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  customerEmail: string;
+  customerName?: string;
+  ticketNumber?: string;
+  ticketSubject?: string;
+}
+
 interface RatingStats {
   totalRatings: number;
-  averageRating: number;
+  avgRating: number;
   distribution: { [key: number]: number };
-  recentRatings?: Array<{
-    ticketId: string;
-    ticketNumber: string;
-    rating: number;
-    comment?: string;
-    createdAt: string;
-  }>;
+  recentRatings?: RatingWithContact[];
 }
+
+interface TicketStats {
+  totalTickets: number;
+  openTickets: number;
+  inProgressTickets: number;
+  resolvedTickets: number;
+  closedTickets: number;
+  avgResolutionTimeHours: number | null;
+  ticketsByDay: { date: string; count: number; open: number; resolved: number }[];
+  ticketsByStatus: { status: string; count: number }[];
+  ticketsByChannel: { channel: string; count: number }[];
+}
+
+interface SearchStats {
+  totalSearches: number;
+  uniqueQueries: number;
+  topQueries: { query: string; count: number }[];
+  noResultQueries: { query: string; count: number }[];
+  searchesByDay: { date: string; count: number }[];
+}
+
+const COLORS = ["#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#ef4444"];
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [ratingStats, setRatingStats] = useState<RatingStats | null>(null);
+  const [ticketStats, setTicketStats] = useState<TicketStats | null>(null);
+  const [searchStats, setSearchStats] = useState<SearchStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'all'>('all');
+  const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month" | "all">("all");
+  const [activeTab, setActiveTab] = useState<"overview" | "tickets" | "search" | "ratings">("overview");
 
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
-        const [analyticsRes, ratingsRes] = await Promise.all([
-          fetch('/api/admin/analytics', { credentials: 'same-origin' }),
-          fetch('/api/admin/analytics/ratings?includeRecent=true&limit=5', { credentials: 'same-origin' })
+        const [analyticsRes, ratingsRes, ticketsRes, searchRes] = await Promise.all([
+          fetch("/api/admin/analytics", { credentials: "same-origin" }),
+          fetch("/api/admin/analytics/ratings?includeRecent=true&includeContact=true&limit=20", { credentials: "same-origin" }),
+          fetch("/api/admin/analytics/tickets?days=30", { credentials: "same-origin" }),
+          fetch("/api/admin/analytics/search?days=30", { credentials: "same-origin" }),
         ]);
 
-        if (!analyticsRes.ok) throw new Error('Failed to fetch analytics');
+        if (!analyticsRes.ok) throw new Error("Failed to fetch analytics");
         const analyticsData = await analyticsRes.json();
         setData(analyticsData);
 
@@ -66,8 +113,18 @@ export default function AnalyticsPage() {
           const ratingsData = await ratingsRes.json();
           setRatingStats(ratingsData);
         }
-      } catch (err: any) {
-        setError(err.message);
+
+        if (ticketsRes.ok) {
+          const ticketsData = await ticketsRes.json();
+          setTicketStats(ticketsData);
+        }
+
+        if (searchRes.ok) {
+          const searchData = await searchRes.json();
+          setSearchStats(searchData);
+        }
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Unbekannter Fehler");
       } finally {
         setLoading(false);
       }
@@ -77,16 +134,21 @@ export default function AnalyticsPage() {
 
   const getViewsByFilter = (article: AnalyticsSummary): number => {
     switch (timeFilter) {
-      case 'today': return article.viewsToday;
-      case 'week': return article.viewsThisWeek;
-      case 'month': return article.viewsThisMonth;
-      default: return article.totalViews;
+      case "today":
+        return article.viewsToday;
+      case "week":
+        return article.viewsThisWeek;
+      case "month":
+        return article.viewsThisMonth;
+      default:
+        return article.totalViews;
     }
   };
 
-  const filteredArticles = data?.articles
-    .map(a => ({ ...a, filteredViews: getViewsByFilter(a) }))
-    .sort((a, b) => b.filteredViews - a.filteredViews) || [];
+  const filteredArticles =
+    data?.articles
+      .map((a) => ({ ...a, filteredViews: getViewsByFilter(a) }))
+      .sort((a, b) => b.filteredViews - a.filteredViews) || [];
 
   if (loading) {
     return (
@@ -125,181 +187,348 @@ export default function AnalyticsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-apple-gray-600 tracking-tight">Analytics</h1>
-          <p className="text-apple-gray-400 text-sm mt-1">Besucherzahlen & Feedback deiner Artikel</p>
+          <p className="text-apple-gray-400 text-sm mt-1">Übersicht über Tickets, Suchen & Bewertungen</p>
         </div>
       </div>
 
-      {/* Stats Cards - Views */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-brand/10 rounded-apple flex items-center justify-center">
-              <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm text-apple-gray-400">Gesamt Views</p>
-              <p className="text-2xl font-bold text-apple-gray-600">{data?.totalViews.toLocaleString() || 0}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-apple flex items-center justify-center">
-              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm text-apple-gray-400">Artikel</p>
-              <p className="text-2xl font-bold text-apple-gray-600">{data?.articles.length || 0}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-amber-100 rounded-apple flex items-center justify-center">
-              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm text-apple-gray-400">Ø Views/Artikel</p>
-              <p className="text-2xl font-bold text-apple-gray-600">
-                {data?.articles.length
-                  ? Math.round(data.totalViews / data.articles.length).toLocaleString()
-                  : 0}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-apple flex items-center justify-center">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm text-apple-gray-400">Top Artikel</p>
-              <p className="text-lg font-bold text-apple-gray-600 truncate max-w-[150px]">
-                {data?.popular[0]?.articleId
-                  ? data.articles.find(a => a.articleId === data.popular[0].articleId)?.title || 'N/A'
-                  : 'N/A'}
-              </p>
-            </div>
-          </div>
-        </div>
+      {/* Tab Navigation */}
+      <div className="flex flex-wrap gap-2 mb-6 border-b border-apple-gray-200 pb-4">
+        {[
+          { key: "overview", label: "Übersicht", icon: "📊" },
+          { key: "tickets", label: "Tickets", icon: "🎫" },
+          { key: "search", label: "Suche", icon: "🔍" },
+          { key: "ratings", label: "Bewertungen", icon: "⭐" },
+        ].map(({ key, label, icon }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key as typeof activeTab)}
+            className={`px-4 py-3 min-h-[44px] text-sm font-medium rounded-full transition-all flex items-center gap-2 ${
+              activeTab === key ? "bg-brand text-white" : "bg-apple-gray-100 text-apple-gray-600 hover:bg-apple-gray-200"
+            }`}
+          >
+            <span>{icon}</span>
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Stats Cards - Feedback */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-100 rounded-apple flex items-center justify-center">
-              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-              </svg>
+      {/* OVERVIEW TAB */}
+      {activeTab === "overview" && (
+        <>
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-brand/10 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">🎫</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Offene Tickets</p>
+                  <p className="text-2xl font-bold text-apple-gray-600">{ticketStats?.openTickets || 0}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-apple-gray-400">Hilfreich</p>
-              <p className="text-2xl font-bold text-emerald-600">{data?.feedback?.totalHelpful || 0}</p>
+
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">✅</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Gelöste Tickets</p>
+                  <p className="text-2xl font-bold text-green-600">{ticketStats?.resolvedTickets || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">🔍</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Suchen (30 Tage)</p>
+                  <p className="text-2xl font-bold text-apple-gray-600">{searchStats?.totalSearches || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-yellow-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">⭐</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Ø Bewertung</p>
+                  <p className="text-2xl font-bold text-apple-gray-600">
+                    {ratingStats?.avgRating ? `${ratingStats.avgRating.toFixed(1)} / 5` : "–"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-apple flex items-center justify-center">
-              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-              </svg>
+          {/* Ticket Volume Chart */}
+          {ticketStats && ticketStats.ticketsByDay.length > 0 && (
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6 mb-6">
+              <h2 className="text-lg font-semibold text-apple-gray-600 mb-4">Ticket-Volumen (30 Tage)</h2>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={ticketStats.ticketsByDay}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(d) => new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                    />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      labelFormatter={(d) => new Date(d as string).toLocaleDateString("de-DE")}
+                    />
+                    <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={false} name="Neue Tickets" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-apple-gray-400">Nicht hilfreich</p>
-              <p className="text-2xl font-bold text-red-600">{data?.feedback?.totalNotHelpful || 0}</p>
+          )}
+
+          {/* Article Views Table (existing) */}
+          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-apple-gray-100 flex justify-between items-center flex-wrap gap-4">
+              <h2 className="text-lg font-semibold text-apple-gray-600">Artikel-Views</h2>
+              <div className="flex gap-2">
+                {[
+                  { key: "today", label: "Heute" },
+                  { key: "week", label: "7 Tage" },
+                  { key: "month", label: "30 Tage" },
+                  { key: "all", label: "Gesamt" },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setTimeFilter(key as typeof timeFilter)}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                      timeFilter === key ? "bg-brand text-white" : "bg-apple-gray-100 text-apple-gray-600 hover:bg-apple-gray-200"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {filteredArticles.length === 0 ? (
+              <div className="text-center py-8 text-apple-gray-400">Keine Artikel-Daten vorhanden</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-apple-gray-50 border-b border-apple-gray-100">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-apple-gray-400 uppercase">#</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-apple-gray-400 uppercase">Artikel</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-apple-gray-400 uppercase">Views</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-apple-gray-400 uppercase">Feedback</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-apple-gray-100">
+                    {filteredArticles.slice(0, 10).map((article, index) => (
+                      <tr key={article.articleId} className="hover:bg-apple-gray-50">
+                        <td className="px-4 py-3 text-sm text-apple-gray-400">{index + 1}</td>
+                        <td className="px-4 py-3">
+                          <Link href={`/articles/${article.articleId}`} className="text-apple-gray-600 hover:text-brand font-medium">
+                            {article.title || article.articleId}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-apple-gray-600">{article.filteredViews}</td>
+                        <td className="px-4 py-3 text-center">
+                          {article.totalFeedback > 0 ? (
+                            <span
+                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                article.helpfulPercent >= 70
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : article.helpfulPercent >= 50
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {article.helpfulPercent}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-apple-gray-300">–</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* TICKETS TAB */}
+      {activeTab === "tickets" && ticketStats && (
+        <>
+          {/* Ticket Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            {[
+              { label: "Gesamt", value: ticketStats.totalTickets, color: "bg-blue-100 text-blue-600" },
+              { label: "Offen", value: ticketStats.openTickets, color: "bg-red-100 text-red-600" },
+              { label: "In Bearbeitung", value: ticketStats.inProgressTickets, color: "bg-amber-100 text-amber-600" },
+              { label: "Gelöst", value: ticketStats.resolvedTickets, color: "bg-green-100 text-green-600" },
+              { label: "Geschlossen", value: ticketStats.closedTickets, color: "bg-gray-100 text-gray-600" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-4">
+                <p className="text-sm text-apple-gray-400">{label}</p>
+                <p className={`text-2xl font-bold ${color.split(" ")[1]}`}>{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Resolution Time */}
+          {ticketStats.avgResolutionTimeHours !== null && (
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">⏱️</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Ø Lösungszeit</p>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {ticketStats.avgResolutionTimeHours < 24
+                      ? `${ticketStats.avgResolutionTimeHours.toFixed(1)} Stunden`
+                      : `${(ticketStats.avgResolutionTimeHours / 24).toFixed(1)} Tage`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ticket Volume Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">Tickets pro Tag</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={ticketStats.ticketsByDay}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(d) => new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                    />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip labelFormatter={(d) => new Date(d).toLocaleDateString("de-DE")} />
+                    <Bar dataKey="count" fill="#3b82f6" name="Neue Tickets" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">Nach Kanal</h3>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={ticketStats.ticketsByChannel}
+                      dataKey="count"
+                      nameKey="channel"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label={({ name, value }) => `${name}: ${value}`}
+                    >
+                      {ticketStats.ticketsByChannel.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
-        </div>
+        </>
+      )}
 
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-apple flex items-center justify-center">
-              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
+      {/* SEARCH TAB */}
+      {activeTab === "search" && searchStats && (
+        <>
+          {/* Search Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <p className="text-sm text-apple-gray-400">Gesamt Suchen</p>
+              <p className="text-2xl font-bold text-apple-gray-600">{searchStats.totalSearches}</p>
             </div>
-            <div>
-              <p className="text-sm text-apple-gray-400">Gesamt Abstimmungen</p>
-              <p className="text-2xl font-bold text-apple-gray-600">{data?.feedback?.totalVotes || 0}</p>
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <p className="text-sm text-apple-gray-400">Unique Begriffe</p>
+              <p className="text-2xl font-bold text-apple-gray-600">{searchStats.uniqueQueries}</p>
+            </div>
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <p className="text-sm text-apple-gray-400">Ohne Ergebnis</p>
+              <p className="text-2xl font-bold text-red-600">{searchStats.noResultQueries.length}</p>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-apple flex items-center justify-center ${
-              (data?.feedback?.overallHelpfulPercent || 0) >= 70
-                ? 'bg-emerald-100'
-                : (data?.feedback?.overallHelpfulPercent || 0) >= 50
-                  ? 'bg-amber-100'
-                  : 'bg-red-100'
-            }`}>
-              <svg className={`w-5 h-5 ${
-                (data?.feedback?.overallHelpfulPercent || 0) >= 70
-                  ? 'text-emerald-600'
-                  : (data?.feedback?.overallHelpfulPercent || 0) >= 50
-                    ? 'text-amber-600'
-                    : 'text-red-600'
-              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top Queries */}
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">🔥 Top Suchbegriffe</h3>
+              {searchStats.topQueries.length === 0 ? (
+                <p className="text-apple-gray-400 text-center py-4">Noch keine Suchen</p>
+              ) : (
+                <div className="space-y-3">
+                  {searchStats.topQueries.map((item, index) => (
+                    <div key={item.query} className="flex items-center gap-3">
+                      <span className="text-lg font-bold text-apple-gray-300 w-6">{index + 1}</span>
+                      <span className="flex-1 font-medium text-apple-gray-600">{item.query}</span>
+                      <span className="text-sm text-apple-gray-400 bg-apple-gray-100 px-2 py-0.5 rounded-full">
+                        {item.count}x
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div>
-              <p className="text-sm text-apple-gray-400">Zufriedenheitsrate</p>
-              <p className={`text-2xl font-bold ${
-                (data?.feedback?.overallHelpfulPercent || 0) >= 70
-                  ? 'text-emerald-600'
-                  : (data?.feedback?.overallHelpfulPercent || 0) >= 50
-                    ? 'text-amber-600'
-                    : 'text-red-600'
-              }`}>
-                {data?.feedback?.totalVotes ? `${data.feedback.overallHelpfulPercent}%` : '–'}
-              </p>
+
+            {/* No Result Queries */}
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">❌ Suchen ohne Ergebnis</h3>
+              <p className="text-sm text-apple-gray-400 mb-4">Diese Begriffe brauchen Content!</p>
+              {searchStats.noResultQueries.length === 0 ? (
+                <p className="text-green-600 text-center py-4">✅ Alle Suchen hatten Ergebnisse!</p>
+              ) : (
+                <div className="space-y-3">
+                  {searchStats.noResultQueries.map((item) => (
+                    <div key={item.query} className="flex items-center gap-3">
+                      <span className="flex-1 font-medium text-red-600">{item.query}</span>
+                      <span className="text-sm text-apple-gray-400 bg-red-100 px-2 py-0.5 rounded-full">{item.count}x</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      {/* Ticket Ratings Section */}
-      {ratingStats && ratingStats.totalRatings > 0 && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-apple-gray-600 mb-4">Ticket-Bewertungen</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* RATINGS TAB */}
+      {activeTab === "ratings" && ratingStats && (
+        <>
+          {/* Rating Overview */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Average Rating Card */}
             <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
               <div className="text-center">
                 <div className="flex justify-center gap-1 mb-2">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <span
-                      key={star}
-                      className={`text-3xl ${star <= Math.round(ratingStats.averageRating) ? 'text-yellow-400' : 'text-gray-300'}`}
-                    >
+                    <span key={star} className={`text-3xl ${star <= Math.round(ratingStats.avgRating) ? "text-yellow-400" : "text-gray-300"}`}>
                       ★
                     </span>
                   ))}
                 </div>
-                <p className="text-3xl font-bold text-apple-gray-600">
-                  {ratingStats.averageRating.toFixed(1)}
-                </p>
-                <p className="text-sm text-apple-gray-400 mt-1">
-                  Durchschnitt aus {ratingStats.totalRatings} Bewertungen
-                </p>
+                <p className="text-3xl font-bold text-apple-gray-600">{ratingStats.avgRating.toFixed(1)}</p>
+                <p className="text-sm text-apple-gray-400 mt-1">Durchschnitt aus {ratingStats.totalRatings} Bewertungen</p>
               </div>
             </div>
 
@@ -309,20 +538,15 @@ export default function AnalyticsPage() {
               <div className="space-y-2">
                 {[5, 4, 3, 2, 1].map((star) => {
                   const count = ratingStats.distribution[star] || 0;
-                  const percentage = ratingStats.totalRatings > 0
-                    ? Math.round((count / ratingStats.totalRatings) * 100)
-                    : 0;
+                  const percentage = ratingStats.totalRatings > 0 ? Math.round((count / ratingStats.totalRatings) * 100) : 0;
                   return (
                     <div key={star} className="flex items-center gap-2">
                       <span className="text-sm text-apple-gray-500 w-3">{star}</span>
                       <span className="text-yellow-400">★</span>
                       <div className="flex-1 h-2 bg-apple-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-yellow-400 rounded-full transition-all"
-                          style={{ width: `${percentage}%` }}
-                        />
+                        <div className="h-full bg-yellow-400 rounded-full transition-all" style={{ width: `${percentage}%` }} />
                       </div>
-                      <span className="text-xs text-apple-gray-400 w-12 text-right">
+                      <span className="text-xs text-apple-gray-400 w-16 text-right">
                         {count} ({percentage}%)
                       </span>
                     </div>
@@ -331,183 +555,89 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            {/* Recent Ratings Card */}
+            {/* Quick Stats */}
             <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
-              <h3 className="text-sm font-semibold text-apple-gray-500 mb-4">Letzte Bewertungen</h3>
-              {ratingStats.recentRatings && ratingStats.recentRatings.length > 0 ? (
-                <div className="space-y-3">
-                  {ratingStats.recentRatings.map((rating, idx) => (
-                    <div key={idx} className="flex items-start gap-3 pb-3 border-b border-apple-gray-100 last:border-0 last:pb-0">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/admin/tickets/${rating.ticketId}`}
-                            className="text-sm font-medium text-apple-gray-600 hover:text-brand"
-                          >
-                            #{rating.ticketNumber}
+              <h3 className="text-sm font-semibold text-apple-gray-500 mb-4">Schnellübersicht</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-apple-gray-500">Gesamt Bewertungen</span>
+                  <span className="font-bold text-apple-gray-600">{ratingStats.totalRatings}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-apple-gray-500">5-Sterne</span>
+                  <span className="font-bold text-green-600">{ratingStats.distribution[5] || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-apple-gray-500">1-Stern</span>
+                  <span className="font-bold text-red-600">{ratingStats.distribution[1] || 0}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* All Ratings with Contact Info */}
+          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-apple-gray-100">
+              <h3 className="text-lg font-semibold text-apple-gray-600">Alle Bewertungen</h3>
+              <p className="text-sm text-apple-gray-400">Wer hat wie bewertet</p>
+            </div>
+            {!ratingStats.recentRatings || ratingStats.recentRatings.length === 0 ? (
+              <div className="text-center py-8 text-apple-gray-400">Noch keine Bewertungen vorhanden</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-apple-gray-50 border-b border-apple-gray-100">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-apple-gray-400 uppercase">Ticket</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-apple-gray-400 uppercase">Kunde</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-apple-gray-400 uppercase">Bewertung</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-apple-gray-400 uppercase">Kommentar</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-apple-gray-400 uppercase">Datum</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-apple-gray-100">
+                    {ratingStats.recentRatings.map((rating) => (
+                      <tr key={rating.id} className="hover:bg-apple-gray-50">
+                        <td className="px-4 py-3">
+                          <Link href={`/admin/tickets/${rating.ticketId}`} className="text-brand hover:underline font-medium">
+                            {rating.ticketNumber || "#???"}
                           </Link>
-                          <div className="flex">
+                          {rating.ticketSubject && (
+                            <p className="text-xs text-apple-gray-400 truncate max-w-[200px]">{rating.ticketSubject}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-apple-gray-600">{rating.customerName || "Unbekannt"}</p>
+                          <p className="text-xs text-apple-gray-400">{rating.customerEmail}</p>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center gap-0.5">
                             {[1, 2, 3, 4, 5].map((star) => (
-                              <span
-                                key={star}
-                                className={`text-xs ${star <= rating.rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                              >
+                              <span key={star} className={`text-lg ${star <= rating.rating ? "text-yellow-400" : "text-gray-300"}`}>
                                 ★
                               </span>
                             ))}
                           </div>
-                        </div>
-                        {rating.comment && (
-                          <p className="text-xs text-apple-gray-400 mt-1 line-clamp-2">
-                            &quot;{rating.comment}&quot;
-                          </p>
-                        )}
-                        <p className="text-xs text-apple-gray-300 mt-1">
-                          {new Date(rating.createdAt).toLocaleDateString('de-DE')}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-apple-gray-400 text-center py-4">
-                  Noch keine Bewertungen
-                </p>
-              )}
-            </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {rating.comment ? (
+                            <p className="text-sm text-apple-gray-600 max-w-[300px]">&quot;{rating.comment}&quot;</p>
+                          ) : (
+                            <span className="text-xs text-apple-gray-300">–</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right text-sm text-apple-gray-400">
+                          {new Date(rating.createdAt).toLocaleDateString("de-DE")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        </div>
+        </>
       )}
-
-      {/* Time Filter */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {[
-          { key: 'today', label: 'Heute' },
-          { key: 'week', label: '7 Tage' },
-          { key: 'month', label: '30 Tage' },
-          { key: 'all', label: 'Gesamt' },
-        ].map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setTimeFilter(key as any)}
-            className={`px-4 py-3 min-h-[44px] text-sm font-medium rounded-full transition-all ${
-              timeFilter === key
-                ? 'bg-brand text-white'
-                : 'bg-apple-gray-100 text-apple-gray-600 hover:bg-apple-gray-200'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Articles Table */}
-      <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
-        {filteredArticles.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-16 h-16 bg-apple-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <p className="text-apple-gray-500 text-lg mb-2">Keine Daten vorhanden</p>
-            <p className="text-apple-gray-400 text-sm">Sobald Artikel aufgerufen werden, erscheinen hier die Statistiken.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-apple-gray-50 border-b border-apple-gray-100">
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    #
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Artikel
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Heute
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    7 Tage
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    30 Tage
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-right text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Gesamt
-                  </th>
-                  <th scope="col" className="px-6 py-4 text-center text-xs font-semibold text-apple-gray-400 uppercase tracking-wider">
-                    Feedback
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-apple-gray-100">
-                {filteredArticles.map((article, index) => (
-                  <tr
-                    key={article.articleId}
-                    className="hover:bg-apple-gray-50 transition-colors duration-150"
-                  >
-                    <td className="px-6 py-4 text-sm text-apple-gray-400">
-                      {index + 1}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/articles/${article.articleId}`}
-                        className="text-apple-gray-600 hover:text-brand transition-colors font-medium"
-                      >
-                        {article.title || article.articleId}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className={`text-sm font-medium ${
-                        article.viewsToday > 0 ? 'text-green-600' : 'text-apple-gray-400'
-                      }`}>
-                        {article.viewsToday.toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm text-apple-gray-600">
-                      {article.viewsThisWeek.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-right text-sm text-apple-gray-600">
-                      {article.viewsThisMonth.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className="text-sm font-semibold text-apple-gray-600">
-                        {article.totalViews.toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      {article.totalFeedback > 0 ? (
-                        <div className="flex flex-col items-center gap-1">
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-emerald-600 font-medium" title="Hilfreich">
-                              👍 {article.helpful}
-                            </span>
-                            <span className="text-red-500 font-medium" title="Nicht hilfreich">
-                              👎 {article.notHelpful}
-                            </span>
-                          </div>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            article.helpfulPercent >= 70
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : article.helpfulPercent >= 50
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-red-100 text-red-700'
-                          }`}>
-                            {article.helpfulPercent}%
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-apple-gray-300">–</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
       {/* DSGVO Notice */}
       <div className="mt-6 text-center text-sm text-apple-gray-400">

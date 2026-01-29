@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@vercel/kv';
+import { logSearch } from '@/lib/search-analytics';
 
 const kv = createClient({
   url: process.env.KV_REST_API_URL || '',
@@ -106,7 +107,12 @@ export async function GET(req: NextRequest) {
       return a.title.localeCompare(b.title);
     });
 
-    return NextResponse.json(results.slice(0, limit));
+    const finalResults = results.slice(0, limit);
+
+    // Log search query (async, don't wait)
+    logSearch(query, finalResults.length).catch(console.error);
+
+    return NextResponse.json(finalResults);
   } catch (error) {
     console.error('Search error:', error);
     return NextResponse.json(

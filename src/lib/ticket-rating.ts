@@ -198,6 +198,13 @@ export async function hasTicketRating(ticketId: string): Promise<boolean> {
   return rating !== null;
 }
 
+// Extended rating with contact info
+export interface TicketRatingWithContact extends TicketRating {
+  customerName?: string;
+  ticketNumber?: string;
+  ticketSubject?: string;
+}
+
 // Get all ratings (for admin dashboard)
 export async function getAllRatings(limit: number = 50): Promise<TicketRating[]> {
   // Get all ticket IDs
@@ -212,6 +219,37 @@ export async function getAllRatings(limit: number = 50): Promise<TicketRating[]>
     const rating = await getTicketRating(ticketId as string);
     if (rating) {
       ratings.push(rating);
+    }
+    if (ratings.length >= limit) break;
+  }
+
+  // Sort by createdAt descending
+  ratings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return ratings;
+}
+
+// Get all ratings with full contact info (for admin dashboard)
+export async function getAllRatingsWithContact(limit: number = 50): Promise<TicketRatingWithContact[]> {
+  // Get all ticket IDs
+  const ticketIds = await kv.smembers('tickets:ids');
+  if (!ticketIds || ticketIds.length === 0) {
+    return [];
+  }
+
+  const ratings: TicketRatingWithContact[] = [];
+
+  for (const ticketId of ticketIds) {
+    const rating = await getTicketRating(ticketId as string);
+    if (rating) {
+      // Get ticket info for contact details
+      const ticket = await getTicket(ticketId as string);
+      ratings.push({
+        ...rating,
+        customerName: ticket?.customerName,
+        ticketNumber: ticket?.ticketNumber,
+        ticketSubject: ticket?.subject,
+      });
     }
     if (ratings.length >= limit) break;
   }
