@@ -8,6 +8,7 @@ import { ensureContactFromTicket, updateLastContact } from './contacts';
 import { generatePortalToken } from './portal';
 import { notifyNewMessage, notifyNewTicket } from './push-notifications';
 import { createDocument } from './documents';
+import { checkEmailForSpam } from './spam-protection';
 
 const kv = createClient({
   url: process.env.KV_REST_API_URL || '',
@@ -299,6 +300,18 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             .replace(/^(Re:|Fwd:|Fw:|Aw:|Antwort:)\s*/gi, '')
             .replace(/\[TKT-\d+\]\s*/gi, '')
             .trim() || 'Neue Anfrage per E-Mail';
+
+          // Check for spam before creating ticket
+          const spamCheck = await checkEmailForSpam(senderEmail, cleanSubject, content);
+          if (spamCheck.isSpam) {
+            debug.push(`SPAM erkannt von ${senderEmail}: ${spamCheck.reason}`);
+            console.log(`Blocked spam email from ${senderEmail}: ${spamCheck.reason}`);
+
+            // Mark as processed to avoid reprocessing
+            await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
+            await client.messageFlagsAdd(uid, ['\\Seen']);
+            continue;
+          }
 
           const { ticket } = await createTicket({
             subject: cleanSubject,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getChatSession, updateChatSession } from "@/lib/ai-chat";
 import { createTicket, createMessage } from "@/lib/tickets";
 import { sendNewTicketNotification } from "@/lib/resend";
+import { checkForSpam } from "@/lib/spam-protection";
 
 // POST: Escalate chat to a ticket
 export async function POST(req: NextRequest) {
@@ -20,6 +21,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "email is required for escalation" },
         { status: 400 }
+      );
+    }
+
+    // Get IP address for rate limiting
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ||
+               req.headers.get('x-real-ip') ||
+               'unknown';
+
+    // Spam check
+    const spamCheck = await checkForSpam({
+      email,
+      ip,
+    });
+
+    if (spamCheck.isSpam) {
+      return NextResponse.json(
+        { error: spamCheck.reason || 'Anfrage wurde als Spam erkannt.' },
+        { status: 429 }
       );
     }
 

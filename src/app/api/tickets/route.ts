@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTicket } from '@/lib/tickets';
 import { ensureContactFromTicket } from '@/lib/contacts';
 import { sendNewTicketNotification } from '@/lib/resend';
+import { checkForSpam } from '@/lib/spam-protection';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { subject, customerName, customerEmail, content, priority } = body;
+    const { subject, customerName, customerEmail, content, priority, honeypot } = body;
 
     // Validation
     if (!subject || !customerName || !customerEmail || !content) {
@@ -22,6 +23,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { message: 'Bitte geben Sie eine gültige E-Mail-Adresse an.' },
         { status: 400 }
+      );
+    }
+
+    // Get IP address for rate limiting
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ||
+               req.headers.get('x-real-ip') ||
+               'unknown';
+
+    // Spam check
+    const spamCheck = await checkForSpam({
+      email: customerEmail,
+      content,
+      subject,
+      ip,
+      honeypotValue: honeypot,
+    });
+
+    if (spamCheck.isSpam) {
+      return NextResponse.json(
+        { message: spamCheck.reason || 'Anfrage wurde als Spam erkannt.' },
+        { status: 429 }
       );
     }
 
