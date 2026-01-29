@@ -676,7 +676,7 @@ export async function sendForwardedMessage(params: {
 
     await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
-      replyTo: replyToEmail,
+      replyTo: originalMessage.senderEmail,  // Antwort geht direkt an den Kunden
       to: toEmail,
       subject: `Fwd: [${ticketInfo.ticketNumber}] ${ticketInfo.subject}`,
       html: `
