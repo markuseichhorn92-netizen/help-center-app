@@ -119,10 +119,15 @@ export default function DocumentsPage() {
   const [creatingBulkShare, setCreatingBulkShare] = useState(false);
   const [bulkShareUrl, setBulkShareUrl] = useState<string | null>(null);
 
-  // Drag & Drop states
+  // Drag & Drop states (for file upload)
   const [isDragging, setIsDragging] = useState(false);
   const dragCounter = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Drag & Drop states (for moving documents to folders)
+  const [draggedDocIds, setDraggedDocIds] = useState<string[]>([]);
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
+  const [isMovingDocs, setIsMovingDocs] = useState(false);
 
   // Upload & OCR progress states
   const [uploadQueue, setUploadQueue] = useState<UploadProgress[]>([]);
@@ -576,6 +581,101 @@ export default function DocumentsPage() {
     } catch (err) {
       console.error('Delete folder error:', err);
       alert('Fehler beim Löschen des Ordners');
+    }
+  };
+
+  // Move documents to folder
+  const handleMoveDocuments = async (docIds: string[], targetFolderId: string | null) => {
+    if (docIds.length === 0) return;
+
+    setIsMovingDocs(true);
+    try {
+      // Move all documents in parallel
+      await Promise.all(
+        docIds.map(docId =>
+          fetch(`/api/admin/documents/${docId}`, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folderId: targetFolderId }),
+          })
+        )
+      );
+
+      // Clear selection and reload
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      await loadData();
+    } catch (err) {
+      console.error('Move error:', err);
+      alert('Fehler beim Verschieben');
+    } finally {
+      setIsMovingDocs(false);
+      setDraggedDocIds([]);
+      setDropTargetFolderId(null);
+    }
+  };
+
+  // Drag handlers for documents
+  const handleDocDragStart = (e: React.DragEvent, docId: string) => {
+    e.stopPropagation();
+    // If this doc is selected, drag all selected docs
+    // Otherwise, just drag this one doc
+    const ids = selectedIds.has(docId) && selectedIds.size > 0
+      ? Array.from(selectedIds)
+      : [docId];
+    setDraggedDocIds(ids);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', ids.join(','));
+    // Add visual feedback class
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  const handleDocDragEnd = (e: React.DragEvent) => {
+    e.stopPropagation();
+    setDraggedDocIds([]);
+    setDropTargetFolderId(null);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+  };
+
+  // Drop handlers for folders
+  const handleFolderDragOver = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedDocIds.length > 0) {
+      e.dataTransfer.dropEffect = 'move';
+      setDropTargetFolderId(folderId);
+    }
+  };
+
+  const handleFolderDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetFolderId(null);
+  };
+
+  const handleFolderDrop = async (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetFolderId(null);
+
+    if (draggedDocIds.length > 0) {
+      await handleMoveDocuments(draggedDocIds, folderId);
+    }
+  };
+
+  // Drop handler for "back to parent" or root
+  const handleBreadcrumbDrop = async (e: React.DragEvent, targetFolderId: string | null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetFolderId(null);
+
+    if (draggedDocIds.length > 0) {
+      await handleMoveDocuments(draggedDocIds, targetFolderId);
     }
   };
 
@@ -1229,9 +1329,17 @@ export default function DocumentsPage() {
             <div className="flex items-center gap-2 text-sm overflow-x-auto pb-2 sm:pb-0">
               <button
                 onClick={() => setCurrentFolderId(null)}
-                className={`hover:text-brand whitespace-nowrap ${!currentFolderId ? 'font-medium text-brand' : 'text-apple-gray-400'}`}
+                onDragOver={(e) => { e.preventDefault(); if (draggedDocIds.length > 0 && currentFolderId) setDropTargetFolderId('root'); }}
+                onDragLeave={() => setDropTargetFolderId(null)}
+                onDrop={(e) => handleBreadcrumbDrop(e, null)}
+                className={`hover:text-brand whitespace-nowrap px-2 py-1 rounded-lg transition-colors ${
+                  !currentFolderId ? 'font-medium text-brand' : 'text-apple-gray-400'
+                } ${dropTargetFolderId === 'root' ? 'bg-brand/10 text-brand ring-2 ring-brand' : ''}`}
               >
                 Alle Dokumente
+                {dropTargetFolderId === 'root' && draggedDocIds.length > 0 && (
+                  <span className="ml-1 text-xs">({draggedDocIds.length})</span>
+                )}
               </button>
               {folderPath.map((folder, index) => (
                 <div key={folder.id} className="flex items-center gap-2">
@@ -1240,11 +1348,17 @@ export default function DocumentsPage() {
                   </svg>
                   <button
                     onClick={() => setCurrentFolderId(folder.id)}
-                    className={`hover:text-brand whitespace-nowrap ${
+                    onDragOver={(e) => { e.preventDefault(); if (draggedDocIds.length > 0 && folder.id !== currentFolderId) setDropTargetFolderId(folder.id); }}
+                    onDragLeave={() => setDropTargetFolderId(null)}
+                    onDrop={(e) => handleBreadcrumbDrop(e, folder.id)}
+                    className={`hover:text-brand whitespace-nowrap px-2 py-1 rounded-lg transition-colors ${
                       index === folderPath.length - 1 ? 'font-medium text-brand' : 'text-apple-gray-400'
-                    }`}
+                    } ${dropTargetFolderId === folder.id ? 'bg-brand/10 text-brand ring-2 ring-brand' : ''}`}
                   >
                     {folder.name}
+                    {dropTargetFolderId === folder.id && draggedDocIds.length > 0 && (
+                      <span className="ml-1 text-xs">({draggedDocIds.length})</span>
+                    )}
                   </button>
                 </div>
               ))}
@@ -1313,16 +1427,30 @@ export default function DocumentsPage() {
               {folders.map((folder) => (
                 <div
                   key={folder.id}
-                  className="bg-white rounded-xl border border-apple-gray-100 p-4 cursor-pointer hover:shadow-md hover:border-brand/30 transition-all group"
+                  className={`relative bg-white rounded-xl border p-4 cursor-pointer hover:shadow-md transition-all group ${
+                    dropTargetFolderId === folder.id
+                      ? 'border-brand border-2 bg-brand/5 scale-105'
+                      : 'border-apple-gray-100 hover:border-brand/30'
+                  }`}
                   onClick={() => setCurrentFolderId(folder.id)}
+                  onDragOver={(e) => handleFolderDragOver(e, folder.id)}
+                  onDragLeave={handleFolderDragLeave}
+                  onDrop={(e) => handleFolderDrop(e, folder.id)}
                 >
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-100 rounded-xl flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
-                      <svg className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mb-2 group-hover:scale-105 transition-transform ${
+                      dropTargetFolderId === folder.id ? 'bg-brand/20' : 'bg-yellow-100'
+                    }`}>
+                      <svg className={`w-6 h-6 sm:w-7 sm:h-7 ${dropTargetFolderId === folder.id ? 'text-brand' : 'text-yellow-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                       </svg>
                     </div>
                     <span className="font-medium text-apple-gray-600 text-sm truncate w-full">{folder.name}</span>
+                    {dropTargetFolderId === folder.id && draggedDocIds.length > 0 && (
+                      <span className="text-xs text-brand mt-1">
+                        {draggedDocIds.length} {draggedDocIds.length === 1 ? 'Datei' : 'Dateien'} hierher
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDeleteFolder(folder.id); }}
@@ -1351,10 +1479,13 @@ export default function DocumentsPage() {
               {documents.filter(d => !d.isInvoice).map((doc) => (
                 <div
                   key={doc.id}
+                  draggable
+                  onDragStart={(e) => handleDocDragStart(e, doc.id)}
+                  onDragEnd={handleDocDragEnd}
                   onClick={() => selectionMode ? toggleSelection(doc.id) : setPreviewDoc(doc)}
                   className={`bg-white rounded-xl border overflow-hidden cursor-pointer hover:shadow-md transition-all group ${
                     selectedIds.has(doc.id) ? 'ring-2 ring-brand border-brand' : 'border-apple-gray-100 hover:border-brand/30'
-                  }`}
+                  } ${draggedDocIds.includes(doc.id) ? 'opacity-50' : ''}`}
                 >
                   {/* Thumbnail */}
                   <div className="aspect-square overflow-hidden bg-apple-gray-50 relative">
