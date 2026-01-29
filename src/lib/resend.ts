@@ -613,3 +613,196 @@ export async function sendNewTicketNotification(params: {
     return false;
   }
 }
+
+// Send forwarded message to external recipient
+export async function sendForwardedMessage(params: {
+  toEmail: string;
+  toName?: string;
+  forwardingNote?: string;
+  originalMessage: {
+    senderName: string;
+    senderEmail: string;
+    content: string;
+    createdAt: string;
+  };
+  ticketInfo: {
+    ticketNumber: string;
+    subject: string;
+  };
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { toEmail, toName, forwardingNote, originalMessage, ticketInfo } = params;
+    const replyToEmail = process.env.IMAP_USER || SUPPORT_EMAIL;
+
+    const formattedDate = new Date(originalMessage.createdAt).toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    await getResend().emails.send({
+      from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
+      replyTo: replyToEmail,
+      to: toEmail,
+      subject: `Fwd: [${ticketInfo.ticketNumber}] ${ticketInfo.subject}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1D1D1F; margin: 0; padding: 0; background-color: #FBFBFD; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #0a4958 0%, #073440 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+            .header-logo { margin-bottom: 15px; background: white; display: inline-block; padding: 10px 20px; border-radius: 8px; }
+            .header-logo img { height: 35px; width: auto; display: block; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+            .content { background: #FBFBFD; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #E8E8ED; border-top: none; }
+            .note { background: #FEF3C7; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #F59E0B; }
+            .note p { margin: 0; color: #92400E; }
+            .forwarded { background: white; padding: 20px; border-radius: 12px; border: 1px solid #E8E8ED; margin-top: 20px; }
+            .forwarded-header { color: #86868B; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #E8E8ED; }
+            .meta { color: #86868B; font-size: 13px; margin-bottom: 16px; }
+            .message-content { color: #1D1D1F; }
+            .footer { text-align: center; color: #86868B; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E8E8ED; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="header-logo">
+                <img src="${LOGO_URL}" alt="FIT INN" height="40" style="height: 40px; width: auto;">
+              </div>
+              <h1>Weitergeleitete Nachricht</h1>
+            </div>
+            <div class="content">
+              ${toName ? `<p>Hallo ${toName},</p>` : ''}
+              <p>die folgende Nachricht aus dem Support-Ticket <strong>${ticketInfo.ticketNumber}</strong> wurde an Sie weitergeleitet.</p>
+
+              ${forwardingNote ? `
+                <div class="note">
+                  <p><strong>Anmerkung:</strong> ${forwardingNote}</p>
+                </div>
+              ` : ''}
+
+              <div class="forwarded">
+                <div class="forwarded-header">Weitergeleitete Nachricht</div>
+                <div class="meta">
+                  <strong>Von:</strong> ${originalMessage.senderName} (${originalMessage.senderEmail})<br>
+                  <strong>Datum:</strong> ${formattedDate}<br>
+                  <strong>Betreff:</strong> ${ticketInfo.subject}
+                </div>
+                <div class="message-content">
+                  ${formatEmailContent(originalMessage.content)}
+                </div>
+              </div>
+            </div>
+            <div class="footer">
+              <p>Diese E-Mail wurde über das FIT INN Hilfe-Center weitergeleitet.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    console.log(`Forwarded message from ticket ${ticketInfo.ticketNumber} to ${toEmail}`);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send forwarded message:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unbekannter Fehler' };
+  }
+}
+
+// Send rating request email to customer
+export async function sendRatingRequestEmail(params: {
+  customerEmail: string;
+  customerName: string;
+  ticketNumber: string;
+  subject: string;
+  ratingToken: string;
+}): Promise<boolean> {
+  try {
+    const { customerEmail, customerName, ticketNumber, subject, ratingToken } = params;
+    const ratingUrl = `${BASE_URL}/feedback/${ticketNumber}/${ratingToken}`;
+    const replyToEmail = process.env.IMAP_USER || SUPPORT_EMAIL;
+
+    await getResend().emails.send({
+      from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
+      replyTo: replyToEmail,
+      to: customerEmail,
+      subject: `Wie war unser Support? [${ticketNumber}]`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1D1D1F; margin: 0; padding: 0; background-color: #FBFBFD; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #0a4958 0%, #073440 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+            .header-logo { margin-bottom: 15px; background: white; display: inline-block; padding: 10px 20px; border-radius: 8px; }
+            .header-logo img { height: 35px; width: auto; display: block; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+            .header p { margin: 10px 0 0; opacity: 0.9; }
+            .content { background: #FBFBFD; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #E8E8ED; border-top: none; text-align: center; }
+            .stars { font-size: 40px; margin: 30px 0; letter-spacing: 8px; }
+            .ticket-info { background: white; padding: 16px; border-radius: 12px; margin: 20px 0; border: 1px solid #E8E8ED; text-align: left; }
+            .ticket-info p { margin: 4px 0; color: #86868B; font-size: 14px; }
+            .ticket-info strong { color: #1D1D1F; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #0a4958 0%, #073440 100%); color: white !important; padding: 16px 40px; border-radius: 25px; font-weight: 600; font-size: 16px; text-decoration: none; margin: 25px 0; }
+            .footer { text-align: center; color: #86868B; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E8E8ED; }
+            a { color: #0a4958; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="header-logo">
+                <img src="${LOGO_URL}" alt="FIT INN" height="40" style="height: 40px; width: auto;">
+              </div>
+              <h1>Wie war unser Support?</h1>
+              <p>Ihr Ticket wurde geschlossen</p>
+            </div>
+            <div class="content">
+              <p>Hallo ${customerName},</p>
+              <p>Ihr Support-Ticket wurde erfolgreich bearbeitet und geschlossen. Wir würden uns sehr über Ihr Feedback freuen!</p>
+
+              <div class="stars">⭐⭐⭐⭐⭐</div>
+
+              <p>Wie zufrieden waren Sie mit unserem Service?</p>
+
+              <a href="${ratingUrl}" class="cta-button">Jetzt bewerten</a>
+
+              <div class="ticket-info">
+                <p><strong>Ticket:</strong> ${ticketNumber}</p>
+                <p><strong>Betreff:</strong> ${subject}</p>
+              </div>
+
+              <p style="color: #86868B; font-size: 13px;">
+                Der Bewertungslink ist 7 Tage gültig.
+              </p>
+            </div>
+            <div class="footer">
+              <p>Vielen Dank, dass Sie sich für FIT INN entschieden haben!</p>
+              <p style="margin-top: 10px;">
+                <a href="${BASE_URL}">FIT INN Hilfe-Center</a>
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    console.log(`Rating request sent to ${customerEmail} for ticket ${ticketNumber}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to send rating request email:', error);
+    return false;
+  }
+}

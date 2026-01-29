@@ -242,6 +242,32 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     category?: string;
   }>>([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
+
+  // Article search state
+  const [articleSearchQuery, setArticleSearchQuery] = useState('');
+  const [articleSearchResults, setArticleSearchResults] = useState<Array<{
+    id: string;
+    title: string;
+    slug: string;
+    category?: string;
+    excerpt?: string;
+  }>>([]);
+  const [articleSearching, setArticleSearching] = useState(false);
+  const [showArticleSearch, setShowArticleSearch] = useState(false);
+  const articleSearchTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Forward modal state
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [forwardMessage, setForwardMessage] = useState<TicketMessage | null>(null);
+  const [forwardEmail, setForwardEmail] = useState('');
+  const [forwardName, setForwardName] = useState('');
+  const [forwardNote, setForwardNote] = useState('');
+  const [forwarding, setForwarding] = useState(false);
+
+  // Rating state
+  const [ticketRating, setTicketRating] = useState<{ rating: number; comment?: string } | null>(null);
+  const [requestingRating, setRequestingRating] = useState(false);
+  const [ratingRequested, setRatingRequested] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<{
     id: string;
@@ -270,11 +296,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   const loadData = async () => {
     try {
-      const [ticketRes, messagesRes] = await Promise.all([
+      const [ticketRes, messagesRes, ratingRes] = await Promise.all([
         fetch(`/api/admin/tickets/${id}`, {
           credentials: 'same-origin'
         }),
         fetch(`/api/admin/tickets/${id}/messages`, {
+          credentials: 'same-origin'
+        }),
+        fetch(`/api/admin/tickets/${id}/rating`, {
           credentials: 'same-origin'
         })
       ]);
@@ -285,6 +314,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       const ticketData = await ticketRes.json();
       const messagesData = await messagesRes.json();
+
+      // Load rating if available
+      if (ratingRes.ok) {
+        const ratingData = await ratingRes.json();
+        if (ratingData.rating) {
+          setTicketRating({
+            rating: ratingData.rating.rating,
+            comment: ratingData.rating.comment,
+          });
+        }
+      }
 
       setTicket(ticketData);
       
@@ -656,7 +696,19 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       const updatedTicket = await res.json();
       setTicket(updatedTicket);
-      
+
+      // Automatically request rating when closing ticket
+      if (newStatus === 'closed' && !ticketRating && !ratingRequested) {
+        try {
+          await fetch(`/api/admin/tickets/${id}/request-rating`, {
+            method: 'POST',
+          });
+          setRatingRequested(true);
+        } catch (e) {
+          console.error('Failed to send rating request:', e);
+        }
+      }
+
       // Navigate back to ticket list to show updated sorting
       if (newStatus === 'closed' || newStatus === 'resolved') {
         setTimeout(() => {
@@ -686,6 +738,103 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       setTicket(updatedTicket);
     } catch (err: any) {
       alert(err.message);
+    }
+  };
+
+  // Article search handler with debouncing
+  const handleArticleSearch = (query: string) => {
+    setArticleSearchQuery(query);
+
+    // Clear previous timeout
+    if (articleSearchTimeout.current) {
+      clearTimeout(articleSearchTimeout.current);
+    }
+
+    if (query.length < 2) {
+      setArticleSearchResults([]);
+      return;
+    }
+
+    // Debounce search
+    articleSearchTimeout.current = setTimeout(async () => {
+      setArticleSearching(true);
+      try {
+        const res = await fetch(`/api/admin/articles/search?q=${encodeURIComponent(query)}&limit=5`);
+        const data = await res.json();
+        setArticleSearchResults(data.articles || []);
+      } catch (e) {
+        console.error('Article search error:', e);
+      } finally {
+        setArticleSearching(false);
+      }
+    }, 300);
+  };
+
+  // Insert article link into reply
+  const handleInsertArticle = (article: { id: string; title: string }) => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const articleUrl = `${baseUrl}/articles/${article.id}`;
+    const insertText = `\n\nHilfreicher Artikel: ${article.title}\n${articleUrl}`;
+    setReplyContent(prev => prev + insertText);
+  };
+
+  // Forward message handler
+  const handleForwardMessage = async () => {
+    if (!forwardMessage || !forwardEmail || !ticket) return;
+
+    setForwarding(true);
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}/forward`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageId: forwardMessage.id,
+          toEmail: forwardEmail,
+          toName: forwardName || undefined,
+          note: forwardNote || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Weiterleitung fehlgeschlagen');
+      }
+
+      // Success - close modal and reset
+      setShowForwardModal(false);
+      setForwardMessage(null);
+      setForwardEmail('');
+      setForwardName('');
+      setForwardNote('');
+      alert('Nachricht wurde weitergeleitet');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setForwarding(false);
+    }
+  };
+
+  // Request rating handler
+  const handleRequestRating = async () => {
+    if (!ticket || requestingRating) return;
+
+    setRequestingRating(true);
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}/request-rating`, {
+        method: 'POST',
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Fehler beim Senden');
+      }
+
+      setRatingRequested(true);
+      alert('Bewertungsanfrage wurde gesendet');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setRequestingRating(false);
     }
   };
 
@@ -1392,6 +1541,25 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         </div>
                       </div>
                     )}
+                      {/* Forward Button */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setForwardMessage(msg);
+                          setShowForwardModal(true);
+                        }}
+                        className={`mt-2 text-xs flex items-center gap-1 ${
+                          msg.sender === "admin"
+                            ? "text-white/60 hover:text-white"
+                            : "text-apple-gray-400 hover:text-apple-gray-600"
+                        }`}
+                        title="Nachricht weiterleiten"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        Weiterleiten
+                      </button>
                   </div>
                 </div>
                 );
@@ -2073,11 +2241,97 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-apple-gray-400 uppercase tracking-wider">Passende Artikel</h3>
-              <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <button
+                onClick={() => setShowArticleSearch(!showArticleSearch)}
+                className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${showArticleSearch ? 'bg-brand text-white' : 'bg-apple-gray-100 text-apple-gray-400 hover:bg-apple-gray-200'}`}
+                title="Artikel suchen"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
             </div>
-            {articlesLoading ? (
+
+            {/* Article Search Input */}
+            {showArticleSearch && (
+              <div className="mb-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={articleSearchQuery}
+                    onChange={(e) => handleArticleSearch(e.target.value)}
+                    placeholder="Artikel durchsuchen..."
+                    className="w-full pl-9 pr-4 py-2 text-sm border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                  />
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {articleSearching && (
+                    <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-apple-gray-400" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                </div>
+
+                {/* Search Results */}
+                {articleSearchResults.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {articleSearchResults.map((article) => (
+                      <div
+                        key={article.id}
+                        className="group bg-blue-50 hover:bg-blue-100 rounded-lg p-2.5 transition-all"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-apple-gray-600 line-clamp-1">
+                              {article.title}
+                            </p>
+                            {article.excerpt && (
+                              <p className="text-xs text-apple-gray-400 mt-0.5 line-clamp-2">
+                                {article.excerpt}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <button
+                              onClick={() => handleInsertArticle(article)}
+                              className="w-7 h-7 rounded-md bg-white/80 text-apple-gray-500 hover:bg-brand hover:text-white flex items-center justify-center transition-all"
+                              title="In Antwort einfügen"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedArticle(article);
+                                setShowShareModal(true);
+                              }}
+                              className="w-7 h-7 rounded-md bg-white/80 text-apple-gray-500 hover:bg-brand hover:text-white flex items-center justify-center transition-all"
+                              title="Mit Kunde teilen"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {articleSearchQuery.length >= 2 && articleSearchResults.length === 0 && !articleSearching && (
+                  <p className="text-xs text-apple-gray-400 text-center mt-2">
+                    Keine Artikel gefunden
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Automatic suggestions */}
+            {!showArticleSearch && (articlesLoading ? (
               <div className="flex items-center justify-center py-4">
                 <svg className="w-5 h-5 animate-spin text-apple-gray-300" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -2133,8 +2387,71 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   Alle Artikel
                 </a>
               </div>
-            )}
+            ))}
           </div>
+
+          {/* Rating Request Button */}
+          {ticket.status === 'closed' && (
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-apple-gray-400 uppercase tracking-wider">Kundenbewertung</h3>
+                <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                </svg>
+              </div>
+
+              {ticketRating ? (
+                <div className="text-center py-2">
+                  <div className="flex justify-center gap-0.5 mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span
+                        key={star}
+                        className={`text-xl ${star <= ticketRating.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-apple-gray-500">{ticketRating.rating}/5 Sterne</p>
+                  {ticketRating.comment && (
+                    <p className="text-xs text-apple-gray-400 mt-2 italic">&quot;{ticketRating.comment}&quot;</p>
+                  )}
+                </div>
+              ) : ratingRequested ? (
+                <div className="text-center py-2">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-apple-gray-500">Bewertungsanfrage gesendet</p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleRequestRating}
+                  disabled={requestingRating}
+                  className="w-full py-3 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {requestingRating ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Wird gesendet...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                      Bewertung anfordern
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
         </div>
         </div>
         </div>
@@ -2539,6 +2856,137 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       {/* Click outside to close quick replies */}
       {showQuickReplies && (
         <div className="fixed inset-0 z-0" onClick={() => setShowQuickReplies(false)} />
+      )}
+
+      {/* Forward Message Modal */}
+      {showForwardModal && forwardMessage && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-50 animate-fade-in backdrop-blur-sm"
+            onClick={() => {
+              setShowForwardModal(false);
+              setForwardMessage(null);
+              setForwardEmail('');
+              setForwardName('');
+              setForwardNote('');
+            }}
+          />
+          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-xl sm:w-full sm:mx-4">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl animate-slide-up sm:animate-fade-in">
+              {/* Header */}
+              <div className="border-b border-apple-gray-100">
+                <div className="flex justify-center pt-3 sm:hidden">
+                  <div className="w-12 h-1.5 bg-apple-gray-200 rounded-full"></div>
+                </div>
+                <div className="flex items-center justify-between px-5 py-4 sm:px-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-brand flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-apple-gray-600">Nachricht weiterleiten</h3>
+                      <p className="text-xs text-apple-gray-400">An externe E-Mail senden</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowForwardModal(false);
+                      setForwardMessage(null);
+                      setForwardEmail('');
+                      setForwardName('');
+                      setForwardNote('');
+                    }}
+                    className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center text-apple-gray-500 hover:bg-apple-gray-200 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="px-5 py-4 sm:px-6 space-y-4">
+                {/* Original message preview */}
+                <div className="bg-apple-gray-50 rounded-xl p-3">
+                  <p className="text-xs font-medium text-apple-gray-400 mb-1">Originalnachricht von {forwardMessage.senderName}</p>
+                  <p className="text-sm text-apple-gray-600 line-clamp-3">
+                    {String(forwardMessage.content || '').replace(/<[^>]*>/g, '').substring(0, 200)}...
+                  </p>
+                </div>
+
+                {/* Email input */}
+                <div>
+                  <label className="block text-sm font-medium text-apple-gray-600 mb-1.5">
+                    E-Mail-Adresse *
+                  </label>
+                  <input
+                    type="email"
+                    value={forwardEmail}
+                    onChange={(e) => setForwardEmail(e.target.value)}
+                    placeholder="empfaenger@example.com"
+                    className="w-full px-4 py-2.5 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                  />
+                </div>
+
+                {/* Name input */}
+                <div>
+                  <label className="block text-sm font-medium text-apple-gray-600 mb-1.5">
+                    Name (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={forwardName}
+                    onChange={(e) => setForwardName(e.target.value)}
+                    placeholder="Max Mustermann"
+                    className="w-full px-4 py-2.5 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                  />
+                </div>
+
+                {/* Note input */}
+                <div>
+                  <label className="block text-sm font-medium text-apple-gray-600 mb-1.5">
+                    Anmerkung (optional)
+                  </label>
+                  <textarea
+                    value={forwardNote}
+                    onChange={(e) => setForwardNote(e.target.value)}
+                    placeholder="Zusätzliche Nachricht an den Empfänger..."
+                    rows={3}
+                    className="w-full px-4 py-2.5 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
+                  />
+                </div>
+
+                {/* Submit button */}
+                <button
+                  onClick={handleForwardMessage}
+                  disabled={!forwardEmail || forwarding}
+                  className="w-full py-3 bg-brand text-white rounded-xl font-semibold hover:bg-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {forwarding ? (
+                    <>
+                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Wird gesendet...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Weiterleiten
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Audio element for notification */}

@@ -320,6 +320,8 @@ Admin-Bereich für Dokumenten- und Rechnungsverwaltung unter `/admin/documents`.
 ### KV-Keys (Share-Links)
 - `share:{token}` - Hash: { token, documentId, createdAt, expiresAt?, passwordHash?, hasPassword, accessCount, createdBy }
 - `document:{id}:shares` - Set von Share-Tokens für ein Dokument
+- `bulkshare:{token}` - Hash: { token, documentIds (JSON), createdAt, expiresAt?, passwordHash?, hasPassword, accessCount, createdBy, title? }
+- `bulkshares:ids` - Set aller Bulk-Share-Tokens
 
 ### API Routes (Dokumente)
 - `GET/POST /api/admin/documents` - Liste/Upload
@@ -328,10 +330,17 @@ Admin-Bereich für Dokumenten- und Rechnungsverwaltung unter `/admin/documents`.
 - `GET/POST/DELETE /api/admin/documents/[id]/share` - Share-Links verwalten
 - `GET /api/admin/documents/invoices` - Rechnungsliste mit Filtern
 - `POST /api/admin/documents/export` - ZIP-Export
+- `POST /api/admin/documents/bulk-share` - Bulk-Share für mehrere Dokumente (max. 50)
 
 ### API Routes (Öffentlich)
-- `GET /api/documents/share/[token]` - Öffentlicher Zugriff auf geteilte Dokumente (keine Auth)
+- `GET /api/documents/share/[token]` - Einzelnes geteiltes Dokument
   - Query-Parameter: `password` (wenn geschützt), `download=true` (für Download)
+- `GET /api/documents/bulk-share/[token]` - Mehrere geteilte Dokumente
+  - Query-Parameter: `password`, `download=true` (ZIP-Archiv)
+
+### Öffentliche Share-Seiten
+- `/share/[token]` - Vorschau für einzelnes Dokument (PDF/Bild-Viewer, Download-Button)
+- `/share/bulk/[token]` - Übersicht mehrerer Dokumente (Liste, ZIP-Download, Rechnungssumme)
 
 ### Rechnungsfilter (GET /api/admin/documents/invoices)
 Query-Parameter:
@@ -357,18 +366,31 @@ Body:
 
 ### Share-Link-Beispiel
 ```typescript
-import { createShareLink, validateShareAccess } from '@/lib/share';
+import { createShareLink, validateShareAccess, createBulkShareLink, validateBulkShareAccess } from '@/lib/share';
 
-// Share-Link erstellen
+// Einzelnes Dokument teilen
 const shareLink = await createShareLink(documentId, {
   expiresAt: '2024-12-31T23:59:59Z',  // Optional
   password: 'geheim123',               // Optional
   createdBy: 'admin',
 });
 
+// Mehrere Dokumente teilen (Bulk-Share)
+const bulkShare = await createBulkShareLink(documentIds, {
+  title: 'Rechnungen Januar 2024',     // Optional
+  expiresAt: '2024-12-31T23:59:59Z',   // Optional
+  password: 'geheim123',                // Optional
+});
+
 // Zugriff validieren
 const result = await validateShareAccess(token, password);
-if (result.valid) {
-  // result.document enthält das Dokument
-}
+const bulkResult = await validateBulkShareAccess(token, password);
+// result.document / bulkResult.documents enthält die Dokumente
 ```
+
+### UI-Features (Dokumentenverwaltung)
+- **Drag & Drop Upload**: Dateien per Drag & Drop hochladen (visuelles Overlay)
+- **Grid-Ansicht**: Dokumente als Kacheln (Dropbox-Style), Rechnungen als Liste
+- **Mehrfachauswahl**: "Auswählen"-Modus mit Checkboxen, Bulk-Share-Modal
+- **Debouncing**: Rechnungssuche mit 300ms Verzögerung (verhindert API-Spam)
+- **Vorschau-Modal**: Vollbild-PDF/Bild-Vorschau mit Download/Share-Buttons

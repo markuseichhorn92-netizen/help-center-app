@@ -30,8 +30,22 @@ interface AnalyticsData {
   feedback: FeedbackTotals;
 }
 
+interface RatingStats {
+  totalRatings: number;
+  averageRating: number;
+  distribution: { [key: number]: number };
+  recentRatings?: Array<{
+    ticketId: string;
+    ticketNumber: string;
+    rating: number;
+    comment?: string;
+    createdAt: string;
+  }>;
+}
+
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [ratingStats, setRatingStats] = useState<RatingStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'all'>('all');
@@ -39,12 +53,19 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
-        const res = await fetch('/api/admin/analytics', {
-          credentials: 'same-origin'
-        });
-        if (!res.ok) throw new Error('Failed to fetch analytics');
-        const analyticsData = await res.json();
+        const [analyticsRes, ratingsRes] = await Promise.all([
+          fetch('/api/admin/analytics', { credentials: 'same-origin' }),
+          fetch('/api/admin/analytics/ratings?includeRecent=true&limit=5', { credentials: 'same-origin' })
+        ]);
+
+        if (!analyticsRes.ok) throw new Error('Failed to fetch analytics');
+        const analyticsData = await analyticsRes.json();
         setData(analyticsData);
+
+        if (ratingsRes.ok) {
+          const ratingsData = await ratingsRes.json();
+          setRatingStats(ratingsData);
+        }
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -254,6 +275,109 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* Ticket Ratings Section */}
+      {ratingStats && ratingStats.totalRatings > 0 && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-apple-gray-600 mb-4">Ticket-Bewertungen</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Average Rating Card */}
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <div className="text-center">
+                <div className="flex justify-center gap-1 mb-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      className={`text-3xl ${star <= Math.round(ratingStats.averageRating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className="text-3xl font-bold text-apple-gray-600">
+                  {ratingStats.averageRating.toFixed(1)}
+                </p>
+                <p className="text-sm text-apple-gray-400 mt-1">
+                  Durchschnitt aus {ratingStats.totalRatings} Bewertungen
+                </p>
+              </div>
+            </div>
+
+            {/* Distribution Card */}
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-sm font-semibold text-apple-gray-500 mb-4">Verteilung</h3>
+              <div className="space-y-2">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = ratingStats.distribution[star] || 0;
+                  const percentage = ratingStats.totalRatings > 0
+                    ? Math.round((count / ratingStats.totalRatings) * 100)
+                    : 0;
+                  return (
+                    <div key={star} className="flex items-center gap-2">
+                      <span className="text-sm text-apple-gray-500 w-3">{star}</span>
+                      <span className="text-yellow-400">★</span>
+                      <div className="flex-1 h-2 bg-apple-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-yellow-400 rounded-full transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-apple-gray-400 w-12 text-right">
+                        {count} ({percentage}%)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Recent Ratings Card */}
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-sm font-semibold text-apple-gray-500 mb-4">Letzte Bewertungen</h3>
+              {ratingStats.recentRatings && ratingStats.recentRatings.length > 0 ? (
+                <div className="space-y-3">
+                  {ratingStats.recentRatings.map((rating, idx) => (
+                    <div key={idx} className="flex items-start gap-3 pb-3 border-b border-apple-gray-100 last:border-0 last:pb-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/admin/tickets/${rating.ticketId}`}
+                            className="text-sm font-medium text-apple-gray-600 hover:text-brand"
+                          >
+                            #{rating.ticketNumber}
+                          </Link>
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <span
+                                key={star}
+                                className={`text-xs ${star <= rating.rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                              >
+                                ★
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        {rating.comment && (
+                          <p className="text-xs text-apple-gray-400 mt-1 line-clamp-2">
+                            &quot;{rating.comment}&quot;
+                          </p>
+                        )}
+                        <p className="text-xs text-apple-gray-300 mt-1">
+                          {new Date(rating.createdAt).toLocaleDateString('de-DE')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-apple-gray-400 text-center py-4">
+                  Noch keine Bewertungen
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Time Filter */}
       <div className="flex flex-wrap gap-2 mb-6">
