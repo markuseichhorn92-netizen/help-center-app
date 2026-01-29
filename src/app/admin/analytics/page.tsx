@@ -107,10 +107,13 @@ export default function AnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month" | "all">("all");
   const [activeTab, setActiveTab] = useState<"overview" | "visitors" | "tickets" | "search" | "ratings">("overview");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    const loadAnalytics = async () => {
-      try {
+  const loadAnalytics = async (showLoading = true) => {
+    if (showLoading) setIsRefreshing(true);
+    try {
         const [analyticsRes, ratingsRes, ticketsRes, searchRes, pagesRes] = await Promise.all([
           fetch("/api/admin/analytics", { credentials: "same-origin" }),
           fetch("/api/admin/analytics/ratings?includeRecent=true&includeContact=true&limit=20", { credentials: "same-origin" }),
@@ -142,14 +145,28 @@ export default function AnalyticsPage() {
           const pagesData = await pagesRes.json();
           setPageStats(pagesData);
         }
+        setLastUpdated(new Date());
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Unbekannter Fehler");
       } finally {
         setLoading(false);
+        setIsRefreshing(false);
       }
     };
+
+  // Initial load
+  useEffect(() => {
     loadAnalytics();
   }, []);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      loadAnalytics(false); // Don't show loading spinner for auto-refresh
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   const getViewsByFilter = (article: AnalyticsSummary): number => {
     switch (timeFilter) {
@@ -206,7 +223,51 @@ export default function AnalyticsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-apple-gray-600 tracking-tight">Analytics</h1>
-          <p className="text-apple-gray-400 text-sm mt-1">Übersicht über Tickets, Suchen & Bewertungen</p>
+          <p className="text-apple-gray-400 text-sm mt-1">
+            Übersicht über Besucher, Tickets, Suchen & Bewertungen
+            {lastUpdated && (
+              <span className="ml-2">
+                • Aktualisiert: {lastUpdated.toLocaleTimeString("de-DE")}
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Auto-Refresh Toggle */}
+          <label className="flex items-center gap-2 text-sm text-apple-gray-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              className="w-4 h-4 rounded border-apple-gray-300 text-brand focus:ring-brand"
+            />
+            Auto (30s)
+          </label>
+          {/* Manual Refresh Button */}
+          <button
+            onClick={() => loadAnalytics()}
+            disabled={isRefreshing}
+            className={`px-4 py-2 text-sm font-medium rounded-apple transition-all flex items-center gap-2 ${
+              isRefreshing
+                ? "bg-apple-gray-100 text-apple-gray-400 cursor-not-allowed"
+                : "bg-brand text-white hover:bg-brand-dark"
+            }`}
+          >
+            <svg
+              className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+            {isRefreshing ? "Lädt..." : "Aktualisieren"}
+          </button>
         </div>
       </div>
 
