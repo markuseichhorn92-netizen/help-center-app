@@ -83,6 +83,18 @@ interface SearchStats {
   searchesByDay: { date: string; count: number }[];
 }
 
+interface PageStats {
+  totalViews: number;
+  uniquePaths: number;
+  viewsByDay: { date: string; count: number }[];
+  topPages: { path: string; count: number }[];
+  topReferrers: { referrer: string; count: number }[];
+  deviceStats: { device: string; count: number }[];
+  viewsToday: number;
+  viewsThisWeek: number;
+  viewsThisMonth: number;
+}
+
 const COLORS = ["#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#ef4444"];
 
 export default function AnalyticsPage() {
@@ -90,19 +102,21 @@ export default function AnalyticsPage() {
   const [ratingStats, setRatingStats] = useState<RatingStats | null>(null);
   const [ticketStats, setTicketStats] = useState<TicketStats | null>(null);
   const [searchStats, setSearchStats] = useState<SearchStats | null>(null);
+  const [pageStats, setPageStats] = useState<PageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timeFilter, setTimeFilter] = useState<"today" | "week" | "month" | "all">("all");
-  const [activeTab, setActiveTab] = useState<"overview" | "tickets" | "search" | "ratings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "visitors" | "tickets" | "search" | "ratings">("overview");
 
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
-        const [analyticsRes, ratingsRes, ticketsRes, searchRes] = await Promise.all([
+        const [analyticsRes, ratingsRes, ticketsRes, searchRes, pagesRes] = await Promise.all([
           fetch("/api/admin/analytics", { credentials: "same-origin" }),
           fetch("/api/admin/analytics/ratings?includeRecent=true&includeContact=true&limit=20", { credentials: "same-origin" }),
           fetch("/api/admin/analytics/tickets?days=30", { credentials: "same-origin" }),
           fetch("/api/admin/analytics/search?days=30", { credentials: "same-origin" }),
+          fetch("/api/admin/analytics/pages?days=30", { credentials: "same-origin" }),
         ]);
 
         if (!analyticsRes.ok) throw new Error("Failed to fetch analytics");
@@ -122,6 +136,11 @@ export default function AnalyticsPage() {
         if (searchRes.ok) {
           const searchData = await searchRes.json();
           setSearchStats(searchData);
+        }
+
+        if (pagesRes.ok) {
+          const pagesData = await pagesRes.json();
+          setPageStats(pagesData);
         }
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Unbekannter Fehler");
@@ -195,6 +214,7 @@ export default function AnalyticsPage() {
       <div className="flex flex-wrap gap-2 mb-6 border-b border-apple-gray-200 pb-4">
         {[
           { key: "overview", label: "Übersicht", icon: "📊" },
+          { key: "visitors", label: "Besucher", icon: "👥" },
           { key: "tickets", label: "Tickets", icon: "🎫" },
           { key: "search", label: "Suche", icon: "🔍" },
           { key: "ratings", label: "Bewertungen", icon: "⭐" },
@@ -237,6 +257,18 @@ export default function AnalyticsPage() {
                 <div>
                   <p className="text-sm text-apple-gray-400">Gelöste Tickets</p>
                   <p className="text-2xl font-bold text-green-600">{ticketStats?.resolvedTickets || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">👥</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Besucher (30 Tage)</p>
+                  <p className="text-2xl font-bold text-purple-600">{pageStats?.viewsThisMonth || 0}</p>
                 </div>
               </div>
             </div>
@@ -361,6 +393,164 @@ export default function AnalyticsPage() {
                 </table>
               </div>
             )}
+          </div>
+        </>
+      )}
+
+      {/* VISITORS TAB */}
+      {activeTab === "visitors" && pageStats && (
+        <>
+          {/* Visitor Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">👁️</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Heute</p>
+                  <p className="text-2xl font-bold text-blue-600">{pageStats.viewsToday}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">📅</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Diese Woche</p>
+                  <p className="text-2xl font-bold text-green-600">{pageStats.viewsThisWeek}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">📆</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Dieser Monat</p>
+                  <p className="text-2xl font-bold text-purple-600">{pageStats.viewsThisMonth}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-apple flex items-center justify-center">
+                  <span className="text-xl">🌐</span>
+                </div>
+                <div>
+                  <p className="text-sm text-apple-gray-400">Gesamt</p>
+                  <p className="text-2xl font-bold text-amber-600">{pageStats.totalViews}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Visitor Chart */}
+          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6 mb-6">
+            <h2 className="text-lg font-semibold text-apple-gray-600 mb-4">Seitenaufrufe (30 Tage)</h2>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={pageStats.viewsByDay}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(d) => new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip labelFormatter={(d) => new Date(d as string).toLocaleDateString("de-DE")} />
+                  <Line type="monotone" dataKey="count" stroke="#8b5cf6" strokeWidth={2} dot={false} name="Seitenaufrufe" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Top Pages */}
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">🔥 Top Seiten</h3>
+              {pageStats.topPages.length === 0 ? (
+                <p className="text-apple-gray-400 text-center py-4">Noch keine Daten</p>
+              ) : (
+                <div className="space-y-3">
+                  {pageStats.topPages.map((item, index) => (
+                    <div key={item.path} className="flex items-center gap-3">
+                      <span className="text-lg font-bold text-apple-gray-300 w-6">{index + 1}</span>
+                      <span className="flex-1 font-medium text-apple-gray-600 truncate" title={item.path}>
+                        {item.path === "/" ? "Startseite" : item.path}
+                      </span>
+                      <span className="text-sm text-apple-gray-400 bg-apple-gray-100 px-2 py-0.5 rounded-full">
+                        {item.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Top Referrers */}
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">🔗 Woher kommen Besucher?</h3>
+              {pageStats.topReferrers.length === 0 ? (
+                <p className="text-apple-gray-400 text-center py-4">Nur direkte Aufrufe</p>
+              ) : (
+                <div className="space-y-3">
+                  {pageStats.topReferrers.map((item) => (
+                    <div key={item.referrer} className="flex items-center gap-3">
+                      <span className="flex-1 font-medium text-apple-gray-600">{item.referrer}</span>
+                      <span className="text-sm text-apple-gray-400 bg-apple-gray-100 px-2 py-0.5 rounded-full">
+                        {item.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Device Stats */}
+            <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-6">
+              <h3 className="text-lg font-semibold text-apple-gray-600 mb-4">📱 Gerätetypen</h3>
+              {pageStats.deviceStats.length === 0 ? (
+                <p className="text-apple-gray-400 text-center py-4">Noch keine Daten</p>
+              ) : (
+                <>
+                  <div className="h-40 mb-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pageStats.deviceStats}
+                          dataKey="count"
+                          nameKey="device"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={60}
+                        >
+                          {pageStats.deviceStats.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-2">
+                    {pageStats.deviceStats.map((item, index) => (
+                      <div key={item.device} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                        <span className="flex-1 text-sm text-apple-gray-600">{item.device}</span>
+                        <span className="text-sm font-medium text-apple-gray-600">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </>
       )}

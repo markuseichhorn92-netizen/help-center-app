@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieBanner from "@/components/CookieBanner";
+import { PageTracker } from "@/components/PageTracker";
 
 // Optimized font loading with next/font
 const inter = Inter({
@@ -59,6 +60,9 @@ export default function RootLayout({
 
         {/* Cookie Banner */}
         <CookieBanner />
+
+        {/* Anonymous Page Tracking (no cookies, DSGVO-konform) */}
+        <PageTracker />
       </body>
     </html>
   );
