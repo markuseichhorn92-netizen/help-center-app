@@ -262,6 +262,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [forwardEmail, setForwardEmail] = useState('');
   const [forwardName, setForwardName] = useState('');
   const [forwardNote, setForwardNote] = useState('');
+  const [forwardReplyToCustomer, setForwardReplyToCustomer] = useState(false);
   const [forwarding, setForwarding] = useState(false);
 
   // Rating state
@@ -792,6 +793,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           toEmail: forwardEmail,
           toName: forwardName || undefined,
           note: forwardNote || undefined,
+          replyToCustomer: forwardReplyToCustomer,
         }),
       });
 
@@ -806,6 +808,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       setForwardEmail('');
       setForwardName('');
       setForwardNote('');
+      setForwardReplyToCustomer(false);
       alert('Nachricht wurde weitergeleitet');
     } catch (err: any) {
       alert(err.message);
@@ -2959,6 +2962,20 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     className="w-full px-4 py-2.5 border border-apple-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand resize-none"
                   />
                 </div>
+
+                {/* Reply to customer checkbox */}
+                <label className="flex items-center gap-3 p-3 bg-apple-gray-50 rounded-xl cursor-pointer hover:bg-apple-gray-100 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={forwardReplyToCustomer}
+                    onChange={(e) => setForwardReplyToCustomer(e.target.checked)}
+                    className="w-5 h-5 rounded border-apple-gray-300 text-brand focus:ring-brand/20"
+                  />
+                  <div>
+                    <span className="block text-sm font-medium text-apple-gray-600">Antwort an Kunden</span>
+                    <span className="block text-xs text-apple-gray-400">Empfänger antwortet direkt an {forwardMessage?.senderEmail}</span>
+                  </div>
+                </label>
 
                 {/* Submit button */}
                 <button

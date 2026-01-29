@@ -15,7 +15,7 @@ export async function POST(
   try {
     const { id: ticketId } = await params;
     const body = await req.json();
-    const { messageId, toEmail, toName, note } = body;
+    const { messageId, toEmail, toName, note, replyToCustomer } = body;
 
     // Validate required fields
     if (!toEmail) {
@@ -51,6 +51,7 @@ export async function POST(
       toEmail,
       toName: toName || undefined,
       forwardingNote: note || undefined,
+      replyToCustomer: replyToCustomer === true,
       originalMessage: {
         senderName: messageToForward.senderName,
         senderEmail: messageToForward.senderEmail,

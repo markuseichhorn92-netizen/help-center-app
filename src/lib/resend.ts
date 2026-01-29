@@ -626,6 +626,7 @@ export async function sendForwardedMessage(params: {
   toEmail: string;
   toName?: string;
   forwardingNote?: string;
+  replyToCustomer?: boolean;
   originalMessage: {
     senderName: string;
     senderEmail: string;
@@ -645,8 +646,9 @@ export async function sendForwardedMessage(params: {
   };
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const { toEmail, toName, forwardingNote, originalMessage, ticketInfo } = params;
-    const replyToEmail = process.env.IMAP_USER || SUPPORT_EMAIL;
+    const { toEmail, toName, forwardingNote, replyToCustomer, originalMessage, ticketInfo } = params;
+    // Wenn replyToCustomer aktiviert, Reply-To auf Kunden setzen, sonst auf Support
+    const replyToEmail = replyToCustomer ? originalMessage.senderEmail : (process.env.IMAP_USER || SUPPORT_EMAIL);
 
     const formattedDate = new Date(originalMessage.createdAt).toLocaleString('de-DE', {
       day: '2-digit',
@@ -676,7 +678,7 @@ export async function sendForwardedMessage(params: {
 
     await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
-      replyTo: originalMessage.senderEmail,  // Antwort geht direkt an den Kunden
+      replyTo: replyToEmail,
       to: toEmail,
       subject: `Fwd: [${ticketInfo.ticketNumber}] ${ticketInfo.subject}`,
       html: `
