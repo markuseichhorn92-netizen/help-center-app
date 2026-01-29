@@ -56,6 +56,7 @@ export async function POST(
         senderEmail: messageToForward.senderEmail,
         content: messageToForward.content,
         createdAt: messageToForward.createdAt,
+        attachments: messageToForward.attachments,
       },
       ticketInfo: {
         ticketNumber: ticket.ticketNumber,

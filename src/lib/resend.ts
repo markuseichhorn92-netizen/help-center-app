@@ -614,6 +614,13 @@ export async function sendNewTicketNotification(params: {
   }
 }
 
+// Helper to format file size
+function formatFileSizeForEmail(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 // Send forwarded message to external recipient
 export async function sendForwardedMessage(params: {
   toEmail: string;
@@ -624,6 +631,13 @@ export async function sendForwardedMessage(params: {
     senderEmail: string;
     content: string;
     createdAt: string;
+    attachments?: Array<{
+      id: string;
+      filename: string;
+      url: string;
+      size: number;
+      contentType: string;
+    }>;
   };
   ticketInfo: {
     ticketNumber: string;
@@ -641,6 +655,24 @@ export async function sendForwardedMessage(params: {
       hour: '2-digit',
       minute: '2-digit',
     });
+
+    // Build attachments HTML if any
+    const attachmentsHtml = originalMessage.attachments && originalMessage.attachments.length > 0
+      ? `
+        <div class="attachments">
+          <div class="attachments-header">Anhänge (${originalMessage.attachments.length})</div>
+          <div class="attachments-list">
+            ${originalMessage.attachments.map(att => `
+              <a href="${att.url}" class="attachment-item" target="_blank" rel="noopener noreferrer">
+                <span class="attachment-icon">📎</span>
+                <span class="attachment-name">${att.filename}</span>
+                <span class="attachment-size">(${formatFileSizeForEmail(att.size)})</span>
+              </a>
+            `).join('')}
+          </div>
+        </div>
+      `
+      : '';
 
     await getResend().emails.send({
       from: `${SUPPORT_NAME} <${SUPPORT_EMAIL}>`,
@@ -667,6 +699,14 @@ export async function sendForwardedMessage(params: {
             .forwarded-header { color: #86868B; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #E8E8ED; }
             .meta { color: #86868B; font-size: 13px; margin-bottom: 16px; }
             .message-content { color: #1D1D1F; }
+            .attachments { margin-top: 16px; padding-top: 16px; border-top: 1px solid #E8E8ED; }
+            .attachments-header { color: #86868B; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+            .attachments-list { display: flex; flex-direction: column; gap: 8px; }
+            .attachment-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #F5F5F7; border-radius: 8px; text-decoration: none; color: #0a4958; transition: background 0.2s; }
+            .attachment-item:hover { background: #E8E8ED; }
+            .attachment-icon { font-size: 16px; }
+            .attachment-name { flex: 1; font-weight: 500; }
+            .attachment-size { color: #86868B; font-size: 12px; }
             .footer { text-align: center; color: #86868B; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #E8E8ED; }
           </style>
         </head>
@@ -698,6 +738,7 @@ export async function sendForwardedMessage(params: {
                 <div class="message-content">
                   ${formatEmailContent(originalMessage.content)}
                 </div>
+                ${attachmentsHtml}
               </div>
             </div>
             <div class="footer">
@@ -709,7 +750,7 @@ export async function sendForwardedMessage(params: {
       `,
     });
 
-    console.log(`Forwarded message from ticket ${ticketInfo.ticketNumber} to ${toEmail}`);
+    console.log(`Forwarded message from ticket ${ticketInfo.ticketNumber} to ${toEmail}${originalMessage.attachments?.length ? ` with ${originalMessage.attachments.length} attachment(s)` : ''}`);
     return { success: true };
   } catch (error) {
     console.error('Failed to send forwarded message:', error);
