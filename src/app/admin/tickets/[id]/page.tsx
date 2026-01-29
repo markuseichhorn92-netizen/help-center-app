@@ -262,7 +262,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [forwardEmail, setForwardEmail] = useState('');
   const [forwardName, setForwardName] = useState('');
   const [forwardNote, setForwardNote] = useState('');
-  const [forwardReplyToCustomer, setForwardReplyToCustomer] = useState(false);
+  const [forwardReplyToCustomer, setForwardReplyToCustomer] = useState(true);
   const [forwarding, setForwarding] = useState(false);
 
   // Rating state
