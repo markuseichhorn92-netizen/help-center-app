@@ -362,22 +362,34 @@ export default function DocumentsPage() {
     loadData(searchQuery.trim() || undefined);
   };
 
-  // Drag & Drop handlers
+  // Drag & Drop handlers (for file upload from outside)
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dragCounter.current++;
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setIsDragging(true);
+
+    // Only show upload overlay for external files, not internal drag operations
+    // Check if this is an external file drag (has "Files" type) and not an internal move
+    const hasFiles = e.dataTransfer.types.includes('Files');
+    const isInternalDrag = draggedDocIds.length > 0;
+
+    if (hasFiles && !isInternalDrag) {
+      dragCounter.current++;
+      if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+        setIsDragging(true);
+      }
     }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dragCounter.current--;
-    if (dragCounter.current === 0) {
-      setIsDragging(false);
+
+    // Only handle if we're in upload drag mode
+    if (isDragging) {
+      dragCounter.current--;
+      if (dragCounter.current === 0) {
+        setIsDragging(false);
+      }
     }
   };
 
@@ -389,12 +401,16 @@ export default function DocumentsPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(false);
-    dragCounter.current = 0;
 
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      handleFilesUpload(files);
+    // Only handle file upload if we were in upload drag mode
+    if (isDragging) {
+      setIsDragging(false);
+      dragCounter.current = 0;
+
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        handleFilesUpload(files);
+      }
     }
   };
 
