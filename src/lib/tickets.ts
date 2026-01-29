@@ -22,6 +22,9 @@ export interface Ticket {
   resolvedAt?: string; // Timestamp when ticket was marked as resolved (for auto-close)
   tags?: string[]; // Custom tags for categorization
   aiStatus?: 'active' | 'escalated' | 'disabled'; // AI handling status
+  deletedAt?: string; // Soft delete timestamp (for trash)
+  isSpam?: boolean; // Marked as spam
+  spamReason?: string; // Why it was marked as spam
 }
 
 // Internal notes (only visible to admins)
@@ -661,4 +664,298 @@ export async function updateTicketTags(ticketId: string, tags: string[]): Promis
     tags: JSON.stringify(tags),
     updatedAt: new Date().toISOString()
   });
+}
+
+// ============================================
+// TRASH / SOFT DELETE
+// ============================================
+
+// Move ticket to trash (soft delete)
+export async function moveTicketToTrash(id: string): Promise<Ticket | null> {
+  const ticket = await getTicket(id);
+  if (!ticket) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+
+  // Set deletedAt timestamp
+  await kv.hset(`ticket:${id}`, {
+    deletedAt: now,
+    updatedAt: now,
+  });
+
+  // Move from active to deleted set
+  await kv.srem('tickets:ids', id);
+  await kv.sadd('tickets:deleted', id);
+
+  return { ...ticket, deletedAt: now, updatedAt: now };
+}
+
+// Restore ticket from trash
+export async function restoreTicketFromTrash(id: string): Promise<Ticket | null> {
+  const ticket = await kv.hgetall(`ticket:${id}`) as unknown as Ticket;
+  if (!ticket || !ticket.deletedAt) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+
+  // Remove deletedAt
+  await kv.hdel(`ticket:${id}`, 'deletedAt');
+  await kv.hset(`ticket:${id}`, { updatedAt: now });
+
+  // Move back to active set
+  await kv.srem('tickets:deleted', id);
+  await kv.sadd('tickets:ids', id);
+
+  const { deletedAt: _, ...restoredTicket } = ticket;
+  return { ...restoredTicket, updatedAt: now } as Ticket;
+}
+
+// Get all deleted tickets (trash)
+export async function getDeletedTickets(): Promise<Ticket[]> {
+  const ticketIds: string[] = await kv.smembers('tickets:deleted');
+  if (ticketIds.length === 0) {
+    return [];
+  }
+
+  const tickets = await Promise.all(
+    ticketIds.map(async (id) => {
+      const ticket = await kv.hgetall(`ticket:${id}`);
+      return ticket as unknown as Ticket;
+    })
+  );
+
+  return tickets
+    .filter((t): t is Ticket => t !== null && Object.keys(t).length > 0)
+    .sort((a, b) => new Date(b.deletedAt || b.createdAt).getTime() - new Date(a.deletedAt || a.createdAt).getTime());
+}
+
+// Permanently delete a ticket (from trash)
+export async function permanentlyDeleteTicket(id: string): Promise<boolean> {
+  const ticket = await kv.hgetall(`ticket:${id}`) as unknown as Ticket;
+  if (!ticket) {
+    return false;
+  }
+
+  // Delete all messages in parallel
+  const messageIds: string[] = await kv.smembers(`ticket:${id}:messages`);
+  const noteIds: string[] = await kv.lrange(`ticket:${id}:notes`, 0, -1);
+
+  await Promise.all([
+    // Delete all messages
+    ...messageIds.map(msgId => kv.del(`message:${msgId}`)),
+    // Delete message index
+    kv.del(`ticket:${id}:messages`),
+    // Delete read status
+    kv.del(`ticket:${id}:read`),
+    // Delete notes
+    ...noteIds.map(noteId => kv.del(`note:${noteId}`)),
+    kv.del(`ticket:${id}:notes`),
+    // Remove from email index
+    kv.srem(`tickets:email:${ticket.customerEmail.toLowerCase()}`, id),
+    // Remove from phone index if exists
+    ...(ticket.phone ? [kv.srem(`tickets:phone:${ticket.phone}`, id)] : []),
+    // Delete ticket
+    kv.del(`ticket:${id}`),
+    // Remove from both sets (just in case)
+    kv.srem('tickets:ids', id),
+    kv.srem('tickets:deleted', id),
+    kv.srem('tickets:spam', id),
+  ]);
+
+  return true;
+}
+
+// Batch move tickets to trash
+export async function moveTicketsToTrash(ids: string[]): Promise<{ deleted: number; failed: string[] }> {
+  const results = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const ticket = await moveTicketToTrash(id);
+        return { id, success: ticket !== null };
+      } catch {
+        return { id, success: false };
+      }
+    })
+  );
+
+  return {
+    deleted: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).map(r => r.id),
+  };
+}
+
+// Clean up tickets deleted more than 30 days ago
+export async function cleanupOldDeletedTickets(): Promise<{ deleted: number; failed: string[] }> {
+  const deletedTickets = await getDeletedTickets();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const ticketsToDelete = deletedTickets.filter(
+    (t) => t.deletedAt && t.deletedAt < thirtyDaysAgo
+  );
+
+  if (ticketsToDelete.length === 0) {
+    return { deleted: 0, failed: [] };
+  }
+
+  const results = await Promise.all(
+    ticketsToDelete.map(async (ticket) => {
+      try {
+        const success = await permanentlyDeleteTicket(ticket.id);
+        return { id: ticket.id, success };
+      } catch {
+        return { id: ticket.id, success: false };
+      }
+    })
+  );
+
+  return {
+    deleted: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).map(r => r.id),
+  };
+}
+
+// ============================================
+// SPAM TICKETS
+// ============================================
+
+// Create a spam ticket (blocked by spam filter but stored for review)
+export async function createSpamTicket(data: {
+  subject: string;
+  customerName: string;
+  customerEmail: string;
+  content: string;
+  priority?: 'low' | 'medium' | 'high';
+  attachments?: Attachment[];
+  channel?: 'email' | 'whatsapp' | 'web';
+  phone?: string;
+  spamReason: string;
+}): Promise<Ticket> {
+  const ticketId = crypto.randomUUID();
+  const ticketNumber = await generateTicketNumber();
+  const now = new Date().toISOString();
+
+  const ticket: Ticket = {
+    id: ticketId,
+    ticketNumber,
+    subject: data.subject,
+    status: 'closed',
+    priority: data.priority || 'low',
+    customerName: data.customerName,
+    customerEmail: data.customerEmail,
+    createdAt: now,
+    updatedAt: now,
+    channel: data.channel || 'web',
+    aiStatus: 'disabled',
+    isSpam: true,
+    spamReason: data.spamReason,
+    ...(data.phone && { phone: data.phone }),
+  };
+
+  // Filter out undefined/null values for Redis
+  const ticketForKV = Object.fromEntries(
+    Object.entries(ticket).filter(([_, v]) => v != null)
+  );
+
+  // Save ticket
+  await kv.hmset(`ticket:${ticketId}`, ticketForKV);
+  await kv.sadd('tickets:spam', ticketId);
+
+  // Create initial message (for reference)
+  await createMessage({
+    ticketId,
+    content: data.content,
+    sender: 'customer',
+    senderName: data.customerName,
+    senderEmail: data.customerEmail,
+    attachments: data.attachments,
+  });
+
+  return ticket;
+}
+
+// Get all spam tickets
+export async function getSpamTickets(): Promise<Ticket[]> {
+  const ticketIds: string[] = await kv.smembers('tickets:spam');
+  if (ticketIds.length === 0) {
+    return [];
+  }
+
+  const tickets = await Promise.all(
+    ticketIds.map(async (id) => {
+      const ticket = await kv.hgetall(`ticket:${id}`);
+      return ticket as unknown as Ticket;
+    })
+  );
+
+  return tickets
+    .filter((t): t is Ticket => t !== null && Object.keys(t).length > 0)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+// Mark spam ticket as not spam (restore to active)
+export async function restoreSpamTicket(id: string): Promise<Ticket | null> {
+  const ticket = await kv.hgetall(`ticket:${id}`) as unknown as Ticket;
+  if (!ticket || !ticket.isSpam) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+
+  // Remove spam flags
+  await kv.hdel(`ticket:${id}`, 'isSpam', 'spamReason');
+  await kv.hset(`ticket:${id}`, {
+    status: 'open',
+    updatedAt: now,
+  });
+
+  // Move to active set
+  await kv.srem('tickets:spam', id);
+  await kv.sadd('tickets:ids', id);
+
+  // Re-add to email index
+  await kv.sadd(`tickets:email:${ticket.customerEmail.toLowerCase()}`, id);
+  if (ticket.phone) {
+    await kv.sadd(`tickets:phone:${ticket.phone}`, id);
+  }
+
+  const { isSpam: _, spamReason: __, ...restoredTicket } = ticket;
+  return { ...restoredTicket, status: 'open', updatedAt: now } as Ticket;
+}
+
+// Permanently delete spam ticket
+export async function deleteSpamTicket(id: string): Promise<boolean> {
+  return permanentlyDeleteTicket(id);
+}
+
+// Clean up spam tickets older than 30 days
+export async function cleanupOldSpamTickets(): Promise<{ deleted: number; failed: string[] }> {
+  const spamTickets = await getSpamTickets();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const ticketsToDelete = spamTickets.filter(
+    (t) => t.createdAt < thirtyDaysAgo
+  );
+
+  if (ticketsToDelete.length === 0) {
+    return { deleted: 0, failed: [] };
+  }
+
+  const results = await Promise.all(
+    ticketsToDelete.map(async (ticket) => {
+      try {
+        const success = await permanentlyDeleteTicket(ticket.id);
+        return { id: ticket.id, success };
+      } catch {
+        return { id: ticket.id, success: false };
+      }
+    })
+  );
+
+  return {
+    deleted: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).map(r => r.id),
+  };
 }

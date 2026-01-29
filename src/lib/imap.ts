@@ -2,7 +2,7 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser, ParsedMail } from 'mailparser';
 import { createClient } from '@vercel/kv';
 import { put } from '@vercel/blob';
-import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment } from './tickets';
+import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment, createSpamTicket } from './tickets';
 import { parseTicketNumberFromSubject, sendTicketConfirmation, sendNewTicketNotification } from './resend';
 import { ensureContactFromTicket, updateLastContact } from './contacts';
 import { generatePortalToken } from './portal';
@@ -307,9 +307,22 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             debug.push(`SPAM erkannt von ${senderEmail}: ${spamCheck.reason}`);
             console.log(`Blocked spam email from ${senderEmail}: ${spamCheck.reason}`);
 
+            // Store as spam ticket for admin review
+            await createSpamTicket({
+              subject: cleanSubject,
+              customerName: senderName,
+              customerEmail: senderEmail,
+              content: content.trim(),
+              priority: 'low',
+              attachments,
+              channel: 'email',
+              spamReason: spamCheck.reason || 'Spam erkannt',
+            });
+
             // Mark as processed to avoid reprocessing
             await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
             await client.messageFlagsAdd(uid, ['\\Seen']);
+            results.processed++;
             continue;
           }
 

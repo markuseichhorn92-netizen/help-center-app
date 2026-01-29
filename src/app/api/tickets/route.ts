@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createTicket } from '@/lib/tickets';
+import { createTicket, createSpamTicket } from '@/lib/tickets';
 import { ensureContactFromTicket } from '@/lib/contacts';
 import { sendNewTicketNotification } from '@/lib/resend';
 import { checkForSpam } from '@/lib/spam-protection';
@@ -41,13 +41,25 @@ export async function POST(req: NextRequest) {
     });
 
     if (spamCheck.isSpam) {
+      // Store spam ticket for admin review instead of rejecting
+      await createSpamTicket({
+        subject,
+        customerName,
+        customerEmail,
+        content,
+        priority: priority || 'low',
+        channel: 'web',
+        spamReason: spamCheck.reason || 'Spam erkannt',
+      });
+
+      // Return generic error to not reveal spam detection
       return NextResponse.json(
-        { message: spamCheck.reason || 'Anfrage wurde als Spam erkannt.' },
+        { message: 'Ihre Anfrage konnte nicht verarbeitet werden. Bitte versuchen Sie es später erneut.' },
         { status: 429 }
       );
     }
 
-    const { ticket, message } = await createTicket({
+    const { ticket } = await createTicket({
       subject,
       customerName,
       customerEmail,
