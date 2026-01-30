@@ -92,6 +92,10 @@ export default function AdminHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Hide AdminHeader on mobile when on ticket detail page (has its own header)
+  const isTicketDetailPage = pathname?.match(/^\/admin\/tickets\/[^/]+$/);
+  const isMobileHidden = isTicketDetailPage;
   const [adminStatus, setAdminStatus] = useState<"online" | "offline">("offline");
   const [statusLoading, setStatusLoading] = useState(true);
   const [pushStatus, setPushStatus] = useState<"unsupported" | "denied" | "disabled" | "enabled">("unsupported");
@@ -259,7 +263,7 @@ export default function AdminHeader() {
   };
 
   return (
-    <header className="bg-white border-b border-apple-gray-200 sticky top-0 z-40">
+    <header className={`bg-white border-b border-apple-gray-200 sticky top-0 z-40 ${isMobileHidden ? 'hidden md:block' : ''}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo / Brand */}
