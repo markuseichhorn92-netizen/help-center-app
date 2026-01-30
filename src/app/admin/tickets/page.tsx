@@ -115,15 +115,44 @@ export default function TicketsPage() {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    
     const initLoad = async () => {
-      // Load tickets first (fast)
-      await loadTickets();
-      setLoading(false);
+      try {
+        // Load tickets first (fast)
+        const fetchedTickets = await fetchTickets();
+        if (isMounted) {
+          setTickets(fetchedTickets);
+          setLastRefresh(new Date());
+          setLoading(false);
+        }
 
-      // Then fetch emails in background
-      fetchEmailsInBackground().then(() => loadTickets());
+        // Then fetch emails in background
+        fetchEmailsInBackground().then(async () => {
+          if (isMounted) {
+            const refreshedTickets = await fetchTickets();
+            if (isMounted) {
+              setTickets(refreshedTickets);
+              setLastRefresh(new Date());
+            }
+          }
+        });
+      } catch (err: any) {
+        // Ignore abort/navigation errors
+        if (!isMounted || err.name === 'AbortError' || err.message?.includes('Load failed')) {
+          return;
+        }
+        if (isMounted) {
+          setError(err.message);
+          setLoading(false);
+        }
+      }
     };
     initLoad();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Auto-refresh tickets every 15 seconds + fetch emails every 60 seconds (optimized)
@@ -177,6 +206,11 @@ export default function TicketsPage() {
       setLastRefresh(new Date());
       setNewItemsAvailable(false); // Reset notification
     } catch (err: any) {
+      // Ignore abort errors (happens during navigation/swipe back)
+      if (err.name === 'AbortError' || err.message?.includes('aborted') || err.message?.includes('Load failed')) {
+        console.log('Request aborted during navigation, ignoring');
+        return;
+      }
       setError(err.message);
     }
   };
