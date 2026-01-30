@@ -3348,15 +3348,21 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </>
       )}
 
-      {/* Mobile Notes Modal */}
+      {/* Audio element for notification */}
+      <audio ref={audioRef} preload="auto">
+        <source src="/sounds/notification.mp3" type="audio/mpeg" />
+      </audio>
+      </div>
+
+      {/* Mobile Notes Modal - OUTSIDE animate-fade-in container! */}
       {showMobileNotesModal && (
         <>
           <div
-            className="fixed inset-0 bg-black/60 z-50 animate-fade-in backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-[100] backdrop-blur-sm"
             onClick={() => setShowMobileNotesModal(false)}
           />
-          <div className="fixed inset-x-0 bottom-0 max-h-[85vh] z-50">
-            <div className="bg-white rounded-t-3xl shadow-2xl animate-slide-up flex flex-col max-h-[85vh]">
+          <div className="fixed inset-x-0 bottom-0 max-h-[85vh] z-[100]">
+            <div className="bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[85vh]">
               {/* Header */}
               <div className="border-b border-apple-gray-100 flex-shrink-0">
                 <div className="flex justify-center pt-3">
@@ -3397,7 +3403,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <button
                   onClick={async () => {
                     await handleAddNote();
-                    // Keep modal open after adding
                   }}
                   disabled={!newNoteContent.trim() || savingNote}
                   className="mt-3 w-full px-4 py-3 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
@@ -3422,7 +3427,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </div>
 
               {/* Notes List */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-8">
                 {ticketNotes.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -3466,12 +3471,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           </div>
         </>
       )}
-
-      {/* Audio element for notification */}
-      <audio ref={audioRef} preload="auto">
-        <source src="/sounds/notification.mp3" type="audio/mpeg" />
-      </audio>
-      </div>
     </>
   );
 }
