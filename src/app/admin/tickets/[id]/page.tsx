@@ -710,10 +710,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         }
       }
 
-      // Navigate back to ticket list to show updated sorting
+      // Navigate to the appropriate filter view
       if (newStatus === 'closed' || newStatus === 'resolved') {
         setTimeout(() => {
-          window.location.href = '/admin/tickets';
+          // Use router for smoother navigation, go to the matching status filter
+          const filterParam = newStatus === 'resolved' ? 'resolved' : 'closed';
+          window.location.href = `/admin/tickets?filter=${filterParam}`;
         }, 300);
       }
     } catch (err: any) {
@@ -1202,8 +1204,104 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     router.push(`/admin/tickets/${ticketId}`);
   };
 
+  // Find next/previous ticket for navigation
+  const currentTicketIndex = sidebarTickets.findIndex(t => t.id === id);
+  const prevTicket = currentTicketIndex > 0 ? sidebarTickets[currentTicketIndex - 1] : null;
+  const nextTicket = currentTicketIndex < sidebarTickets.length - 1 ? sidebarTickets[currentTicketIndex + 1] : null;
+
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in pb-20 md:pb-0">
+      {/* Mobile: Sticky Header with Quick Actions */}
+      <div className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-apple-gray-100 -mx-4 px-4 py-3 mb-4">
+        <div className="flex items-center justify-between gap-3">
+          {/* Back + Ticket Info */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <Link
+              href="/admin/tickets"
+              className="flex-shrink-0 w-9 h-9 rounded-full bg-apple-gray-100 flex items-center justify-center text-apple-gray-500"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-apple-gray-400 font-mono">{ticket.ticketNumber}</p>
+              <p className="text-sm font-semibold text-apple-gray-600 truncate">{ticket.subject}</p>
+            </div>
+          </div>
+
+          {/* Quick Status Buttons */}
+          <div className="flex items-center gap-1">
+            <select
+              value={ticket.status}
+              onChange={(e) => handleStatusChange(e.target.value as Ticket["status"])}
+              className="text-xs px-2 py-1.5 rounded-lg border border-apple-gray-200 bg-white focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none"
+            >
+              {Object.entries(statusConfig).map(([value, config]) => (
+                <option key={value} value={value}>{config.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile: Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-apple-gray-200 px-4 py-2 safe-area-pb">
+        <div className="flex items-center justify-between gap-2">
+          {/* Previous Ticket */}
+          <button
+            onClick={() => prevTicket && router.push(`/admin/tickets/${prevTicket.id}`)}
+            disabled={!prevTicket}
+            className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              prevTicket
+                ? 'bg-apple-gray-100 text-apple-gray-600 active:bg-apple-gray-200'
+                : 'bg-apple-gray-50 text-apple-gray-300'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Vorher
+          </button>
+
+          {/* Quick Actions */}
+          <div className="flex gap-1">
+            {ticket.status !== 'resolved' && (
+              <button
+                onClick={() => handleStatusChange('resolved')}
+                className="px-4 py-2.5 rounded-lg bg-green-500 text-white text-sm font-medium active:bg-green-600"
+              >
+                ✓ Lösen
+              </button>
+            )}
+            {ticket.status !== 'closed' && (
+              <button
+                onClick={() => handleStatusChange('closed')}
+                className="px-4 py-2.5 rounded-lg bg-gray-500 text-white text-sm font-medium active:bg-gray-600"
+              >
+                Schließen
+              </button>
+            )}
+          </div>
+
+          {/* Next Ticket */}
+          <button
+            onClick={() => nextTicket && router.push(`/admin/tickets/${nextTicket.id}`)}
+            disabled={!nextTicket}
+            className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              nextTicket
+                ? 'bg-apple-gray-100 text-apple-gray-600 active:bg-apple-gray-200'
+                : 'bg-apple-gray-50 text-apple-gray-300'
+            }`}
+          >
+            Nächstes
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
       {/* Mobile: Floating Button to open sidebar */}
       <button
         onClick={() => setSidebarOpen(true)}

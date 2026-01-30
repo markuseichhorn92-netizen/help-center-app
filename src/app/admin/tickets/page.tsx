@@ -77,6 +77,17 @@ export default function TicketsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [fetchingEmails, setFetchingEmails] = useState(false);
+
+  // Read filter from URL on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const filterParam = urlParams.get('filter');
+      if (filterParam) {
+        setFilterStatus(filterParam);
+      }
+    }
+  }, []);
   const [emailFetchResult, setEmailFetchResult] = useState<string | null>(null);
   const [selectedTickets, setSelectedTickets] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
