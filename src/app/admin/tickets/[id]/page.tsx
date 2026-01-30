@@ -3154,7 +3154,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </div>
 
               {/* Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6 space-y-4 pb-8">
+              <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6 space-y-4 pb-24">
                 {/* Original message preview */}
                 <div className="bg-apple-gray-50 rounded-xl p-3">
                   <p className="text-xs font-medium text-apple-gray-400 mb-1">Originalnachricht von {forwardMessage.senderName}</p>
