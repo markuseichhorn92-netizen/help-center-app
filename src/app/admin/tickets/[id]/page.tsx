@@ -273,7 +273,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [showMobileAiModal, setShowMobileAiModal] = useState(false);
   const [showMobileQuickRepliesModal, setShowMobileQuickRepliesModal] = useState(false);
   const [showMobileArticlesModal, setShowMobileArticlesModal] = useState(false);
-  const [articleSearchQuery, setArticleSearchQuery] = useState("");
   const [forwardMessage, setForwardMessage] = useState<TicketMessage | null>(null);
   const [forwardEmail, setForwardEmail] = useState('');
   const [forwardName, setForwardName] = useState('');
@@ -3647,16 +3646,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-apple-gray-600 line-clamp-2">{article.title}</p>
-                            {article.relevanceScore && (
-                              <div className="flex items-center gap-1 mt-1">
-                                <div className="h-1.5 w-16 bg-apple-gray-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-blue-500 rounded-full" 
-                                    style={{ width: `${article.relevanceScore}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs text-apple-gray-400">{article.relevanceScore}% relevant</span>
-                              </div>
+                            {article.category && (
+                              <span className="text-xs text-apple-gray-400">{article.category}</span>
                             )}
                           </div>
                         </div>
