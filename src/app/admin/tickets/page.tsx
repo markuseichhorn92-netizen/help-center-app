@@ -303,17 +303,29 @@ export default function TicketsPage() {
     .filter(t => {
       // Status filter
       if (filterStatus === "unread") {
-        // "Neue Nachrichten" shows only tickets with unread messages (any status)
+        // "Neue Nachrichten" shows only ACTIVE tickets with unread messages
+        // Exclude closed/resolved tickets - they belong in their own categories
+        if (t.status === "closed" || t.status === "resolved") {
+          return false;
+        }
         if ((t.unreadCount || 0) === 0) {
           return false;
         }
       } else if (filterStatus === "escalated") {
-        // "Mitarbeiter angefordert" shows only tickets with aiStatus = 'escalated'
+        // "Mitarbeiter angefordert" shows only ACTIVE tickets with aiStatus = 'escalated'
+        // Exclude closed/resolved tickets
+        if (t.status === "closed" || t.status === "resolved") {
+          return false;
+        }
         if (t.aiStatus !== "escalated") {
           return false;
         }
       } else if (filterStatus === "ai_handling") {
-        // "KI bearbeitet" shows only tickets with aiStatus = 'active'
+        // "KI bearbeitet" shows only ACTIVE tickets with aiStatus = 'active'
+        // Exclude closed/resolved tickets
+        if (t.status === "closed" || t.status === "resolved") {
+          return false;
+        }
         if (t.aiStatus !== "active") {
           return false;
         }
@@ -329,6 +341,21 @@ export default function TicketsPage() {
       } else if (filterStatus === "open") {
         // "Offen" shows only tickets with status=open AND aiStatus != 'active'
         if (t.status !== "open" || t.aiStatus === "active") {
+          return false;
+        }
+      } else if (filterStatus === "in_progress") {
+        // "In Bearbeitung" shows only tickets with status=in_progress
+        if (t.status !== "in_progress") {
+          return false;
+        }
+      } else if (filterStatus === "resolved") {
+        // "Gelöst" shows ONLY resolved tickets
+        if (t.status !== "resolved") {
+          return false;
+        }
+      } else if (filterStatus === "closed") {
+        // "Geschlossen" shows ONLY closed tickets
+        if (t.status !== "closed") {
           return false;
         }
       } else if (t.status !== filterStatus) {
