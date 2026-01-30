@@ -2819,11 +2819,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     Die KI kennt den gesamten Gesprächsverlauf und kann kontextbezogen antworten.
                   </p>
                 </div>
-              </div>
 
-              {/* Footer Actions */}
-              <div className="flex-shrink-0 border-t border-apple-gray-100 px-5 py-4 sm:px-6 bg-apple-gray-50/50">
-                <div className="flex gap-3">
+                {/* Action Buttons - Inside scrollable area */}
+                <div className="flex gap-3 mt-6 pb-8">
                   <button
                     type="button"
                     onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
