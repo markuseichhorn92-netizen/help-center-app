@@ -267,6 +267,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   // Forward modal state
   const [showForwardModal, setShowForwardModal] = useState(false);
+  const [showFabMenu, setShowFabMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<TicketMessage | null>(null);
   const [forwardEmail, setForwardEmail] = useState('');
   const [forwardName, setForwardName] = useState('');
@@ -1255,13 +1257,102 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Mobile: Bottom Navigation Bar - OUTSIDE animate container! */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-apple-gray-200 px-4 py-3 pb-6">
-        <div className="flex items-center justify-between gap-2">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-apple-gray-200 px-3 py-2 pb-6">
+        {/* More Menu Popup */}
+        {showMoreMenu && (
+          <>
+            <div 
+              className="fixed inset-0 z-40" 
+              onClick={() => setShowMoreMenu(false)}
+            />
+            <div className="absolute bottom-full left-3 right-3 mb-2 bg-white rounded-xl shadow-xl border border-apple-gray-200 overflow-hidden z-50">
+              <div className="p-2 space-y-1">
+                {/* Artikel suchen */}
+                <button
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    const articlesSection = document.getElementById('relevant-articles');
+                    if (articlesSection) {
+                      articlesSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-apple-gray-600 active:bg-apple-gray-100"
+                >
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium">Artikel suchen</span>
+                </button>
+                
+                {/* Weiterleiten */}
+                <button
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    // Find the last message to forward
+                    const lastMsg = messages[messages.length - 1];
+                    if (lastMsg) {
+                      setForwardMessage(lastMsg);
+                      setShowForwardModal(true);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-apple-gray-600 active:bg-apple-gray-100"
+                >
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium">Per E-Mail weiterleiten</span>
+                </button>
+                
+                {/* Als Spam markieren */}
+                <button
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    if (confirm('Ticket als Spam markieren und in Spam-Ordner verschieben?')) {
+                      handleStatusChange('closed');
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-apple-gray-600 active:bg-apple-gray-100"
+                >
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium">Als Spam markieren</span>
+                </button>
+                
+                {/* Ticket löschen */}
+                <button
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    if (confirm('Ticket wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+                      // Delete logic here
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-red-600 active:bg-red-50"
+                >
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-medium">Ticket löschen</span>
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+        
+        <div className="flex items-center justify-between gap-1.5">
           {/* Previous Ticket */}
           <button
             onClick={() => prevTicket && router.push(`/admin/tickets/${prevTicket.id}`)}
             disabled={!prevTicket}
-            className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               prevTicket
                 ? 'bg-apple-gray-100 text-apple-gray-600 active:bg-apple-gray-200'
                 : 'bg-apple-gray-50 text-apple-gray-300'
@@ -1270,15 +1361,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
             </svg>
-            Vorher
           </button>
 
           {/* Quick Actions */}
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-1 justify-center">
             {ticket.status !== 'resolved' && (
               <button
                 onClick={() => handleStatusChange('resolved')}
-                className="px-4 py-2.5 rounded-lg bg-green-500 text-white text-sm font-medium active:bg-green-600"
+                className="px-3 py-2 rounded-lg bg-green-500 text-white text-sm font-medium active:bg-green-600"
               >
                 ✓ Lösen
               </button>
@@ -1286,24 +1376,37 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             {ticket.status !== 'closed' && (
               <button
                 onClick={() => handleStatusChange('closed')}
-                className="px-4 py-2.5 rounded-lg bg-gray-500 text-white text-sm font-medium active:bg-gray-600"
+                className="px-3 py-2 rounded-lg bg-gray-500 text-white text-sm font-medium active:bg-gray-600"
               >
                 Schließen
               </button>
             )}
           </div>
+          
+          {/* More Menu Button */}
+          <button
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+              showMoreMenu
+                ? 'bg-brand text-white'
+                : 'bg-apple-gray-100 text-apple-gray-600 active:bg-apple-gray-200'
+            }`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+            </svg>
+          </button>
 
           {/* Next Ticket */}
           <button
             onClick={() => nextTicket && router.push(`/admin/tickets/${nextTicket.id}`)}
             disabled={!nextTicket}
-            className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               nextTicket
                 ? 'bg-apple-gray-100 text-apple-gray-600 active:bg-apple-gray-200'
                 : 'bg-apple-gray-50 text-apple-gray-300'
             }`}
           >
-            Nächstes
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
             </svg>
@@ -1311,25 +1414,108 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Mobile: Floating Reply Button - OUTSIDE animate container! */}
-      <button
-        onClick={() => {
-          const replyArea = document.getElementById('reply-area');
-          if (replyArea) {
-            replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-              const editor = replyArea.querySelector('[contenteditable="true"]');
-              if (editor) (editor as HTMLElement).focus();
-            }, 500);
-          }
-        }}
-        className="md:hidden fixed bottom-28 right-4 z-40 w-14 h-14 bg-brand rounded-full shadow-lg flex items-center justify-center text-white hover:bg-brand-dark hover:shadow-xl transition-all active:scale-95"
-        title="Antworten"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-        </svg>
-      </button>
+      {/* Mobile: FAB with Speed Dial - OUTSIDE animate container! */}
+      <div className="md:hidden fixed bottom-28 right-4 z-40">
+        {/* Speed Dial Options */}
+        {showFabMenu && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 z-30" 
+              onClick={() => setShowFabMenu(false)}
+            />
+            {/* Options */}
+            <div className="absolute bottom-16 right-0 flex flex-col gap-3 items-end z-40">
+              {/* Antworten */}
+              <button
+                onClick={() => {
+                  setShowFabMenu(false);
+                  const replyArea = document.getElementById('reply-area');
+                  if (replyArea) {
+                    replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => {
+                      const editor = replyArea.querySelector('[contenteditable="true"]');
+                      if (editor) (editor as HTMLElement).focus();
+                    }, 500);
+                  }
+                }}
+                className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
+              >
+                <div className="w-10 h-10 bg-brand rounded-full flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium">Antworten</span>
+              </button>
+              
+              {/* KI-Assistent */}
+              <button
+                onClick={() => {
+                  setShowFabMenu(false);
+                  setShowAiMenu(true);
+                }}
+                className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
+              >
+                <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium">KI-Assistent</span>
+              </button>
+              
+              {/* Notiz hinzufügen */}
+              <button
+                onClick={() => {
+                  setShowFabMenu(false);
+                  // Scroll to notes section or open note modal
+                  const notesSection = document.getElementById('notes-section');
+                  if (notesSection) {
+                    notesSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
+              >
+                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium">Notiz</span>
+              </button>
+              
+              {/* Schnellantworten */}
+              <button
+                onClick={() => {
+                  setShowFabMenu(false);
+                  setShowQuickReplies(true);
+                }}
+                className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
+              >
+                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <span className="text-sm font-medium">Schnellantwort</span>
+              </button>
+            </div>
+          </>
+        )}
+        
+        {/* Main FAB Button */}
+        <button
+          onClick={() => setShowFabMenu(!showFabMenu)}
+          className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-all active:scale-95 ${
+            showFabMenu ? 'bg-apple-gray-600 rotate-45' : 'bg-brand hover:bg-brand-dark'
+          }`}
+        >
+          <svg className="w-6 h-6 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
 
       <div className="animate-fade-in pb-24 md:pb-0 pt-16 md:pt-0">
 
