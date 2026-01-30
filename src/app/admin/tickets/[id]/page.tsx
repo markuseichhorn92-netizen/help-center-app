@@ -1219,9 +1219,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const nextTicket = currentTicketIndex < sidebarTickets.length - 1 ? sidebarTickets[currentTicketIndex + 1] : null;
 
   return (
-    <div className="animate-fade-in pb-20 md:pb-0">
-      {/* Mobile: Sticky Header with Quick Actions */}
-      <div className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-apple-gray-100 -mx-4 px-4 py-3 mb-4">
+    <div className="animate-fade-in pb-24 md:pb-0 pt-16 md:pt-0">
+      {/* Mobile: Fixed Header with Quick Actions */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-apple-gray-100 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           {/* Back + Ticket Info */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1255,7 +1255,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Mobile: Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-apple-gray-200 px-4 py-2 safe-area-pb">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-apple-gray-200 px-4 py-3 pb-6">
         <div className="flex items-center justify-between gap-2">
           {/* Previous Ticket */}
           <button
@@ -1324,7 +1324,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             }, 500);
           }
         }}
-        className="md:hidden fixed bottom-24 right-4 z-30 w-14 h-14 bg-brand rounded-full shadow-lg flex items-center justify-center text-white hover:bg-brand-dark hover:shadow-xl transition-all active:scale-95"
+        className="md:hidden fixed bottom-28 right-4 z-40 w-14 h-14 bg-brand rounded-full shadow-lg flex items-center justify-center text-white hover:bg-brand-dark hover:shadow-xl transition-all active:scale-95"
         title="Antworten"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1335,7 +1335,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       {/* Mobile: Floating Button to open sidebar */}
       <button
         onClick={() => setSidebarOpen(true)}
-        className="xl:hidden fixed bottom-24 left-4 z-30 w-12 h-12 bg-white rounded-full shadow-lg border border-apple-gray-200 flex items-center justify-center text-apple-gray-500 hover:text-brand hover:shadow-xl transition-all"
+        className="xl:hidden fixed bottom-28 left-4 z-40 w-12 h-12 bg-white rounded-full shadow-lg border border-apple-gray-200 flex items-center justify-center text-apple-gray-500 hover:text-brand hover:shadow-xl transition-all"
         title="Andere Tickets"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
