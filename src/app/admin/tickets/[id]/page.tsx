@@ -1611,12 +1611,42 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           </div>
           <h1 className="text-2xl font-bold text-apple-gray-600 ml-8">{ticket.subject}</h1>
         </div>
-        <button
-          onClick={handleDelete}
-          className="text-sm text-red-500 hover:text-red-700 transition-colors self-start lg:self-center"
-        >
-          Ticket löschen
-        </button>
+        <div className="flex items-center gap-3 self-start lg:self-center">
+          <button
+            onClick={async () => {
+              const blockSender = confirm(`Ticket als Spam markieren?\n\nKlicke OK um auch den Absender (${ticket.customerEmail}) für zukünftige E-Mails zu blockieren.`);
+              
+              if (blockSender) {
+                try {
+                  await fetch('/api/admin/spam', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                      email: ticket.customerEmail,
+                      markExistingTickets: true 
+                    }),
+                  });
+                  alert(`${ticket.customerEmail} wurde zur Spam-Liste hinzugefügt.`);
+                } catch (e) {
+                  console.error('Failed to add to spam list:', e);
+                }
+              }
+              handleStatusChange('closed');
+            }}
+            className="text-sm text-orange-500 hover:text-orange-700 transition-colors flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+            Spam
+          </button>
+          <button
+            onClick={handleDelete}
+            className="text-sm text-red-500 hover:text-red-700 transition-colors"
+          >
+            Ticket löschen
+          </button>
+        </div>
       </div>
 
       {/* Main Layout with Desktop Sidebar */}
