@@ -45,8 +45,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de" className={inter.variable}>
-      <body className="antialiased min-h-screen flex flex-col bg-apple-gray-50 font-sans">
+    <html lang="de" className={inter.variable} suppressHydrationWarning>
+      <head>
+        {/* Prevent flash of wrong theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="antialiased min-h-screen flex flex-col bg-apple-gray-50 dark:bg-dark-bg font-sans transition-colors duration-300">
         {/* Glass Header */}
         <Header />
 

@@ -21,12 +21,25 @@
   --color-apple-gray-500: #6E6E73;
   --color-apple-gray-600: #1D1D1F;
 
+  /* Dark mode colors */
+  --color-dark-bg: #000000;
+  --color-dark-surface: #1C1C1E;
+  --color-dark-surface-elevated: #2C2C2E;
+  --color-dark-surface-card: #1C1C1E;
+  --color-dark-border: #38383A;
+  --color-dark-text: #F5F5F7;
+  --color-dark-text-secondary: #98989D;
+
   /* Custom shadows */
   --shadow-apple: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-apple-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
   --shadow-apple-xl: 0 12px 40px rgba(0, 0, 0, 0.15);
   --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 0, 0, 0.06);
   --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.1);
+
+  /* Dark mode shadows */
+  --shadow-dark-card: 0 2px 8px rgba(0, 0, 0, 0.3), 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-dark-card-hover: 0 4px 16px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.5);
 
   /* Custom border radius */
   --radius-apple: 12px;
@@ -39,6 +52,10 @@
   --color-brand-dark: #073440;
   --color-brand-light: #cfe5ea;
   --color-accent: #ffb54f;
+}
+
+.dark {
+  color-scheme: dark;
 }
 
 html {
@@ -54,6 +71,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   max-width: 100vw;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body,
+html.dark body {
+  background-color: #000000;
+  color: #F5F5F7;
 }
 
 ::selection {
@@ -61,10 +85,20 @@ body {
   color: #1D1D1F;
 }
 
+.dark ::selection {
+  background-color: rgba(207, 229, 234, 0.3);
+  color: #F5F5F7;
+}
+
 .glass {
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.dark .glass {
+  background: rgba(28, 28, 30, 0.8);
+  border-color: rgba(56, 56, 58, 0.5);
 }
 
 .transition-apple {
@@ -497,6 +531,128 @@ body {
 
 .bg-hero-gradient {
   background: linear-gradient(180deg, #cfe5ea 0%, #FBFBFD 100%);
+}
+
+.dark .bg-hero-gradient {
+  background: linear-gradient(180deg, #0a4958 0%, #000000 100%);
+}
+
+/* Dark mode cards */
+.dark .card-hover {
+  background-color: #1C1C1E;
+  border-color: #38383A;
+}
+
+.dark .card-hover:hover {
+  background-color: #2C2C2E;
+}
+
+/* Dark mode inputs */
+.dark .input-apple {
+  background-color: #1C1C1E;
+  border-color: #38383A;
+  color: #F5F5F7;
+}
+
+.dark .input-apple::placeholder {
+  color: #98989D;
+}
+
+.dark .input-apple:focus {
+  border-color: #cfe5ea;
+  box-shadow: 0 0 0 4px rgba(207, 229, 234, 0.2);
+}
+
+/* Dark mode buttons */
+.dark .btn-primary {
+  background-color: #cfe5ea;
+  color: #0a4958;
+}
+
+.dark .btn-primary:hover {
+  background-color: #b8d8df;
+}
+
+.dark .btn-secondary {
+  background-color: #2C2C2E;
+  color: #F5F5F7;
+  border: 1px solid #38383A;
+}
+
+.dark .btn-secondary:hover {
+  background-color: #38383A;
+}
+
+/* Dark mode editor content */
+.dark .editor-content .ProseMirror {
+  color: #F5F5F7;
+}
+
+.dark .editor-content .ProseMirror h2,
+.dark .editor-content .ProseMirror h3 {
+  color: #F5F5F7;
+}
+
+.dark .editor-content .ProseMirror blockquote {
+  border-left-color: #cfe5ea;
+  color: #98989D;
+}
+
+.dark .editor-content .ProseMirror pre {
+  background: #2C2C2E;
+}
+
+.dark .editor-content .ProseMirror code {
+  background: #2C2C2E;
+  color: #cfe5ea;
+}
+
+.dark .editor-content .ProseMirror hr {
+  border-top-color: #38383A;
+}
+
+.dark .editor-content .ProseMirror a {
+  color: #cfe5ea;
+}
+
+/* Dark mode tables */
+.dark .editor-content .ProseMirror table,
+.dark .prose table {
+  border-color: #38383A;
+}
+
+.dark .editor-content .ProseMirror th,
+.dark .editor-content .ProseMirror td,
+.dark .prose th,
+.dark .prose td {
+  border-color: #38383A;
+}
+
+.dark .editor-content .ProseMirror th,
+.dark .prose th {
+  background: #2C2C2E;
+  color: #F5F5F7;
+}
+
+/* Dark mode callouts */
+.dark .callout-info {
+  background: rgba(59, 130, 246, 0.15);
+  border-left-color: #60a5fa;
+}
+
+.dark .callout-success {
+  background: rgba(16, 185, 129, 0.15);
+  border-left-color: #34d399;
+}
+
+.dark .callout-warning {
+  background: rgba(245, 158, 11, 0.15);
+  border-left-color: #fbbf24;
+}
+
+.dark .callout-error {
+  background: rgba(239, 68, 68, 0.15);
+  border-left-color: #f87171;
 }
 
 @keyframes pulse-soft {

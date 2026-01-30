@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Header() {
   const pathname = usePathname();
@@ -15,7 +16,7 @@ export default function Header() {
   }
 
   return (
-    <header className="glass border-b border-apple-gray-200/50 sticky top-0 z-50">
+    <header className="glass border-b border-apple-gray-200/50 dark:border-dark-border sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -28,20 +29,20 @@ export default function Header() {
               className="h-8 w-auto transition-transform duration-300 group-hover:scale-105"
               priority
             />
-            <span className="text-lg font-semibold text-apple-gray-600 tracking-tight">Hilfe-Center</span>
+            <span className="text-lg font-semibold text-apple-gray-600 dark:text-dark-text tracking-tight">Hilfe-Center</span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden sm:flex items-center gap-6">
             <Link
               href="/support"
-              className="text-sm font-medium text-apple-gray-500 hover:text-brand transition-colors duration-200"
+              className="text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200"
             >
               Support
             </Link>
             <Link
               href="/portal"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-apple-gray-500 hover:text-brand transition-colors duration-200"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -52,13 +53,16 @@ export default function Header() {
               href="https://fit-inn-trier.de"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-medium text-apple-gray-500 hover:text-brand transition-colors duration-200"
+              className="inline-flex items-center gap-2 text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200"
             >
               <span>Zur Website</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </Link>
+            
+            {/* Dark Mode Toggle */}
+            <ThemeToggle />
           </nav>
 
           {/* Mobile Hamburger Button */}
@@ -81,18 +85,18 @@ export default function Header() {
 
         {/* Mobile Menu Dropdown */}
         {mobileMenuOpen && (
-          <div className="sm:hidden border-t border-apple-gray-200/50 py-4 space-y-3 animate-fade-in">
+          <div className="sm:hidden border-t border-apple-gray-200/50 dark:border-dark-border py-4 space-y-3 animate-fade-in">
             <Link
               href="/support"
               onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-medium text-apple-gray-500 hover:text-brand transition-colors duration-200 py-2"
+              className="block text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200 py-2"
             >
               Support
             </Link>
             <Link
               href="/portal"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 text-sm font-medium text-apple-gray-500 hover:text-brand transition-colors duration-200 py-2"
+              className="flex items-center gap-2 text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200 py-2"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -104,13 +108,19 @@ export default function Header() {
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 text-sm font-medium text-apple-gray-500 hover:text-brand transition-colors duration-200 py-2"
+              className="flex items-center gap-2 text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200 py-2"
             >
               <span>Zur Website</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
             </Link>
+            
+            {/* Dark Mode Toggle (Mobile) */}
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300">Erscheinungsbild</span>
+              <ThemeToggle />
+            </div>
           </div>
         )}
       </div>
