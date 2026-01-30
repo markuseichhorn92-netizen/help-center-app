@@ -3117,9 +3117,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             }}
           />
           <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-x-4 sm:bottom-auto sm:top-[10vh] sm:mx-auto sm:max-w-xl z-[100]">
-            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
               {/* Header */}
-              <div className="border-b border-apple-gray-100">
+              <div className="border-b border-apple-gray-100 flex-shrink-0">
                 <div className="flex justify-center pt-3 sm:hidden">
                   <div className="w-12 h-1.5 bg-apple-gray-200 rounded-full"></div>
                 </div>
@@ -3153,8 +3153,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="px-5 py-4 sm:px-6 space-y-4">
+              {/* Content - Scrollable */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6 space-y-4 pb-8">
                 {/* Original message preview */}
                 <div className="bg-apple-gray-50 rounded-xl p-3">
                   <p className="text-xs font-medium text-apple-gray-400 mb-1">Originalnachricht von {forwardMessage.senderName}</p>
