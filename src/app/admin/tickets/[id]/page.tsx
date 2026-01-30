@@ -2713,8 +2713,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
           />
           {/* Panel - Full sheet on mobile, centered modal on desktop */}
-          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-x-4 sm:bottom-auto sm:top-[10vh] sm:mx-auto sm:max-w-xl z-[100]">
-            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[80vh]">
+          <div className="fixed inset-x-0 bottom-16 max-h-[75vh] sm:bottom-auto sm:inset-x-4 sm:top-[10vh] sm:mx-auto sm:max-w-xl z-[100]">
+            <div className="bg-white rounded-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[75vh] sm:max-h-[80vh]">
               {/* Header */}
               <div className="flex-shrink-0 border-b border-apple-gray-100">
                 {/* Handle bar for mobile */}
@@ -2861,8 +2861,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               setShareCustomText("");
             }}
           />
-          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-x-4 sm:bottom-auto sm:top-[10vh] sm:mx-auto sm:max-w-md z-[100]">
-            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl">
+          <div className="fixed inset-x-0 bottom-16 max-h-[75vh] sm:bottom-auto sm:inset-x-4 sm:top-[10vh] sm:mx-auto sm:max-w-md z-[100]">
+            <div className="bg-white rounded-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[75vh]">
               {/* Header */}
               <div className="border-b border-apple-gray-100">
                 <div className="flex justify-center pt-3 sm:hidden">
@@ -3118,8 +3118,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               setForwardNote('');
             }}
           />
-          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-x-4 sm:bottom-auto sm:top-[10vh] sm:mx-auto sm:max-w-xl z-[100]">
-            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+          <div className="fixed inset-x-0 bottom-16 max-h-[75vh] sm:bottom-auto sm:inset-x-4 sm:top-[10vh] sm:mx-auto sm:max-w-xl z-[100]">
+            <div className="bg-white rounded-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[75vh]">
               {/* Header */}
               <div className="border-b border-apple-gray-100 flex-shrink-0">
                 <div className="flex justify-center pt-3 sm:hidden">
