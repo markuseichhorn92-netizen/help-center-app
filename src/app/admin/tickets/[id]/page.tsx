@@ -208,6 +208,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [textareaRows, setTextareaRows] = useState(4);
@@ -964,6 +965,53 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   const removeAttachment = (id: string) => {
     setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  // Drag & Drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/admin/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (res.ok) {
+          const attachment = await res.json();
+          setAttachments(prev => [...prev, attachment]);
+        } else {
+          const data = await res.json();
+          alert(`Fehler beim Hochladen von ${file.name}: ${data.message}`);
+        }
+      }
+    } catch (err) {
+      alert('Fehler beim Hochladen');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -1812,7 +1860,23 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Reply Form */}
-            <div id="reply-area" className="border-t border-apple-gray-100 p-4">
+            <div 
+              id="reply-area" 
+              className={`relative border-t border-apple-gray-100 p-4 transition-colors ${isDragging ? 'bg-brand/5 border-brand border-2 border-dashed' : ''}`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {isDragging && (
+                <div className="absolute inset-0 flex items-center justify-center bg-brand/10 rounded-lg z-10 pointer-events-none">
+                  <div className="text-center">
+                    <svg className="w-12 h-12 text-brand mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p className="text-brand font-medium">Datei hier ablegen</p>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSendReply}>
                 {/* AI Tools Bar */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
