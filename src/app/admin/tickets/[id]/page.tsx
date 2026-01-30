@@ -2795,12 +2795,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-black/60 z-50 animate-fade-in backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-[100] backdrop-blur-sm"
             onClick={() => { setShowCustomModal(false); setCustomInstruction(""); }}
           />
-          {/* Panel - Full sheet on mobile, modal on desktop */}
-          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-xl sm:w-full sm:mx-4 sm:max-h-[80vh]">
-            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl animate-slide-up sm:animate-fade-in flex flex-col max-h-[90vh] sm:max-h-[80vh]">
+          {/* Panel - Full sheet on mobile, centered modal on desktop */}
+          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-x-4 sm:bottom-auto sm:top-[10vh] sm:mx-auto sm:max-w-xl z-[100]">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[80vh]">
               {/* Header */}
               <div className="flex-shrink-0 border-b border-apple-gray-100">
                 {/* Handle bar for mobile */}
@@ -2939,7 +2939,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       {showShareModal && selectedArticle && (
         <>
           <div
-            className="fixed inset-0 bg-black/60 z-50 animate-fade-in backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-[100] backdrop-blur-sm"
             onClick={() => {
               setShowShareModal(false);
               setSelectedArticle(null);
@@ -2947,8 +2947,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               setShareCustomText("");
             }}
           />
-          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-md sm:w-full sm:mx-4">
-            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl animate-slide-up sm:animate-fade-in">
+          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-x-4 sm:bottom-auto sm:top-[10vh] sm:mx-auto sm:max-w-md z-[100]">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl">
               {/* Header */}
               <div className="border-b border-apple-gray-100">
                 <div className="flex justify-center pt-3 sm:hidden">
@@ -3195,7 +3195,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       {showForwardModal && forwardMessage && (
         <>
           <div
-            className="fixed inset-0 bg-black/60 z-50 animate-fade-in backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-[100] backdrop-blur-sm"
             onClick={() => {
               setShowForwardModal(false);
               setForwardMessage(null);
@@ -3204,8 +3204,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               setForwardNote('');
             }}
           />
-          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-xl sm:w-full sm:mx-4">
-            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl animate-slide-up sm:animate-fade-in">
+          <div className="fixed inset-x-0 bottom-0 max-h-[90vh] sm:inset-x-4 sm:bottom-auto sm:top-[10vh] sm:mx-auto sm:max-w-xl z-[100]">
+            <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl">
               {/* Header */}
               <div className="border-b border-apple-gray-100">
                 <div className="flex justify-center pt-3 sm:hidden">
