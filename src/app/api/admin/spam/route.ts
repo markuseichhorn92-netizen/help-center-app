@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  getBlockedEmails,
-  getBlockedDomains,
-  addEmailToBlocklist,
-  addDomainToBlocklist,
-  removeEmailFromBlocklist,
-  removeDomainFromBlocklist,
-  getSpamStats,
-} from '@/lib/spam-protection';
+import { addToSpamBlacklist, removeFromSpamBlacklist, getSpamBlacklist, markAllTicketsFromEmailAsSpam } from '@/lib/spam';
 
-// GET: Get spam statistics and blocklists
+// GET /api/admin/spam - Get spam blacklist
 export async function GET(req: NextRequest) {
   const sessionCookie = req.cookies.get('admin_session');
   if (!sessionCookie?.value) {
@@ -17,38 +9,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { searchParams } = new URL(req.url);
-    const includeStats = searchParams.get('includeStats') === 'true';
-
-    const [blockedEmails, blockedDomains] = await Promise.all([
-      getBlockedEmails(),
-      getBlockedDomains(),
-    ]);
-
-    const response: {
-      blockedEmails: string[];
-      blockedDomains: string[];
-      stats?: Awaited<ReturnType<typeof getSpamStats>>;
-    } = {
-      blockedEmails,
-      blockedDomains,
-    };
-
-    if (includeStats) {
-      response.stats = await getSpamStats();
-    }
-
-    return NextResponse.json(response);
+    const blacklist = await getSpamBlacklist();
+    return NextResponse.json({ blacklist });
   } catch (error) {
-    console.error('Spam config error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unbekannter Fehler' },
-      { status: 500 }
-    );
+    console.error('Failed to get spam blacklist:', error);
+    return NextResponse.json({ error: 'Fehler beim Laden der Spam-Liste' }, { status: 500 });
   }
 }
 
-// POST: Add to blocklist
+// POST /api/admin/spam - Add email to spam blacklist
 export async function POST(req: NextRequest) {
   const sessionCookie = req.cookies.get('admin_session');
   if (!sessionCookie?.value) {
@@ -56,54 +25,33 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const body = await req.json();
-    const { type, value } = body;
+    const { email, markExistingTickets } = await req.json();
 
-    if (!type || !value) {
-      return NextResponse.json(
-        { error: 'type und value sind erforderlich' },
-        { status: 400 }
-      );
+    if (!email) {
+      return NextResponse.json({ error: 'E-Mail-Adresse erforderlich' }, { status: 400 });
     }
 
-    if (type === 'email') {
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(value)) {
-        return NextResponse.json(
-          { error: 'Ungültiges E-Mail-Format' },
-          { status: 400 }
-        );
-      }
-      await addEmailToBlocklist(value);
-    } else if (type === 'domain') {
-      // Validate domain format
-      const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}$/;
-      if (!domainRegex.test(value)) {
-        return NextResponse.json(
-          { error: 'Ungültiges Domain-Format' },
-          { status: 400 }
-        );
-      }
-      await addDomainToBlocklist(value);
-    } else {
-      return NextResponse.json(
-        { error: 'type muss "email" oder "domain" sein' },
-        { status: 400 }
-      );
+    // Add to blacklist
+    await addToSpamBlacklist(email, 'Manuell hinzugefügt');
+
+    // Optionally mark all existing tickets from this email as spam
+    let ticketsMarked = 0;
+    if (markExistingTickets) {
+      ticketsMarked = await markAllTicketsFromEmailAsSpam(email);
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true, 
+      message: `${email} zur Spam-Liste hinzugefügt`,
+      ticketsMarked 
+    });
   } catch (error) {
-    console.error('Add to blocklist error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unbekannter Fehler' },
-      { status: 500 }
-    );
+    console.error('Failed to add to spam blacklist:', error);
+    return NextResponse.json({ error: 'Fehler beim Hinzufügen zur Spam-Liste' }, { status: 500 });
   }
 }
 
-// DELETE: Remove from blocklist
+// DELETE /api/admin/spam - Remove email from spam blacklist
 export async function DELETE(req: NextRequest) {
   const sessionCookie = req.cookies.get('admin_session');
   if (!sessionCookie?.value) {
@@ -111,34 +59,20 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type');
-    const value = searchParams.get('value');
+    const { email } = await req.json();
 
-    if (!type || !value) {
-      return NextResponse.json(
-        { error: 'type und value sind erforderlich' },
-        { status: 400 }
-      );
+    if (!email) {
+      return NextResponse.json({ error: 'E-Mail-Adresse erforderlich' }, { status: 400 });
     }
 
-    if (type === 'email') {
-      await removeEmailFromBlocklist(value);
-    } else if (type === 'domain') {
-      await removeDomainFromBlocklist(value);
-    } else {
-      return NextResponse.json(
-        { error: 'type muss "email" oder "domain" sein' },
-        { status: 400 }
-      );
-    }
+    await removeFromSpamBlacklist(email);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true, 
+      message: `${email} von Spam-Liste entfernt` 
+    });
   } catch (error) {
-    console.error('Remove from blocklist error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unbekannter Fehler' },
-      { status: 500 }
-    );
+    console.error('Failed to remove from spam blacklist:', error);
+    return NextResponse.json({ error: 'Fehler beim Entfernen von der Spam-Liste' }, { status: 500 });
   }
 }

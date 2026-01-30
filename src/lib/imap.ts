@@ -203,6 +203,14 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             continue;
           }
 
+          // Check if sender is on spam blacklist
+          const { isSpamEmail } = await import('./spam');
+          if (await isSpamEmail(senderEmail)) {
+            debug.push(`⛔ Spam-Absender übersprungen: ${senderEmail}`);
+            await client.messageFlagsAdd(uid, ['\\Seen']);
+            continue;
+          }
+
           const subject = parsed.subject || 'Kein Betreff';
           const messageId = parsed.messageId || undefined;
 

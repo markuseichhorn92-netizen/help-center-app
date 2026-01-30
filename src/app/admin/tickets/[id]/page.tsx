@@ -3519,11 +3519,27 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
                 {/* Als Spam markieren */}
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setShowMoreMenu(false);
-                    if (confirm('Ticket als Spam markieren und schließen?')) {
-                      handleStatusChange('closed');
+                    const blockSender = confirm(`Ticket als Spam markieren?\n\nKlicke OK um auch den Absender (${ticket.customerEmail}) für zukünftige E-Mails zu blockieren.`);
+                    
+                    if (blockSender) {
+                      try {
+                        // Add sender to spam blacklist
+                        await fetch('/api/admin/spam', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ 
+                            email: ticket.customerEmail,
+                            markExistingTickets: true 
+                          }),
+                        });
+                        alert(`${ticket.customerEmail} wurde zur Spam-Liste hinzugefügt. Alle Tickets von diesem Absender wurden geschlossen.`);
+                      } catch (e) {
+                        console.error('Failed to add to spam list:', e);
+                      }
                     }
+                    handleStatusChange('closed');
                   }}
                   className="w-full flex items-center gap-3 p-4 bg-orange-50 rounded-xl text-left active:bg-orange-100"
                 >
@@ -3533,8 +3549,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     </svg>
                   </div>
                   <div>
-                    <span className="block text-sm font-semibold text-orange-900">Als Spam markieren</span>
-                    <span className="block text-xs text-orange-600">Ticket schließen und als Spam kennzeichnen</span>
+                    <span className="block text-sm font-semibold text-orange-900">Absender als Spam blockieren</span>
+                    <span className="block text-xs text-orange-600">Ticket schließen & Absender blockieren</span>
                   </div>
                 </button>
 
