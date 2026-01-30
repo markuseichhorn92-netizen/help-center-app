@@ -1219,8 +1219,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const nextTicket = currentTicketIndex < sidebarTickets.length - 1 ? sidebarTickets[currentTicketIndex + 1] : null;
 
   return (
-    <div className="animate-fade-in pb-24 md:pb-0 pt-16 md:pt-0">
-      {/* Mobile: Fixed Header with Quick Actions */}
+    <>
+      {/* Mobile: Fixed Header with Quick Actions - OUTSIDE animate container! */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-apple-gray-100 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           {/* Back + Ticket Info */}
@@ -1254,7 +1254,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Mobile: Bottom Navigation Bar */}
+      {/* Mobile: Bottom Navigation Bar - OUTSIDE animate container! */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-apple-gray-200 px-4 py-3 pb-6">
         <div className="flex items-center justify-between gap-2">
           {/* Previous Ticket */}
@@ -1311,13 +1311,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* Mobile: Floating Reply Button */}
+      {/* Mobile: Floating Reply Button - OUTSIDE animate container! */}
       <button
         onClick={() => {
           const replyArea = document.getElementById('reply-area');
           if (replyArea) {
             replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Focus on editor after scroll
             setTimeout(() => {
               const editor = replyArea.querySelector('[contenteditable="true"]');
               if (editor) (editor as HTMLElement).focus();
@@ -1331,6 +1330,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
         </svg>
       </button>
+
+      <div className="animate-fade-in pb-24 md:pb-0 pt-16 md:pt-0">
 
       {/* Mobile: Floating Button to open sidebar */}
       <button
@@ -3153,6 +3154,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       <audio ref={audioRef} preload="auto">
         <source src="/sounds/notification.mp3" type="audio/mpeg" />
       </audio>
-    </div>
+      </div>
+    </>
   );
 }
