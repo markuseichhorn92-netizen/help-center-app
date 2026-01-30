@@ -144,12 +144,12 @@ export default function Home() {
       <section className="w-full bg-hero-gradient">
         <div className="text-center py-16 md:py-24 px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-apple-gray-600 dark:text-white tracking-tight leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#1D1D1F] dark:text-white tracking-tight leading-tight">
               Wie können wir
               <br />
               dir helfen?
             </h1>
-            <p className="mt-6 text-lg text-apple-gray-500 dark:text-apple-gray-300 max-w-lg mx-auto">
+            <p className="mt-6 text-lg text-[#6E6E73] dark:text-[#D2D2D7] max-w-lg mx-auto">
               Finde Antworten auf deine Fragen im FIT INN Hilfe-Center.
             </p>
 
@@ -166,7 +166,7 @@ export default function Home() {
 
       {/* Categories Section */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        <h2 className="text-2xl md:text-3xl font-bold text-apple-gray-600 dark:text-white tracking-tight mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] dark:text-white tracking-tight mb-8">
           Themen durchsuchen
         </h2>
 
@@ -182,7 +182,7 @@ export default function Home() {
                 className={`group relative p-5 rounded-apple-xl border transition-all duration-300 text-left ${
                   isSelected
                     ? 'bg-brand text-white border-brand shadow-lg'
-                    : 'bg-white dark:bg-dark-surface border-apple-gray-100 dark:border-dark-border hover:border-brand/30 dark:hover:border-brand-light/30 hover:shadow-card'
+                    : 'bg-[#FFFFFF] dark:bg-[#1C1C1E] border-[#E8E8ED] dark:border-[#38383A] hover:border-brand/30 dark:hover:border-brand-light/30 hover:shadow-card'
                 }`}
               >
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors ${
@@ -192,11 +192,11 @@ export default function Home() {
                 }`}>
                   <CategoryIcon icon={category.icon} />
                 </div>
-                <h3 className={`font-semibold mb-1 ${isSelected ? 'text-white' : 'text-apple-gray-600 dark:text-white'}`}>
+                <h3 className={`font-semibold mb-1 ${isSelected ? 'text-white' : 'text-[#1D1D1F] dark:text-white'}`}>
                   {category.name}
                 </h3>
                 {category.description && (
-                  <p className={`text-xs line-clamp-2 ${isSelected ? 'text-white/80' : 'text-apple-gray-400 dark:text-apple-gray-300'}`}>
+                  <p className={`text-xs line-clamp-2 ${isSelected ? 'text-white/80' : 'text-[#86868B] dark:text-[#D2D2D7]'}`}>
                     {category.description}
                   </p>
                 )}
@@ -204,7 +204,7 @@ export default function Home() {
                   <span className={`absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full ${
                     isSelected
                       ? 'bg-white/20 text-white'
-                      : 'bg-apple-gray-100 dark:bg-dark-border text-apple-gray-500 dark:text-apple-gray-300'
+                      : 'bg-[#F5F5F7] dark:bg-[#38383A] text-[#6E6E73] dark:text-[#D2D2D7]'
                   }`}>
                     {count}
                   </span>
@@ -234,7 +234,7 @@ export default function Home() {
       {/* Articles Section */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 md:pb-16">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-apple-gray-600 dark:text-white tracking-tight">
+          <h2 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] dark:text-white tracking-tight">
             {selectedCategory
               ? categories.find(c => c.id === selectedCategory)?.name || 'Artikel'
               : 'Alle Artikel'
@@ -251,9 +251,9 @@ export default function Home() {
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white dark:bg-dark-surface rounded-apple-lg p-6 shadow-card dark:shadow-dark-card animate-pulse-soft">
-                <div className="h-5 bg-apple-gray-200 dark:bg-dark-border rounded-lg w-3/4 mb-3"></div>
-                <div className="h-4 bg-apple-gray-100 dark:bg-dark-surface-elevated rounded-lg w-1/2"></div>
+              <div key={i} className="bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-apple-lg p-6 shadow-card animate-pulse-soft">
+                <div className="h-5 bg-[#E8E8ED] dark:bg-[#38383A] rounded-lg w-3/4 mb-3"></div>
+                <div className="h-4 bg-[#F5F5F7] dark:bg-[#2C2C2E] rounded-lg w-1/2"></div>
               </div>
             ))}
           </div>
@@ -271,12 +271,12 @@ export default function Home() {
           <>
             {filteredArticles.length === 0 ? (
               <div className="text-center py-16">
-                <div className="w-16 h-16 bg-apple-gray-100 dark:bg-dark-surface rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-apple-gray-400 dark:text-apple-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-16 h-16 bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-[#86868B] dark:text-[#D2D2D7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <p className="text-apple-gray-500 dark:text-apple-gray-300 text-lg">
+                <p className="text-[#6E6E73] dark:text-[#D2D2D7] text-lg">
                   {searchQuery || selectedCategory
                     ? 'Keine Artikel entsprechen deinen Filterkriterien.'
                     : 'Noch keine Artikel vorhanden.'}
@@ -305,7 +305,7 @@ export default function Home() {
                       className="stagger-item block group"
                       style={{ animationDelay: `${index * 0.05}s` }}
                     >
-                      <div className="bg-white dark:bg-dark-surface rounded-apple-lg shadow-card dark:shadow-dark-card card-hover h-full p-6 flex flex-col justify-between border border-apple-gray-100 dark:border-dark-border group-hover:shadow-card-hover dark:group-hover:shadow-dark-card-hover group-hover:border-apple-gray-200 dark:group-hover:border-dark-border">
+                      <div className="bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-apple-lg shadow-card dark:shadow-dark-card card-hover h-full p-6 flex flex-col justify-between border border-[#E8E8ED] dark:border-[#38383A] group-hover:shadow-card-hover group-hover:border-[#D2D2D7] dark:group-hover:border-[#38383A]">
                         <div>
                           {articleCategory && (
                             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand bg-brand/10 px-2.5 py-1 rounded-full mb-3">
@@ -313,10 +313,10 @@ export default function Home() {
                               {articleCategory.name}
                             </span>
                           )}
-                          <h3 className="text-lg font-semibold text-apple-gray-600 dark:text-white mb-2 group-hover:text-brand dark:group-hover:text-brand-light transition-colors duration-200">
+                          <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-white mb-2 group-hover:text-brand transition-colors duration-200">
                             {article.title}
                           </h3>
-                          <p className="text-sm text-apple-gray-400 dark:text-apple-gray-300">
+                          <p className="text-sm text-[#86868B] dark:text-[#D2D2D7]">
                             {new Date(article.createdAt).toLocaleDateString('de-DE', {
                               day: 'numeric',
                               month: 'long',
