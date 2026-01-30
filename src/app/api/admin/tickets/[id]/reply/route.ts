@@ -3,6 +3,7 @@ import { getTicket, createMessage, getTicketMessages, updateTicket, Attachment }
 import { sendTicketReply } from '@/lib/resend';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { generatePortalToken, getCustomerPresence } from '@/lib/portal';
+import { trackFirstResponse } from '@/lib/sla';
 
 export async function POST(
   req: NextRequest,
@@ -87,6 +88,9 @@ export async function POST(
         deliveryChannel: 'whatsapp',
       });
 
+      // Track first response for SLA
+      await trackFirstResponse(id);
+
       return NextResponse.json({
         message,
         whatsappSent: whatsappResult.success,
@@ -158,6 +162,9 @@ export async function POST(
         attachments: attachments || [],
         deliveryChannel,
       });
+
+      // Track first response for SLA
+      await trackFirstResponse(id);
 
       return NextResponse.json({
         message,

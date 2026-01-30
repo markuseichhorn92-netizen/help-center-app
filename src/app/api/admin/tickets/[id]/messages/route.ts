@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTicket, getTicketMessages, createMessage, updateTicket } from '@/lib/tickets';
+import { trackFirstResponse } from '@/lib/sla';
 import { createClient } from '@vercel/kv';
 
 const kv = createClient({
@@ -79,6 +80,9 @@ export async function POST(
       senderName: senderName || 'Support Team',
       senderEmail: senderEmail || process.env.SUPPORT_EMAIL || 'support@fit-inn-trier.de',
     });
+
+    // Track first response for SLA
+    await trackFirstResponse(id);
 
     return NextResponse.json(message, { status: 201 });
   } catch (error) {

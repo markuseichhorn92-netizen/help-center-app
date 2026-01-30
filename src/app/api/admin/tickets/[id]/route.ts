@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTicket, updateTicket, updateTicketTags, moveTicketToTrash, permanentlyDeleteTicket } from '@/lib/tickets';
+import { createRatingToken, hasTicketRating } from '@/lib/ticket-rating';
+import { sendRatingRequestEmail } from '@/lib/resend';
 
 export async function GET(
   req: NextRequest,
@@ -39,6 +41,12 @@ export async function PUT(
     const body = await req.json();
     const { status, priority, assignedTo, tags } = body;
 
+    // Get current ticket state before update
+    const currentTicket = await getTicket(id);
+    if (!currentTicket) {
+      return NextResponse.json({ message: 'Ticket nicht gefunden.' }, { status: 404 });
+    }
+
     // Handle tags separately if provided
     if (tags !== undefined && Array.isArray(tags)) {
       await updateTicketTags(id, tags);
@@ -48,6 +56,29 @@ export async function PUT(
 
     if (!updatedTicket) {
       return NextResponse.json({ message: 'Ticket nicht gefunden.' }, { status: 404 });
+    }
+
+    // Auto-send rating request when ticket is closed (from any other status)
+    if (status === 'closed' && currentTicket.status !== 'closed') {
+      try {
+        // Check if rating already exists
+        const hasRating = await hasTicketRating(id);
+        if (!hasRating) {
+          // Create rating token and send email
+          const tokenData = await createRatingToken(id);
+          await sendRatingRequestEmail({
+            customerEmail: currentTicket.customerEmail,
+            customerName: currentTicket.customerName,
+            ticketNumber: currentTicket.ticketNumber,
+            subject: currentTicket.subject,
+            ratingToken: tokenData.token,
+          });
+          console.log(`Auto-sent rating request for ticket ${currentTicket.ticketNumber}`);
+        }
+      } catch (ratingError) {
+        // Log but don't fail the status update
+        console.error('Failed to send rating request:', ratingError);
+      }
     }
 
     return NextResponse.json(updatedTicket);

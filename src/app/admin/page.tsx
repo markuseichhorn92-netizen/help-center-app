@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
+import { SLAWidget, CSATWidget } from "@/components/dashboard";
 
 interface DashboardData {
   tickets: {
@@ -406,6 +407,12 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* SLA & CSAT Widgets */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SLAWidget />
+        <CSATWidget />
       </div>
 
       {/* Bottom Section */}
