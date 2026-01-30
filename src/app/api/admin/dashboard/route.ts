@@ -27,12 +27,16 @@ export async function GET(req: NextRequest) {
 
         // Get message IDs for this ticket
         const messageIds = await kv.smembers(`ticket:${id}:messages`);
+        
+        // Get the set of read message IDs
+        const readMessageIds = await kv.smembers(`ticket:${id}:read`);
+        const readSet = new Set(readMessageIds);
 
-        // Count unread messages (from customer, not read by admin)
+        // Count unread messages (from customer, not in read set)
         let unreadCount = 0;
         for (const msgId of messageIds) {
           const msg = await kv.hgetall(`message:${msgId}`);
-          if (msg && msg.sender === 'customer' && !msg.readByAdmin) {
+          if (msg && msg.sender === 'customer' && !readSet.has(msgId as string)) {
             unreadCount++;
           }
         }
