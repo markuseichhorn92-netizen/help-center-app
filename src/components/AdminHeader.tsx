@@ -4,6 +4,47 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
+// Mini theme toggle for admin header
+function MiniThemeToggle() {
+  const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const stored = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setIsDark(stored === 'dark' || (!stored && prefersDark));
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = isDark ? 'light' : 'dark';
+    setIsDark(!isDark);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
+
+  if (!mounted) return <div className="w-11 h-11" />;
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+      aria-label={isDark ? 'Zu hellem Modus wechseln' : 'Zu dunklem Modus wechseln'}
+      title={isDark ? 'Heller Modus' : 'Dunkler Modus'}
+    >
+      {isDark ? (
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 3a1 1 0 011 1v1a1 1 0 11-2 0V4a1 1 0 011-1zm0 15a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm9-6a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5 12a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zm14.07-6.36a1 1 0 010 1.41l-.71.71a1 1 0 11-1.41-1.41l.71-.71a1 1 0 011.41 0zM7.05 17.66a1 1 0 010 1.41l-.71.71a1 1 0 11-1.41-1.41l.71-.71a1 1 0 011.41 0zm11.31 1.41a1 1 0 01-1.41 0l-.71-.71a1 1 0 111.41-1.41l.71.71a1 1 0 010 1.41zM7.05 6.34a1 1 0 01-1.41 0l-.71-.71a1 1 0 011.41-1.41l.71.71a1 1 0 010 1.41zM12 8a4 4 0 100 8 4 4 0 000-8z"/>
+        </svg>
+      ) : (
+        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+        </svg>
+      )}
+    </button>
+  );
+}
+
 const navItems = [
   {
     name: "Dashboard",
@@ -263,7 +304,7 @@ export default function AdminHeader() {
   };
 
   return (
-    <header className={`bg-white border-b border-apple-gray-200 sticky top-0 z-40 ${isMobileHidden ? 'hidden md:block' : ''}`}>
+    <header className={`bg-white dark:bg-dark-card border-b border-apple-gray-200 dark:border-dark-border sticky top-0 z-40 transition-colors duration-300 ${isMobileHidden ? 'hidden md:block' : ''}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo / Brand */}
@@ -299,10 +340,13 @@ export default function AdminHeader() {
 
           {/* Right side actions */}
           <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <MiniThemeToggle />
+
             {/* Push Debug Link */}
             <Link
               href="/admin/debug-push"
-              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-apple-gray-300 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
               title="Push Debug"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

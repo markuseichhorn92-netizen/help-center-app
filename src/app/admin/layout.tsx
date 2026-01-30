@@ -89,7 +89,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-apple-gray-50">
+    <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg transition-colors duration-300">
       <AdminHeader />
       <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 md:py-8 ${isTicketDetailPage ? 'py-0' : 'py-6'}`}>
         <ErrorBoundary>
