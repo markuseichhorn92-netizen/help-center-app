@@ -333,6 +333,7 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             content: content.trim(),
             priority: 'medium',
             attachments,
+            channel: 'email',  // Important: This disables AI auto-reply for emails
           });
 
           // Ensure contact exists

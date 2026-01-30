@@ -404,15 +404,21 @@ export default function TicketsPage() {
     setCurrentPage(1);
   }, [filterStatus, searchQuery, itemsPerPage]);
 
+  // Helper: check if ticket is active (not closed or resolved)
+  const isActiveTicket = (t: Ticket) => t.status !== "closed" && t.status !== "resolved";
+
   const stats = {
     total: tickets.length,
     // "open" count excludes tickets that are being handled by AI
     open: tickets.filter(t => t.status === "open" && t.aiStatus !== "active").length,
     inProgress: tickets.filter(t => t.status === "in_progress").length,
     resolved: tickets.filter(t => t.status === "resolved").length,
-    unread: tickets.filter(t => (t.unreadCount || 0) > 0).length,
-    aiHandling: tickets.filter(t => t.aiStatus === "active").length,
-    escalated: tickets.filter(t => t.aiStatus === "escalated").length,
+    // Only count unread for ACTIVE tickets (not closed/resolved)
+    unread: tickets.filter(t => isActiveTicket(t) && (t.unreadCount || 0) > 0).length,
+    // Only count AI handling for ACTIVE tickets
+    aiHandling: tickets.filter(t => isActiveTicket(t) && t.aiStatus === "active").length,
+    // Only count escalated for ACTIVE tickets
+    escalated: tickets.filter(t => isActiveTicket(t) && t.aiStatus === "escalated").length,
   };
 
   if (loading) {
