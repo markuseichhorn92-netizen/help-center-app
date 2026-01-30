@@ -1271,10 +1271,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <button
                   onClick={() => {
                     setShowMoreMenu(false);
-                    const articlesSection = document.getElementById('relevant-articles');
-                    if (articlesSection) {
-                      articlesSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                    // Open sidebar and show info - articles are in desktop sidebar
+                    setSidebarOpen(true);
+                    setTimeout(() => {
+                      alert('Artikel-Suche ist in der Desktop-Ansicht verfügbar. Drehe dein Gerät oder nutze einen größeren Bildschirm.');
+                    }, 300);
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-apple-gray-600 active:bg-apple-gray-100"
                 >
@@ -1453,7 +1454,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               <button
                 onClick={() => {
                   setShowFabMenu(false);
-                  setShowAiMenu(true);
+                  // Scroll to reply area first, then open AI menu
+                  const replyArea = document.getElementById('reply-area');
+                  if (replyArea) {
+                    replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => {
+                      setShowAiMenu(true);
+                    }, 300);
+                  }
                 }}
                 className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
               >
@@ -1465,15 +1473,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <span className="text-sm font-medium">KI-Assistent</span>
               </button>
               
-              {/* Notiz hinzufügen */}
+              {/* Notiz hinzufügen - Opens sidebar on mobile */}
               <button
                 onClick={() => {
                   setShowFabMenu(false);
-                  // Scroll to notes section or open note modal
-                  const notesSection = document.getElementById('notes-section');
-                  if (notesSection) {
-                    notesSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }
+                  // On mobile, open sidebar (which has notes on desktop)
+                  // For now, show alert - will add mobile notes modal later
+                  setSidebarOpen(true);
+                  setTimeout(() => {
+                    alert('Notizen sind in der Desktop-Ansicht verfügbar. Drehe dein Gerät oder nutze einen größeren Bildschirm.');
+                  }, 300);
                 }}
                 className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
               >
@@ -1489,7 +1498,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               <button
                 onClick={() => {
                   setShowFabMenu(false);
-                  setShowQuickReplies(true);
+                  // Scroll to reply area first, then open quick replies
+                  const replyArea = document.getElementById('reply-area');
+                  if (replyArea) {
+                    replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => {
+                      setShowQuickReplies(true);
+                    }, 300);
+                  }
                 }}
                 className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
               >
@@ -2441,7 +2457,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Internal Notes */}
-          <div className="bg-yellow-50 rounded-apple-xl shadow-card border border-yellow-200 p-5">
+          <div id="notes-section" className="bg-yellow-50 rounded-apple-xl shadow-card border border-yellow-200 p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-yellow-700 uppercase tracking-wider flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2571,7 +2587,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           </div>
 
           {/* Relevant Articles */}
-          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
+          <div id="relevant-articles" className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-apple-gray-400 uppercase tracking-wider">Passende Artikel</h3>
               <button
