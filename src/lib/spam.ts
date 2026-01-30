@@ -32,7 +32,7 @@ export async function getSpamBlacklist(): Promise<string[]> {
 }
 
 // Mark all tickets from an email as spam
-export async function markAllTicketsFromEmailAsSpam(email: string): Promise<number> {
+export async function markAllTicketsFromEmailAsSpam(email: string, reason?: string): Promise<number> {
   const normalizedEmail = email.toLowerCase().trim();
   const ticketIds = await kv.smembers('tickets:ids');
   let count = 0;
@@ -40,7 +40,16 @@ export async function markAllTicketsFromEmailAsSpam(email: string): Promise<numb
   for (const ticketId of ticketIds) {
     const ticket = await kv.hgetall(`ticket:${ticketId}`);
     if (ticket && (ticket.customerEmail as string)?.toLowerCase() === normalizedEmail) {
-      await kv.hset(`ticket:${ticketId}`, { status: 'closed', isSpam: 'true' });
+      // Update ticket with spam flag and reason
+      await kv.hset(`ticket:${ticketId}`, { 
+        status: 'closed', 
+        isSpam: 'true',
+        spamReason: reason || 'E-Mail-Adresse blockiert',
+        updatedAt: new Date().toISOString()
+      });
+      // Move from active tickets to spam set
+      await kv.srem('tickets:ids', ticketId);
+      await kv.sadd('tickets:spam', ticketId);
       count++;
     }
   }

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Optionally mark all existing tickets from this email as spam
     let ticketsMarked = 0;
     if (markExistingTickets) {
-      ticketsMarked = await markAllTicketsFromEmailAsSpam(email);
+      ticketsMarked = await markAllTicketsFromEmailAsSpam(email, 'E-Mail-Adresse blockiert');
     }
 
     return NextResponse.json({ 
