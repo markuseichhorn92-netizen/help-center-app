@@ -192,6 +192,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [error, setError] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [sending, setSending] = useState(false);
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
+
+  // Default Quick Reply Templates (used if no custom ones loaded)
+  const defaultQuickReplies = [
+    { id: "1", title: "Danke", content: "Vielen Dank für Ihre Nachricht! Wir kümmern uns darum." },
+    { id: "2", title: "Rückfrage", content: "Könnten Sie uns bitte noch weitere Details mitteilen?" },
+    { id: "3", title: "Erledigt", content: "Ihr Anliegen wurde bearbeitet. Bei weiteren Fragen stehen wir gerne zur Verfügung." },
+    { id: "4", title: "Weiterleiten", content: "Ich habe Ihre Anfrage an die zuständige Abteilung weitergeleitet." },
+  ];
   const [sendEmail, setSendEmail] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
   const [showAiMenu, setShowAiMenu] = useState(false);
@@ -1302,6 +1311,27 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
+      {/* Mobile: Floating Reply Button */}
+      <button
+        onClick={() => {
+          const replyArea = document.getElementById('reply-area');
+          if (replyArea) {
+            replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Focus on editor after scroll
+            setTimeout(() => {
+              const editor = replyArea.querySelector('[contenteditable="true"]');
+              if (editor) (editor as HTMLElement).focus();
+            }, 500);
+          }
+        }}
+        className="md:hidden fixed bottom-24 right-4 z-30 w-14 h-14 bg-brand rounded-full shadow-lg flex items-center justify-center text-white hover:bg-brand-dark hover:shadow-xl transition-all active:scale-95"
+        title="Antworten"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+        </svg>
+      </button>
+
       {/* Mobile: Floating Button to open sidebar */}
       <button
         onClick={() => setSidebarOpen(true)}
@@ -1682,7 +1712,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Reply Form */}
-            <div className="border-t border-apple-gray-100 p-4">
+            <div id="reply-area" className="border-t border-apple-gray-100 p-4">
               <form onSubmit={handleSendReply}>
                 {/* AI Tools Bar */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -1883,6 +1913,21 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   variant="ticket"
                   placeholder="Antwort schreiben..."
                 />
+
+                {/* Quick Reply Templates - Mobile optimized */}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="text-xs text-apple-gray-400 w-full md:w-auto">Schnellantwort:</span>
+                  {(quickReplies.length > 0 ? quickReplies : defaultQuickReplies).map((qr) => (
+                    <button
+                      key={qr.id}
+                      type="button"
+                      onClick={() => setReplyContent(qr.content)}
+                      className="px-3 py-1.5 text-xs font-medium bg-apple-gray-100 hover:bg-apple-gray-200 text-apple-gray-600 rounded-full transition-colors active:bg-apple-gray-300"
+                    >
+                      {qr.title}
+                    </button>
+                  ))}
+                </div>
 
                 {/* Attachments Preview */}
                 {attachments.length > 0 && (
