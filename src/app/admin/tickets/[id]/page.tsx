@@ -269,6 +269,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [showForwardModal, setShowForwardModal] = useState(false);
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showMobileNotesModal, setShowMobileNotesModal] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<TicketMessage | null>(null);
   const [forwardEmail, setForwardEmail] = useState('');
   const [forwardName, setForwardName] = useState('');
@@ -1473,16 +1474,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <span className="text-sm font-medium">KI-Assistent</span>
               </button>
               
-              {/* Notiz hinzufügen - Opens sidebar on mobile */}
+              {/* Notiz hinzufügen - Opens mobile notes modal */}
               <button
                 onClick={() => {
                   setShowFabMenu(false);
-                  // On mobile, open sidebar (which has notes on desktop)
-                  // For now, show alert - will add mobile notes modal later
-                  setSidebarOpen(true);
-                  setTimeout(() => {
-                    alert('Notizen sind in der Desktop-Ansicht verfügbar. Drehe dein Gerät oder nutze einen größeren Bildschirm.');
-                  }, 300);
+                  setShowMobileNotesModal(true);
                 }}
                 className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
               >
@@ -3346,6 +3342,125 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Mobile Notes Modal */}
+      {showMobileNotesModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-50 animate-fade-in backdrop-blur-sm"
+            onClick={() => setShowMobileNotesModal(false)}
+          />
+          <div className="fixed inset-x-0 bottom-0 max-h-[85vh] z-50">
+            <div className="bg-white rounded-t-3xl shadow-2xl animate-slide-up flex flex-col max-h-[85vh]">
+              {/* Header */}
+              <div className="border-b border-apple-gray-100 flex-shrink-0">
+                <div className="flex justify-center pt-3">
+                  <div className="w-12 h-1.5 bg-apple-gray-200 rounded-full"></div>
+                </div>
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-apple-gray-600">Interne Notizen</h3>
+                      <p className="text-xs text-apple-gray-400">Nur für Admins sichtbar</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowMobileNotesModal(false)}
+                    className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center text-apple-gray-500 hover:bg-apple-gray-200 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Add Note Input */}
+              <div className="p-4 border-b border-apple-gray-100 bg-amber-50/50 flex-shrink-0">
+                <textarea
+                  value={newNoteContent}
+                  onChange={(e) => setNewNoteContent(e.target.value)}
+                  placeholder="Neue Notiz hinzufügen..."
+                  rows={3}
+                  className="w-full px-4 py-3 text-sm rounded-xl border border-amber-200 bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 outline-none resize-none"
+                />
+                <button
+                  onClick={async () => {
+                    await handleAddNote();
+                    // Keep modal open after adding
+                  }}
+                  disabled={!newNoteContent.trim() || savingNote}
+                  className="mt-3 w-full px-4 py-3 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {savingNote ? (
+                    <>
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Speichern...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Notiz hinzufügen
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Notes List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {ticketNotes.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <p className="text-apple-gray-500 font-medium">Noch keine Notizen</p>
+                    <p className="text-sm text-apple-gray-400 mt-1">Füge die erste Notiz hinzu</p>
+                  </div>
+                ) : (
+                  ticketNotes.map((note) => (
+                    <div key={note.id} className="bg-white rounded-xl p-4 border border-amber-100 shadow-sm">
+                      <p className="text-sm text-apple-gray-600 whitespace-pre-wrap leading-relaxed">{note.content}</p>
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-amber-50">
+                        <span className="text-xs text-apple-gray-400">
+                          {new Date(note.createdAt).toLocaleString('de-DE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (confirm('Notiz wirklich löschen?')) {
+                              handleDeleteNote(note.id);
+                            }
+                          }}
+                          className="text-xs text-red-500 hover:text-red-600 font-medium"
+                        >
+                          Löschen
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
