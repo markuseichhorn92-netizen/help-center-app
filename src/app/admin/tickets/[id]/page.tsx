@@ -270,6 +270,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [showFabMenu, setShowFabMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showMobileNotesModal, setShowMobileNotesModal] = useState(false);
+  const [showMobileAiModal, setShowMobileAiModal] = useState(false);
+  const [showMobileQuickRepliesModal, setShowMobileQuickRepliesModal] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<TicketMessage | null>(null);
   const [forwardEmail, setForwardEmail] = useState('');
   const [forwardName, setForwardName] = useState('');
@@ -1455,14 +1457,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               <button
                 onClick={() => {
                   setShowFabMenu(false);
-                  // Scroll to reply area first, then open AI menu
-                  const replyArea = document.getElementById('reply-area');
-                  if (replyArea) {
-                    replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    setTimeout(() => {
-                      setShowAiMenu(true);
-                    }, 300);
-                  }
+                  setShowMobileAiModal(true);
                 }}
                 className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
               >
@@ -1494,14 +1489,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               <button
                 onClick={() => {
                   setShowFabMenu(false);
-                  // Scroll to reply area first, then open quick replies
-                  const replyArea = document.getElementById('reply-area');
-                  if (replyArea) {
-                    replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    setTimeout(() => {
-                      setShowQuickReplies(true);
-                    }, 300);
-                  }
+                  setShowMobileQuickRepliesModal(true);
                 }}
                 className="flex items-center gap-2 pl-3 pr-4 py-2 bg-white rounded-full shadow-lg border border-apple-gray-200 text-apple-gray-600 active:bg-apple-gray-100"
               >
@@ -3466,6 +3454,212 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Mobile AI Modal - OUTSIDE animate-fade-in container! */}
+      {showMobileAiModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-[100] backdrop-blur-sm"
+            onClick={() => setShowMobileAiModal(false)}
+          />
+          <div className="fixed inset-x-0 bottom-0 z-[100]">
+            <div className="bg-white rounded-t-3xl shadow-2xl">
+              {/* Header */}
+              <div className="border-b border-apple-gray-100">
+                <div className="flex justify-center pt-3">
+                  <div className="w-12 h-1.5 bg-apple-gray-200 rounded-full"></div>
+                </div>
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-apple-gray-600">KI-Assistent</h3>
+                      <p className="text-xs text-apple-gray-400">Antworten generieren & bearbeiten</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowMobileAiModal(false)}
+                    className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center text-apple-gray-500 hover:bg-apple-gray-200 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* AI Options */}
+              <div className="p-4 space-y-2 pb-8">
+                {/* Generate */}
+                <button
+                  onClick={() => { setShowMobileAiModal(false); handleAiGenerate(); }}
+                  disabled={aiLoading}
+                  className="w-full flex items-center gap-3 p-4 bg-purple-50 rounded-xl text-left active:bg-purple-100 disabled:opacity-50"
+                >
+                  <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="block text-sm font-semibold text-purple-900">Antwort generieren</span>
+                    <span className="block text-xs text-purple-600">KI erstellt eine passende Antwort</span>
+                  </div>
+                </button>
+
+                {/* Correct */}
+                <button
+                  onClick={() => { setShowMobileAiModal(false); handleAiCorrect(); }}
+                  disabled={aiLoading || !replyContent.trim()}
+                  className="w-full flex items-center gap-3 p-4 bg-blue-50 rounded-xl text-left active:bg-blue-100 disabled:opacity-50"
+                >
+                  <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="block text-sm font-semibold text-blue-900">Korrigieren</span>
+                    <span className="block text-xs text-blue-600">Rechtschreibung & Grammatik prüfen</span>
+                  </div>
+                </button>
+
+                {/* Rewrite options */}
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <button
+                    onClick={() => { setShowMobileAiModal(false); handleAiRewrite("formal"); }}
+                    disabled={aiLoading || !replyContent.trim()}
+                    className="flex items-center gap-2 p-3 bg-apple-gray-50 rounded-xl text-left active:bg-apple-gray-100 disabled:opacity-50"
+                  >
+                    <span className="text-lg">👔</span>
+                    <span className="text-sm font-medium text-apple-gray-600">Formeller</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowMobileAiModal(false); handleAiRewrite("friendly"); }}
+                    disabled={aiLoading || !replyContent.trim()}
+                    className="flex items-center gap-2 p-3 bg-apple-gray-50 rounded-xl text-left active:bg-apple-gray-100 disabled:opacity-50"
+                  >
+                    <span className="text-lg">😊</span>
+                    <span className="text-sm font-medium text-apple-gray-600">Freundlicher</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowMobileAiModal(false); handleAiRewrite("short"); }}
+                    disabled={aiLoading || !replyContent.trim()}
+                    className="flex items-center gap-2 p-3 bg-apple-gray-50 rounded-xl text-left active:bg-apple-gray-100 disabled:opacity-50"
+                  >
+                    <span className="text-lg">✂️</span>
+                    <span className="text-sm font-medium text-apple-gray-600">Kürzer</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowMobileAiModal(false); handleAiRewrite("detailed"); }}
+                    disabled={aiLoading || !replyContent.trim()}
+                    className="flex items-center gap-2 p-3 bg-apple-gray-50 rounded-xl text-left active:bg-apple-gray-100 disabled:opacity-50"
+                  >
+                    <span className="text-lg">📝</span>
+                    <span className="text-sm font-medium text-apple-gray-600">Ausführlicher</span>
+                  </button>
+                </div>
+
+                {/* Custom instruction */}
+                <button
+                  onClick={() => { setShowMobileAiModal(false); setShowCustomModal(true); }}
+                  disabled={aiLoading}
+                  className="w-full flex items-center gap-3 p-4 bg-green-50 rounded-xl text-left active:bg-green-100 disabled:opacity-50 mt-2"
+                >
+                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <span className="block text-sm font-semibold text-green-900">Eigene Anweisung</span>
+                    <span className="block text-xs text-green-600">KI nach deinen Wünschen steuern</span>
+                  </div>
+                </button>
+
+                {aiLoading && (
+                  <div className="flex items-center justify-center gap-2 py-4 text-purple-600">
+                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm font-medium">KI arbeitet...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Mobile Quick Replies Modal - OUTSIDE animate-fade-in container! */}
+      {showMobileQuickRepliesModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-[100] backdrop-blur-sm"
+            onClick={() => setShowMobileQuickRepliesModal(false)}
+          />
+          <div className="fixed inset-x-0 bottom-0 max-h-[70vh] z-[100]">
+            <div className="bg-white rounded-t-3xl shadow-2xl flex flex-col max-h-[70vh]">
+              {/* Header */}
+              <div className="border-b border-apple-gray-100 flex-shrink-0">
+                <div className="flex justify-center pt-3">
+                  <div className="w-12 h-1.5 bg-apple-gray-200 rounded-full"></div>
+                </div>
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-apple-gray-600">Schnellantworten</h3>
+                      <p className="text-xs text-apple-gray-400">Vordefinierte Antworten einfügen</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowMobileQuickRepliesModal(false)}
+                    className="w-8 h-8 rounded-full bg-apple-gray-100 flex items-center justify-center text-apple-gray-500 hover:bg-apple-gray-200 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Replies List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 pb-8">
+                {(quickReplies.length > 0 ? quickReplies : defaultQuickReplies).map((qr) => (
+                  <button
+                    key={qr.id}
+                    onClick={() => {
+                      setReplyContent(qr.content);
+                      setShowMobileQuickRepliesModal(false);
+                      // Scroll to reply area
+                      const replyArea = document.getElementById('reply-area');
+                      if (replyArea) {
+                        setTimeout(() => {
+                          replyArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                      }
+                    }}
+                    className="w-full p-4 bg-green-50 rounded-xl text-left active:bg-green-100 border border-green-100"
+                  >
+                    <span className="block text-sm font-semibold text-green-900 mb-1">{qr.title}</span>
+                    <span className="block text-sm text-green-700 line-clamp-2">{qr.content}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
