@@ -120,6 +120,7 @@ html.dark body {
   font-size: 1rem;
   line-height: 1.7;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1D1D1F; /* Explicit text color for light mode */
 }
 
 .editor-content .ProseMirror:focus {
