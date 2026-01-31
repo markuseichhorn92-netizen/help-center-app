@@ -308,7 +308,7 @@ export default function Home() {
                       <div className="bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-apple-lg shadow-card dark:shadow-dark-card card-hover h-full p-6 flex flex-col justify-between border border-[#E8E8ED] dark:border-[#38383A] group-hover:shadow-card-hover group-hover:border-[#D2D2D7] dark:group-hover:border-[#38383A]">
                         <div>
                           {articleCategory && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand bg-brand/10 px-2.5 py-1 rounded-full mb-3">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand dark:text-brand-light bg-brand/10 dark:bg-brand-light/20 px-2.5 py-1 rounded-full mb-3">
                               <CategoryIcon icon={articleCategory.icon} className="w-3 h-3" />
                               {articleCategory.name}
                             </span>
@@ -324,7 +324,7 @@ export default function Home() {
                             })}
                           </p>
                         </div>
-                        <div className="mt-4 flex items-center text-brand text-sm font-medium group-hover:translate-x-1 transition-transform duration-200">
+                        <div className="mt-4 flex items-center text-brand dark:text-brand-light text-sm font-medium group-hover:translate-x-1 transition-transform duration-200">
                           <span>Artikel lesen</span>
                           <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
