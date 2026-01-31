@@ -82,6 +82,7 @@ export async function createTicket(data: {
   attachments?: Attachment[];
   channel?: 'email' | 'whatsapp' | 'web';
   phone?: string;
+  emailMessageId?: string;
 }): Promise<{ ticket: Ticket; message: TicketMessage }> {
   const ticketId = crypto.randomUUID();
   const ticketNumber = await generateTicketNumber();
@@ -128,6 +129,7 @@ export async function createTicket(data: {
     senderName: data.customerName,
     senderEmail: data.customerEmail,
     attachments: data.attachments,
+    emailMessageId: data.emailMessageId,
   });
 
   return { ticket, message };

@@ -2,7 +2,7 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser, ParsedMail } from 'mailparser';
 import { createClient } from '@vercel/kv';
 import { put } from '@vercel/blob';
-import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment, createSpamTicket } from './tickets';
+import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment, createSpamTicket, findMessageByExternalId } from './tickets';
 import { parseTicketNumberFromSubject, sendTicketConfirmation, sendNewTicketNotification } from './resend';
 import { ensureContactFromTicket, updateLastContact } from './contacts';
 import { generatePortalToken } from './portal';
@@ -309,6 +309,19 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             .replace(/\[TKT-\d+\]\s*/gi, '')
             .trim() || 'Neue Anfrage per E-Mail';
 
+          // Check if this email was already imported (duplicate check by Message-ID)
+          if (messageId) {
+            const existingMessage = await findMessageByExternalId(messageId, 'email');
+            if (existingMessage) {
+              debug.push(`Duplikat erkannt: E-Mail mit Message-ID ${messageId} existiert bereits`);
+              console.log(`Skipping duplicate email with Message-ID: ${messageId}`);
+              // Mark as processed to avoid reprocessing
+              await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
+              await client.messageFlagsAdd(uid, ['\\Seen']);
+              continue;
+            }
+          }
+
           // Check for spam before creating ticket
           const spamCheck = await checkEmailForSpam(senderEmail, cleanSubject, content);
           if (spamCheck.isSpam) {
@@ -342,6 +355,7 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             priority: 'medium',
             attachments,
             channel: 'email',  // Important: This disables AI auto-reply for emails
+            emailMessageId: messageId,  // Store for duplicate detection
           });
 
           // Ensure contact exists
