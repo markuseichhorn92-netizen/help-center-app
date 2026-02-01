@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { kv } from "@vercel/kv";
 import { TicketMessage } from "./tickets";
 import { getRelevantArticles, getKnowledgeBaseContext } from "./ai-chat";
+import { FINN_KNOWLEDGE, FINN_PERSONALITY } from "./finn-knowledge";
 
 const anthropic = new Anthropic();
 
@@ -100,8 +101,8 @@ export async function generateAutoReply(params: {
         .join("\n");
     }
 
-    // Get knowledge context (articles + knowledge base)
-    console.log("[AI-AutoReply] Loading context for:", customerMessage);
+    // Get additional knowledge context (articles + scraped knowledge base)
+    console.log("[AI-AutoReply/Finn] Loading context for:", customerMessage);
     const searchQuery = `${ticketSubject} ${customerMessage}`;
 
     const [articlesContext, knowledgeContext] = await Promise.all([
@@ -109,26 +110,22 @@ export async function generateAutoReply(params: {
       getKnowledgeBaseContext(searchQuery),
     ]);
 
-    console.log("[AI-AutoReply] Articles context length:", articlesContext.length);
-    console.log("[AI-AutoReply] Knowledge context length:", knowledgeContext.length);
+    console.log("[AI-AutoReply/Finn] Articles context length:", articlesContext.length);
+    console.log("[AI-AutoReply/Finn] Knowledge context length:", knowledgeContext.length);
 
-    const systemPrompt = `Du bist der freundliche Support-Assistent von FIT INN Trier, einem Fitnessstudio.
+    // Build Finn's system prompt with full knowledge base
+    const systemPrompt = `${FINN_PERSONALITY}
 
-DEINE AUFGABEN:
-- Beantworte Kundenfragen höflich und hilfsbereit basierend auf den bereitgestellten Informationen
-- Halte dich kurz (2-3 Sätze maximal)
-- WICHTIG: Durchsuche die HILFE-ARTIKEL und WISSENSBASIS unten sorgfältig nach relevanten Informationen BEVOR du antwortest
-- Wenn die Antwort in den Artikeln steht, gib sie wieder - erfinde NICHTS
-- Bei komplexen Fragen oder wenn die Info NICHT in den Artikeln steht, empfehle den Kontakt zu einem Mitarbeiter
+${FINN_KNOWLEDGE}
+
+${articlesContext ? `\n=== ZUSÄTZLICHE HILFE-ARTIKEL ===\n${articlesContext}\n=== ENDE HILFE-ARTIKEL ===` : ""}
+${knowledgeContext ? `\n=== ZUSÄTZLICHE WEBSITE-INFOS ===\n${knowledgeContext}\n=== ENDE WEBSITE-INFOS ===` : ""}
 
 WICHTIGE REGELN:
 - Du darfst KEINE Verträge kündigen oder ändern
-- Du darfst KEINE verbindlichen Preise oder Zusagen machen
-- Bei Kündigungen, Beschwerden oder Vertragsfragen: Immer an Mitarbeiter verweisen
-- Sage NIE "ich habe die Information nicht" wenn sie in den Artikeln unten steht!
-
-${articlesContext ? `\n=== HILFE-ARTIKEL (durchsuche diese ZUERST!) ===\n${articlesContext}\n=== ENDE HILFE-ARTIKEL ===` : "\n(Keine Hilfe-Artikel verfügbar)"}
-${knowledgeContext ? `\n=== WISSENSBASIS ===\n${knowledgeContext}\n=== ENDE WISSENSBASIS ===` : ""}
+- Du darfst KEINE verbindlichen Zusagen machen (außer den offiziellen Preisen oben)
+- Bei Kündigungen, Beschwerden oder Vertragsfragen: Immer an Team verweisen
+- Nutze die WISSENSBASIS oben für alle Antworten!
 
 BEENDE JEDE Antwort mit:
 "Möchtest du mit einem Mitarbeiter sprechen? Schreibe einfach 'Mitarbeiter'."`;
