@@ -152,7 +152,7 @@ export default function Home() {
   return (
     <div className="overflow-hidden">
       {/* Hero Section - Full Width with Particles */}
-      <section className="relative w-full min-h-[70vh] flex items-center justify-center overflow-hidden">
+      <section className="relative w-full min-h-[50vh] flex items-center justify-center overflow-hidden">
         {/* Particle Background */}
         <div className="absolute inset-0">
           <ParticleBackground
@@ -170,7 +170,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-hero-gradient opacity-90 pointer-events-none" />
 
         {/* Content */}
-        <div className="relative z-10 text-center py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 text-center py-12 md:py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl mx-auto">
             {/* Animated Headline */}
             <motion.div
@@ -219,14 +219,14 @@ export default function Home() {
           </div>
 
           {/* Scroll Indicator */}
-          <div className="mt-12">
+          <div className="mt-8">
             <ScrollIndicator />
           </div>
         </div>
       </section>
 
       {/* Categories Section */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         <ScrollReveal>
           <h2 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight mb-8">
             Themen durchsuchen
