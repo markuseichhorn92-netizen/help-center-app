@@ -7,7 +7,6 @@ import {
   ParticleBackground,
   GradientOrbs,
   TextReveal,
-  ScrollIndicator,
   GlowCard,
   ScrollReveal,
   StaggerContainer,
@@ -152,7 +151,7 @@ export default function Home() {
   return (
     <div className="overflow-hidden">
       {/* Hero Section - Full Width with Particles */}
-      <section className="relative w-full min-h-[50vh] flex items-center justify-center overflow-hidden">
+      <section className="relative w-full py-16 md:py-20 flex items-center justify-center overflow-hidden">
         {/* Particle Background */}
         <div className="absolute inset-0">
           <ParticleBackground
@@ -218,15 +217,11 @@ export default function Home() {
             </motion.div>
           </div>
 
-          {/* Scroll Indicator */}
-          <div className="mt-8">
-            <ScrollIndicator />
-          </div>
         </div>
       </section>
 
       {/* Categories Section */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 md:pt-6 md:pb-12">
         <ScrollReveal>
           <h2 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight mb-8">
             Themen durchsuchen
