@@ -2,6 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import Link from "next/link";
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ParticleBackground,
+  GradientOrbs,
+  TextReveal,
+  ScrollIndicator,
+  GlowCard,
+  ScrollReveal,
+  StaggerContainer,
+  StaggerItem,
+} from '@/components/animations';
 import SearchAutocomplete from '@/components/SearchAutocomplete';
 
 interface Category {
@@ -139,202 +150,311 @@ export default function Home() {
   };
 
   return (
-    <div className="animate-fade-in">
-      {/* Hero Section - Full Width */}
-      <section className="w-full bg-hero-gradient">
-        <div className="text-center py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#1D1D1F] dark:text-white tracking-tight leading-tight">
-              Wie können wir
-              <br />
-              dir helfen?
-            </h1>
-            <p className="mt-6 text-lg text-[#6E6E73] dark:text-[#D2D2D7] max-w-lg mx-auto">
-              Finde Antworten auf deine Fragen im FIT INN Hilfe-Center.
-            </p>
+    <div className="overflow-hidden">
+      {/* Hero Section - Full Width with Particles */}
+      <section className="relative w-full min-h-[70vh] flex items-center justify-center overflow-hidden">
+        {/* Particle Background */}
+        <div className="absolute inset-0">
+          <ParticleBackground
+            particleCount={60}
+            colors={['#0a4958', '#cfe5ea', '#ffb54f']}
+            connectDistance={100}
+            mouseRadius={120}
+          />
+        </div>
 
-            {/* Search Input with Autocomplete */}
-            <div className="mt-10 max-w-xl mx-auto">
-              <SearchAutocomplete
-                placeholder="Suche nach Artikeln..."
-                onSearch={(query) => setSearchQuery(query)}
-              />
-            </div>
+        {/* Gradient Orbs */}
+        <GradientOrbs count={3} />
+
+        {/* Hero Gradient Overlay */}
+        <div className="absolute inset-0 bg-hero-gradient opacity-90 pointer-events-none" />
+
+        {/* Content */}
+        <div className="relative z-10 text-center py-16 md:py-24 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto">
+            {/* Animated Headline */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] as const }}
+            >
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight leading-tight">
+                <TextReveal variant="flip" delay={0.2}>
+                  Wie können wir
+                </TextReveal>
+                <br />
+                <TextReveal variant="flip" delay={0.5}>
+                  dir helfen?
+                </TextReveal>
+              </h1>
+            </motion.div>
+
+            <motion.p
+              className="mt-6 text-lg text-[#6E6E73] dark:text-[#A1A1A6] max-w-lg mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.8 }}
+            >
+              Finde Antworten auf deine Fragen im FIT INN Hilfe-Center.
+            </motion.p>
+
+            {/* Search Input with Glow */}
+            <motion.div
+              className="mt-10 max-w-xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 1 }}
+            >
+              <div className="relative group">
+                {/* Glow Effect */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-brand via-brand-light to-accent rounded-2xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity duration-500" />
+                <div className="relative">
+                  <SearchAutocomplete
+                    placeholder="Suche nach Artikeln..."
+                    onSearch={(query) => setSearchQuery(query)}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Scroll Indicator */}
+          <div className="mt-12">
+            <ScrollIndicator />
           </div>
         </div>
       </section>
 
       {/* Categories Section */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        <h2 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] dark:text-white tracking-tight mb-8">
-          Themen durchsuchen
-        </h2>
+        <ScrollReveal>
+          <h2 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight mb-8">
+            Themen durchsuchen
+          </h2>
+        </ScrollReveal>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {categories.map((category) => {
+        <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" staggerDelay={0.1}>
+          {categories.map((category, index) => {
             const count = getCategoryArticleCount(category.id);
             const isSelected = selectedCategory === category.id;
 
             return (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategory(isSelected ? null : category.id)}
-                className={`group relative p-5 rounded-apple-xl border transition-all duration-300 text-left ${
-                  isSelected
-                    ? 'bg-brand text-white border-brand shadow-lg'
-                    : 'bg-[#FFFFFF] dark:bg-[#1C1C1E] border-[#E8E8ED] dark:border-[#38383A] hover:border-brand/30 dark:hover:border-brand-light/30 hover:shadow-card'
-                }`}
-              >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors ${
-                  isSelected
-                    ? 'bg-white/20'
-                    : 'bg-brand/10 text-brand group-hover:bg-brand/20'
-                }`}>
-                  <CategoryIcon icon={category.icon} />
-                </div>
-                <h3 className={`font-semibold mb-1 ${isSelected ? 'text-white' : 'text-[#1D1D1F] dark:text-white'}`}>
-                  {category.name}
-                </h3>
-                {category.description && (
-                  <p className={`text-xs line-clamp-2 ${isSelected ? 'text-white/80' : 'text-[#86868B] dark:text-[#D2D2D7]'}`}>
-                    {category.description}
-                  </p>
-                )}
-                {count > 0 && (
-                  <span className={`absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full ${
-                    isSelected
-                      ? 'bg-white/20 text-white'
-                      : 'bg-[#F5F5F7] dark:bg-[#38383A] text-[#6E6E73] dark:text-[#D2D2D7]'
-                  }`}>
-                    {count}
-                  </span>
-                )}
-              </button>
+              <StaggerItem key={category.id}>
+                <GlowCard
+                  onClick={() => setSelectedCategory(isSelected ? null : category.id)}
+                  isSelected={isSelected}
+                  delay={index * 0.05}
+                  glowColor={isSelected ? 'rgba(10, 73, 88, 0.6)' : 'rgba(10, 73, 88, 0.3)'}
+                >
+                  <div className="p-5 text-left">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors ${
+                      isSelected
+                        ? 'bg-white/20'
+                        : 'bg-brand/10 text-brand group-hover:bg-brand/20'
+                    }`}>
+                      <CategoryIcon icon={category.icon} />
+                    </div>
+                    <h3 className={`font-semibold mb-1 ${isSelected ? 'text-white' : 'text-[#1D1D1F] dark:text-[#F5F5F7]'}`}>
+                      {category.name}
+                    </h3>
+                    {category.description && (
+                      <p className={`text-xs line-clamp-2 ${isSelected ? 'text-white/80' : 'text-[#6E6E73] dark:text-[#A1A1A6]'}`}>
+                        {category.description}
+                      </p>
+                    )}
+                    {count > 0 && (
+                      <motion.span
+                        className={`absolute top-3 right-3 text-xs font-medium px-2 py-0.5 rounded-full ${
+                          isSelected
+                            ? 'bg-white/20 text-white'
+                            : 'bg-[#F5F5F7] dark:bg-[#38383A] text-[#6E6E73] dark:text-[#D2D2D7]'
+                        }`}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 500, delay: index * 0.05 + 0.2 }}
+                      >
+                        {count}
+                      </motion.span>
+                    )}
+                  </div>
+                </GlowCard>
+              </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
 
         {/* Active filter indicator */}
-        {selectedCategory && (
-          <div className="mt-6 flex items-center gap-2">
-            <span className="text-sm text-apple-gray-500">Filter aktiv:</span>
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand/10 text-brand text-sm font-medium rounded-full hover:bg-brand/20 transition-colors"
+        <AnimatePresence>
+          {selectedCategory && (
+            <motion.div
+              className="mt-6 flex items-center gap-2"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
             >
-              {categories.find(c => c.id === selectedCategory)?.name}
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
+              <span className="text-sm text-apple-gray-500">Filter aktiv:</span>
+              <motion.button
+                onClick={() => setSelectedCategory(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand/10 text-brand text-sm font-medium rounded-full hover:bg-brand/20 transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                {categories.find(c => c.id === selectedCategory)?.name}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </motion.button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* Articles Section */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 md:pb-16">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] dark:text-white tracking-tight">
-            {selectedCategory
-              ? categories.find(c => c.id === selectedCategory)?.name || 'Artikel'
-              : 'Alle Artikel'
-            }
-          </h2>
-          {!loading && filteredArticles.length > 0 && (
-            <span className="text-sm text-apple-gray-400 font-medium">
-              {filteredArticles.length} {filteredArticles.length === 1 ? 'Artikel' : 'Artikel'}
-            </span>
-          )}
-        </div>
+        <ScrollReveal>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+              {selectedCategory
+                ? categories.find(c => c.id === selectedCategory)?.name || 'Artikel'
+                : 'Alle Artikel'
+              }
+            </h2>
+            {!loading && filteredArticles.length > 0 && (
+              <motion.span
+                className="text-sm text-apple-gray-400 font-medium"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                {filteredArticles.length} {filteredArticles.length === 1 ? 'Artikel' : 'Artikel'}
+              </motion.span>
+            )}
+          </div>
+        </ScrollReveal>
 
         {/* Loading State */}
         {loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-apple-lg p-6 shadow-card animate-pulse-soft">
+              <motion.div
+                key={i}
+                className="bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-2xl p-6 shadow-card"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+              >
                 <div className="h-5 bg-[#E8E8ED] dark:bg-[#38383A] rounded-lg w-3/4 mb-3"></div>
                 <div className="h-4 bg-[#F5F5F7] dark:bg-[#2C2C2E] rounded-lg w-1/2"></div>
-              </div>
+              </motion.div>
             ))}
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 text-red-600 px-6 py-4 rounded-apple-lg text-center">
+          <motion.div
+            className="bg-red-50 text-red-600 px-6 py-4 rounded-2xl text-center"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
             {error}
-          </div>
+          </motion.div>
         )}
 
         {/* Articles Grid */}
         {!loading && !error && (
           <>
             {filteredArticles.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-16 h-16 bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-full flex items-center justify-center mx-auto mb-4">
+              <motion.div
+                className="text-center py-16"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <motion.div
+                  className="w-16 h-16 bg-[#F5F5F7] dark:bg-[#1C1C1E] rounded-full flex items-center justify-center mx-auto mb-4"
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
                   <svg className="w-8 h-8 text-[#86868B] dark:text-[#D2D2D7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                </div>
-                <p className="text-[#6E6E73] dark:text-[#D2D2D7] text-lg">
+                </motion.div>
+                <p className="text-[#6E6E73] dark:text-[#A1A1A6] text-lg">
                   {searchQuery || selectedCategory
                     ? 'Keine Artikel entsprechen deinen Filterkriterien.'
                     : 'Noch keine Artikel vorhanden.'}
                 </p>
                 {(searchQuery || selectedCategory) && (
-                  <button
+                  <motion.button
                     onClick={() => {
                       setSearchQuery('');
                       setSelectedCategory(null);
                     }}
                     className="mt-4 text-brand font-medium hover:underline"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     Filter zurücksetzen
-                  </button>
+                  </motion.button>
                 )}
-              </div>
+              </motion.div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" staggerDelay={0.08}>
                 {filteredArticles.map((article, index) => {
                   const articleCategory = categories.find(c => c.id === article.category);
 
                   return (
-                    <Link
-                      key={article.id}
-                      href={`/articles/${article.id}`}
-                      className="stagger-item block group"
-                      style={{ animationDelay: `${index * 0.05}s` }}
-                    >
-                      <div className="bg-[#FFFFFF] dark:bg-[#1C1C1E] rounded-apple-lg shadow-card dark:shadow-dark-card card-hover h-full p-6 flex flex-col justify-between border border-[#E8E8ED] dark:border-[#38383A] group-hover:shadow-card-hover group-hover:border-[#D2D2D7] dark:group-hover:border-[#38383A]">
-                        <div>
-                          {articleCategory && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-brand dark:text-brand-light bg-brand/10 dark:bg-brand-light/20 px-2.5 py-1 rounded-full mb-3">
-                              <CategoryIcon icon={articleCategory.icon} className="w-3 h-3" />
-                              {articleCategory.name}
-                            </span>
-                          )}
-                          <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-white mb-2 group-hover:text-brand transition-colors duration-200">
-                            {article.title}
-                          </h3>
-                          <p className="text-sm text-[#86868B] dark:text-[#D2D2D7]">
-                            {new Date(article.createdAt).toLocaleDateString('de-DE', {
-                              day: 'numeric',
-                              month: 'long',
-                              year: 'numeric'
-                            })}
-                          </p>
-                        </div>
-                        <div className="mt-4 flex items-center text-brand dark:text-brand-light text-sm font-medium group-hover:translate-x-1 transition-transform duration-200">
-                          <span>Artikel lesen</span>
-                          <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    </Link>
+                    <StaggerItem key={article.id}>
+                      <Link href={`/articles/${article.id}`} className="block group h-full">
+                        <motion.div
+                          className="bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-card dark:shadow-dark-card h-full p-6 flex flex-col justify-between border border-[#E8E8ED] dark:border-[#38383A] group-hover:shadow-xl dark:group-hover:shadow-dark-card-hover group-hover:border-brand/20 dark:group-hover:border-brand-light/30 transition-all duration-300"
+                          whileHover={{ y: -8, scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div>
+                            {articleCategory && (
+                              <motion.span
+                                className="inline-flex items-center gap-1.5 text-xs font-medium text-brand dark:text-[#A8D4DE] bg-brand/10 dark:bg-[#0a4958]/30 px-2.5 py-1 rounded-full mb-3"
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: index * 0.05 + 0.3 }}
+                              >
+                                <CategoryIcon icon={articleCategory.icon} className="w-3 h-3" />
+                                {articleCategory.name}
+                              </motion.span>
+                            )}
+                            <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 group-hover:text-brand dark:group-hover:text-[#A8D4DE] transition-colors duration-200">
+                              {article.title}
+                            </h3>
+                            <p className="text-sm text-[#6E6E73] dark:text-[#98989D]">
+                              {new Date(article.createdAt).toLocaleDateString('de-DE', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                          <motion.div
+                            className="mt-4 flex items-center text-brand dark:text-[#A8D4DE] text-sm font-medium"
+                            whileHover={{ x: 5 }}
+                          >
+                            <span>Artikel lesen</span>
+                            <motion.svg
+                              className="ml-2 w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              animate={{ x: [0, 3, 0] }}
+                              transition={{ duration: 1.5, repeat: Infinity }}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                            </motion.svg>
+                          </motion.div>
+                        </motion.div>
+                      </Link>
+                    </StaggerItem>
                   );
                 })}
-              </div>
+              </StaggerContainer>
             )}
           </>
         )}
