@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Enable class-based dark mode (Tailwind v4) */
+@variant dark (&:where(.dark, .dark *));
+
 /* Theme configuration for Tailwind v4 */
 @theme {
   --font-family-sans: var(--font-inter), 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
