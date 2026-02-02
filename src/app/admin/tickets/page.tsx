@@ -811,6 +811,59 @@ export default function TicketsPage() {
         ))}
       </div>
 
+      {/* Selection Bar - Always visible */}
+      {paginatedTickets.length > 0 && (
+        <div className="mb-4 flex items-center justify-between bg-apple-gray-50 rounded-apple-lg px-4 py-3">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleSelectAll}
+              className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all ${
+                paginatedTickets.every(t => selectedTickets.has(t.id))
+                  ? 'bg-brand text-white'
+                  : 'bg-white text-apple-gray-600 border border-apple-gray-200 hover:bg-apple-gray-100'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {paginatedTickets.every(t => selectedTickets.has(t.id)) ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                )}
+              </svg>
+              {paginatedTickets.every(t => selectedTickets.has(t.id)) ? 'Auswahl aufheben' : 'Alle auswählen'}
+            </button>
+            {selectedTickets.size > 0 && (
+              <span className="text-sm text-apple-gray-500">
+                {selectedTickets.size} von {filteredTickets.length} ausgewählt
+              </span>
+            )}
+          </div>
+          {selectedTickets.size > 0 && (
+            <div className="flex items-center gap-2">
+              {/* Quick actions for mobile */}
+              <div className="relative md:hidden">
+                <button
+                  onClick={() => setShowStatusMenu(!showStatusMenu)}
+                  className="p-2 bg-brand text-white rounded-full"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+              </div>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="md:hidden p-2 bg-red-500 text-white rounded-full"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Tickets Table / Cards */}
       <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
         {paginatedTickets.length === 0 ? (
