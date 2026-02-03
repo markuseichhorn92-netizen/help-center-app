@@ -372,15 +372,18 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
           // Generate portal token for direct access
           const portalToken = await generatePortalToken(senderEmail, ticket.id);
 
-          // Send confirmation email with portal link
-          await sendTicketConfirmation(
-            senderEmail,
-            senderName,
-            ticket.ticketNumber,
-            cleanSubject,
-            ticket.id,
-            portalToken.token
-          );
+          // Send confirmation email with portal link (DISABLED per request 2026-02-03)
+          // To re-enable: set SEND_TICKET_CONFIRMATION=true in .env
+          if (process.env.SEND_TICKET_CONFIRMATION === 'true') {
+            await sendTicketConfirmation(
+              senderEmail,
+              senderName,
+              ticket.ticketNumber,
+              cleanSubject,
+              ticket.id,
+              portalToken.token
+            );
+          }
 
           // Notify admin about new email ticket
           try {
