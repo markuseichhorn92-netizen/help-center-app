@@ -187,13 +187,14 @@ export default function MemberSearch({
     }).format(amount);
   };
 
-  // Compact view for sidebar
+  // Compact view for sidebar - now with full details
   if (compact && selectedMember) {
     const member = selectedMember.customer;
-    const activeContract = selectedMember.contracts.find((c) => c.isActive);
+    const allContracts = selectedMember.contracts;
 
     return (
-      <div className="bg-white rounded-lg border border-apple-gray-200 p-4">
+      <div className="bg-white rounded-lg border border-apple-gray-200 p-4 max-h-[70vh] overflow-y-auto">
+        {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div>
             <p className="font-semibold text-apple-gray-600">{member.fullName}</p>
@@ -208,57 +209,163 @@ export default function MemberSearch({
           </span>
         </div>
 
-        <div className="space-y-2 text-sm">
-          {member.email && (
-            <div className="flex items-center gap-2 text-apple-gray-500">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-              <span className="truncate">{member.email}</span>
-            </div>
-          )}
-          {member.phone && (
-            <div className="flex items-center gap-2 text-apple-gray-500">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              <span>{member.phone}</span>
-            </div>
-          )}
-          {member.address.formatted && (
-            <div className="flex items-start gap-2 text-apple-gray-500">
-              <svg className="w-4 h-4 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span>{member.address.formatted}</span>
-            </div>
-          )}
-        </div>
-
-        {activeContract && (
-          <div className="mt-3 pt-3 border-t border-apple-gray-100">
-            <p className="text-xs text-apple-gray-400 uppercase tracking-wide mb-1">Vertrag</p>
-            <p className="text-sm font-medium text-apple-gray-600">{activeContract.rateName}</p>
-            <p className="text-xs text-apple-gray-500">
-              seit {formatDate(activeContract.startDate)}
-              {activeContract.isCancelled && (
-                <span className="text-red-500 ml-2">
-                  (gekündigt zum {formatDate(activeContract.endDate)})
-                </span>
-              )}
-            </p>
-          </div>
-        )}
-
+        {/* Zugangssperre */}
         {member.accessRefusal && (
-          <div className="mt-3 p-2 bg-red-50 rounded-lg">
+          <div className="mb-3 p-2 bg-red-50 rounded-lg">
             <p className="text-xs text-red-600 font-medium flex items-center gap-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               Zugangssperre aktiv
             </p>
+          </div>
+        )}
+
+        {/* Kontaktdaten */}
+        <div className="mb-3">
+          <p className="text-xs text-apple-gray-400 uppercase tracking-wide mb-2">Kontakt</p>
+          <div className="space-y-1.5 text-sm">
+            {member.email && (
+              <div className="flex items-center gap-2 text-apple-gray-500">
+                <span className="text-xs text-apple-gray-400 w-12">E-Mail:</span>
+                <a href={`mailto:${member.email}`} className="text-brand hover:underline truncate">{member.email}</a>
+              </div>
+            )}
+            {member.phone && (
+              <div className="flex items-center gap-2 text-apple-gray-500">
+                <span className="text-xs text-apple-gray-400 w-12">Tel:</span>
+                <a href={`tel:${member.phone}`} className="text-brand hover:underline">{member.phone}</a>
+              </div>
+            )}
+            {member.phoneMobile && member.phoneMobile !== member.phone && (
+              <div className="flex items-center gap-2 text-apple-gray-500">
+                <span className="text-xs text-apple-gray-400 w-12">Mobil:</span>
+                <a href={`tel:${member.phoneMobile}`} className="text-brand hover:underline">{member.phoneMobile}</a>
+              </div>
+            )}
+            {member.phoneBusiness && (
+              <div className="flex items-center gap-2 text-apple-gray-500">
+                <span className="text-xs text-apple-gray-400 w-12">Gesch.:</span>
+                <a href={`tel:${member.phoneBusiness}`} className="text-brand hover:underline">{member.phoneBusiness}</a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Persönliche Daten */}
+        <div className="mb-3 pt-3 border-t border-apple-gray-100">
+          <p className="text-xs text-apple-gray-400 uppercase tracking-wide mb-2">Persönliche Daten</p>
+          <div className="space-y-1.5 text-sm text-apple-gray-600">
+            {member.dateOfBirth && (
+              <div className="flex">
+                <span className="text-xs text-apple-gray-400 w-20">Geb.datum:</span>
+                <span>{formatDate(member.dateOfBirth)}</span>
+              </div>
+            )}
+            {member.gender && (
+              <div className="flex">
+                <span className="text-xs text-apple-gray-400 w-20">Geschlecht:</span>
+                <span>{member.gender === 'MALE' ? 'Männlich' : member.gender === 'FEMALE' ? 'Weiblich' : 'Divers'}</span>
+              </div>
+            )}
+            {member.createdDateTime && (
+              <div className="flex">
+                <span className="text-xs text-apple-gray-400 w-20">Mitglied seit:</span>
+                <span>{formatDate(member.createdDateTime)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Adresse */}
+        {member.address.street && (
+          <div className="mb-3 pt-3 border-t border-apple-gray-100">
+            <p className="text-xs text-apple-gray-400 uppercase tracking-wide mb-2">Adresse</p>
+            <div className="text-sm text-apple-gray-600">
+              <p>{member.address.street} {member.address.houseNumber}</p>
+              <p>{member.address.zipCode} {member.address.city}</p>
+              {member.address.country && member.address.country !== 'DE' && (
+                <p>{member.address.country}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bankverbindung */}
+        {member.bankAccount && (
+          <div className="mb-3 pt-3 border-t border-apple-gray-100">
+            <p className="text-xs text-apple-gray-400 uppercase tracking-wide mb-2">Bankverbindung</p>
+            <div className="text-sm text-apple-gray-600 space-y-1">
+              {member.bankAccount.accountHolder && (
+                <p><span className="text-xs text-apple-gray-400">Inhaber:</span> {member.bankAccount.accountHolder}</p>
+              )}
+              {member.bankAccount.iban && (
+                <p className="font-mono text-xs">{member.bankAccount.iban}</p>
+              )}
+              {member.bankAccount.bankName && (
+                <p className="text-xs text-apple-gray-500">{member.bankAccount.bankName}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Alle Verträge */}
+        {allContracts.length > 0 && (
+          <div className="mb-3 pt-3 border-t border-apple-gray-100">
+            <p className="text-xs text-apple-gray-400 uppercase tracking-wide mb-2">Verträge ({allContracts.length})</p>
+            <div className="space-y-2">
+              {allContracts.map((contract) => (
+                <div
+                  key={contract.id}
+                  className={`p-2 rounded-lg text-xs ${
+                    contract.isActive
+                      ? contract.isCancelled
+                        ? "bg-amber-50 border border-amber-200"
+                        : "bg-green-50 border border-green-200"
+                      : "bg-gray-50 border border-gray-200"
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <p className="font-medium text-apple-gray-600">{contract.rateName}</p>
+                    {contract.monthlyFee && (
+                      <p className="font-semibold">{formatCurrency(contract.monthlyFee, contract.currency)}/M</p>
+                    )}
+                  </div>
+                  <p className="text-apple-gray-500 mt-0.5">
+                    {formatDate(contract.startDate)}
+                    {contract.endDate && ` - ${formatDate(contract.endDate)}`}
+                  </p>
+                  {contract.isCancelled && (
+                    <p className="text-red-500 mt-0.5">
+                      Gekündigt zum {formatDate(contract.cancellationDate)}
+                    </p>
+                  )}
+                  {!contract.isActive && !contract.isCancelled && (
+                    <p className="text-gray-500 mt-0.5">Beendet</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Ruhezeiten */}
+        {member.idlePeriods && member.idlePeriods.length > 0 && (
+          <div className="mb-3 pt-3 border-t border-apple-gray-100">
+            <p className="text-xs text-apple-gray-400 uppercase tracking-wide mb-2">Ruhezeiten</p>
+            <div className="space-y-1.5">
+              {member.idlePeriods.map((period, idx) => (
+                <div key={idx} className="p-2 bg-blue-50 rounded-lg text-xs">
+                  <p className="text-blue-700">
+                    {formatDate(period.startDate)} - {period.unlimited ? "unbefristet" : formatDate(period.endDate)}
+                  </p>
+                  <p className="text-blue-500">
+                    {period.reason}
+                    {period.rateName && ` • ${period.rateName}`}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -269,9 +376,9 @@ export default function MemberSearch({
             setResults([]);
             setAutoSearched(false);
           }}
-          className="mt-3 w-full text-xs text-apple-gray-400 hover:text-apple-gray-600"
+          className="mt-3 w-full text-xs text-apple-gray-400 hover:text-apple-gray-600 py-2 border border-apple-gray-200 rounded-lg hover:bg-apple-gray-50"
         >
-          Andere Suche
+          🔍 Andere Suche
         </button>
       </div>
     );

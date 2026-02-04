@@ -66,8 +66,7 @@ export async function GET(
         bankAccount: customer.bankAccount ? {
           accountHolder: customer.bankAccount.accountHolder,
           bankName: customer.bankAccount.bankName,
-          iban: customer.bankAccount.iban ? 
-            `${customer.bankAccount.iban.slice(0, 4)}****${customer.bankAccount.iban.slice(-4)}` : null,
+          iban: customer.bankAccount.iban || null,
         } : null,
         accessRefusal: customer.accessRefusal,
         createdDateTime: customer.createdDateTime,
