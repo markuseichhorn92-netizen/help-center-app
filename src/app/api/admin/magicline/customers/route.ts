@@ -30,7 +30,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ customers: [], total: 0 });
     }
 
-    let customers = [];
+    let customers: Array<{
+      id: number;
+      customerNumber: string;
+      firstName: string;
+      lastName: string;
+      email?: string | null;
+      phonePrivate?: string | null;
+      phonePrivateMobile?: string | null;
+      phoneBusiness?: string | null;
+      phoneBusinessMobile?: string | null;
+      status?: string;
+      city?: string | null;
+      street?: string | null;
+      houseNumber?: string | null;
+      zipCode?: string | null;
+      dateOfBirth?: string;
+      createdDateTime?: string;
+      accessRefusal?: boolean;
+      idlePeriods?: Array<{
+        startDate: string;
+        endDate: string;
+        reason: string;
+        contract?: { id: number; rateName: string };
+        unlimited: boolean;
+      }>;
+    }> = [];
 
     // Search by member number first (most specific)
     if (memberNumber || query.match(/^M-?\d+$/i)) {
