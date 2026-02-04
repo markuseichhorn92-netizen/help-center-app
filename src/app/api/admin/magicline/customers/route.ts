@@ -65,23 +65,15 @@ export async function GET(request: NextRequest) {
         customers = [customer];
       }
     }
-    // Search by email
+    // Search by email (paginated search - API doesn't support email param)
     else if (email || query.includes('@')) {
       const searchEmail = email || query;
-      const result = await magicline.searchCustomers({ 
-        email: searchEmail, 
-        size: Math.min(size, 100) 
-      });
-      customers = result.result || [];
+      customers = await magicline.searchCustomersByEmail(searchEmail, Math.min(size, 20));
     }
-    // Search by phone
-    else if (phone || query.match(/^[\d\s+\-()]+$/) && query.replace(/\D/g, '').length >= 6) {
+    // Search by phone (paginated search - API doesn't support phone param)
+    else if (phone || (query.match(/^[\d\s+\-()]+$/) && query.replace(/\D/g, '').length >= 6)) {
       const searchPhone = phone || query;
-      const result = await magicline.searchCustomers({ 
-        phone: searchPhone, 
-        size: Math.min(size, 100) 
-      });
-      customers = result.result || [];
+      customers = await magicline.searchCustomersByPhone(searchPhone, Math.min(size, 20));
     }
     // Search by name (paginated search through all customers)
     else if (query.length >= 2) {

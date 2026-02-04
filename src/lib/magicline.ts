@@ -189,6 +189,83 @@ class MagiclineClient {
     return matches.slice(0, maxResults);
   }
 
+  // Search customers by email across ALL pages (paginated search)
+  // Magicline API doesn't support email query param, so we paginate and filter
+  async searchCustomersByEmail(email: string, maxResults: number = 10): Promise<MagiclineCustomer[]> {
+    const emailLower = email.toLowerCase();
+    const matches: MagiclineCustomer[] = [];
+    let offset: string | undefined;
+    let pageCount = 0;
+    const maxPages = 50; // Safety limit
+
+    while (pageCount < maxPages && matches.length < maxResults) {
+      const params = new URLSearchParams();
+      params.append('size', '100');
+      if (offset) params.append('offset', offset);
+
+      const result = await this.fetch<ApiResponse<MagiclineCustomer>>(
+        `/customers?${params.toString()}`
+      );
+
+      // Filter for matching email
+      const pageMatches = (result.result || []).filter(c => 
+        c.email?.toLowerCase().includes(emailLower)
+      );
+
+      matches.push(...pageMatches);
+
+      // Check if there are more pages
+      if (!result.hasNext || !result.offset) {
+        break;
+      }
+
+      offset = result.offset;
+      pageCount++;
+    }
+
+    return matches.slice(0, maxResults);
+  }
+
+  // Search customers by phone across ALL pages (paginated search)
+  // Magicline API doesn't support phone query param, so we paginate and filter
+  async searchCustomersByPhone(phone: string, maxResults: number = 10): Promise<MagiclineCustomer[]> {
+    const phoneClean = phone.replace(/\D/g, '');
+    const matches: MagiclineCustomer[] = [];
+    let offset: string | undefined;
+    let pageCount = 0;
+    const maxPages = 50; // Safety limit
+
+    while (pageCount < maxPages && matches.length < maxResults) {
+      const params = new URLSearchParams();
+      params.append('size', '100');
+      if (offset) params.append('offset', offset);
+
+      const result = await this.fetch<ApiResponse<MagiclineCustomer>>(
+        `/customers?${params.toString()}`
+      );
+
+      // Filter for matching phone
+      const pageMatches = (result.result || []).filter(c => 
+        c.phonePrivate?.replace(/\D/g, '').includes(phoneClean) ||
+        c.phonePrivateMobile?.replace(/\D/g, '').includes(phoneClean) ||
+        c.phoneBusiness?.replace(/\D/g, '').includes(phoneClean) ||
+        c.phoneBusinessMobile?.replace(/\D/g, '').includes(phoneClean)
+      );
+
+      matches.push(...pageMatches);
+
+      // Check if there are more pages
+      if (!result.hasNext || !result.offset) {
+        break;
+      }
+
+      offset = result.offset;
+      pageCount++;
+    }
+
+    return matches.slice(0, maxResults);
+  }
+
   // Get customer by ID
   async getCustomer(id: number): Promise<MagiclineCustomer> {
     return this.fetch<MagiclineCustomer>(`/customers/${id}`);
