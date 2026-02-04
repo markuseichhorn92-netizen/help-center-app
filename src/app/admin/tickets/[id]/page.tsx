@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, use } from "react";
 import RichTextEditor from "@/components/editor/LazyRichTextEditor";
+import MemberSearch from "@/components/MemberSearch";
 
 // Format message content based on channel and content type
 function formatMessageContent(content: string | null | undefined, channel?: string): string {
@@ -2556,6 +2557,21 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Magicline Member Info */}
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-apple-xl shadow-card border border-indigo-200 p-5">
+            <h3 className="text-sm font-semibold text-indigo-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Magicline Mitglied
+            </h3>
+            <MemberSearch 
+              initialEmail={ticket.customerEmail}
+              initialPhone={ticket.phone}
+              compact={true}
+            />
           </div>
 
           {/* Dates */}
