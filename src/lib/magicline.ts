@@ -51,8 +51,19 @@ interface MagiclineContract {
   rateName: string;
   startDate: string;
   endDate?: string | null;
+  createdDate?: string;
   cancellationDate?: string | null;
-  status: string;
+  cancellationReceiptDate?: string | null;
+  cancellationReason?: string | null;
+  contractStatus?: string;
+  cancelled?: boolean;
+  price?: number;
+  priceDetails?: {
+    basePrice?: { amount: number; currency: string };
+    currentPrice?: { amount: number; currency: string };
+  };
+  // Legacy fields for compatibility
+  status?: string;
   monthlyFee?: number;
   currency?: string;
 }
@@ -280,11 +291,12 @@ class MagiclineClient {
   }
 
   // Get customer contracts
+  // Note: This endpoint returns an array directly, not wrapped in { result: [...] }
   async getCustomerContracts(customerId: number): Promise<MagiclineContract[]> {
-    const result = await this.fetch<ApiResponse<MagiclineContract>>(
+    const result = await this.fetch<MagiclineContract[]>(
       `/customers/${customerId}/contracts`
     );
-    return result.result || [];
+    return result || [];
   }
 
   // Get customer checkins

@@ -84,11 +84,11 @@ export async function GET(
         startDate: c.startDate,
         endDate: c.endDate,
         cancellationDate: c.cancellationDate,
-        status: c.status,
-        monthlyFee: c.monthlyFee,
-        currency: c.currency || 'EUR',
-        isActive: !c.endDate || new Date(c.endDate) > new Date(),
-        isCancelled: !!c.cancellationDate,
+        status: c.contractStatus || c.status || 'UNKNOWN',
+        monthlyFee: c.priceDetails?.currentPrice?.amount || c.price || c.monthlyFee,
+        currency: c.priceDetails?.currentPrice?.currency || c.currency || 'EUR',
+        isActive: c.contractStatus === 'ACTIVE' || (!c.endDate || new Date(c.endDate) > new Date()),
+        isCancelled: c.cancelled || !!c.cancellationDate,
       })),
     };
 
