@@ -263,7 +263,12 @@ export default function MemberSearch({
         )}
 
         <button
-          onClick={() => setSelectedMember(null)}
+          onClick={() => {
+            setSelectedMember(null);
+            setQuery("");
+            setResults([]);
+            setAutoSearched(false);
+          }}
           className="mt-3 w-full text-xs text-apple-gray-400 hover:text-apple-gray-600"
         >
           Andere Suche
@@ -367,7 +372,12 @@ export default function MemberSearch({
                   {statusLabels[selectedMember.customer.status]?.label || selectedMember.customer.status}
                 </span>
                 <button
-                  onClick={() => setSelectedMember(null)}
+                  onClick={() => {
+                    setSelectedMember(null);
+                    setQuery("");
+                    setResults([]);
+                    setAutoSearched(false);
+                  }}
                   className="p-1 text-apple-gray-400 hover:text-apple-gray-600"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
