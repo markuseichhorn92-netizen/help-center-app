@@ -151,6 +151,44 @@ class MagiclineClient {
     return result;
   }
 
+  // Search customers by name across ALL pages (paginated search)
+  async searchCustomersByName(name: string, maxResults: number = 20): Promise<MagiclineCustomer[]> {
+    const nameLower = name.toLowerCase();
+    const matches: MagiclineCustomer[] = [];
+    let offset: string | undefined;
+    let pageCount = 0;
+    const maxPages = 50; // Safety limit
+
+    while (pageCount < maxPages && matches.length < maxResults) {
+      const params = new URLSearchParams();
+      params.append('size', '100');
+      if (offset) params.append('offset', offset);
+
+      const result = await this.fetch<ApiResponse<MagiclineCustomer>>(
+        `/customers?${params.toString()}`
+      );
+
+      // Filter for matching names
+      const pageMatches = (result.result || []).filter(c => 
+        c.firstName?.toLowerCase().includes(nameLower) ||
+        c.lastName?.toLowerCase().includes(nameLower) ||
+        `${c.firstName} ${c.lastName}`.toLowerCase().includes(nameLower)
+      );
+
+      matches.push(...pageMatches);
+
+      // Check if there are more pages
+      if (!result.hasNext || !result.offset) {
+        break;
+      }
+
+      offset = result.offset;
+      pageCount++;
+    }
+
+    return matches.slice(0, maxResults);
+  }
+
   // Get customer by ID
   async getCustomer(id: number): Promise<MagiclineCustomer> {
     return this.fetch<MagiclineCustomer>(`/customers/${id}`);

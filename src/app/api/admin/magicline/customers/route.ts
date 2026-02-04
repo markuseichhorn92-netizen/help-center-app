@@ -83,13 +83,9 @@ export async function GET(request: NextRequest) {
       });
       customers = result.result || [];
     }
-    // Search by name (requires fetching all and filtering)
+    // Search by name (paginated search through all customers)
     else if (query.length >= 2) {
-      const result = await magicline.searchCustomers({ 
-        name: query, 
-        size: Math.min(size * 5, 500) // Fetch more since we filter client-side
-      });
-      customers = result.result || [];
+      customers = await magicline.searchCustomersByName(query, Math.min(size, 20));
     }
 
     // Format response - only include relevant fields
