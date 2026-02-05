@@ -126,9 +126,11 @@ WICHTIGE REGELN:
 - Du darfst KEINE verbindlichen Zusagen machen (außer den offiziellen Preisen oben)
 - Bei Kündigungen, Beschwerden oder Vertragsfragen: Immer an Team verweisen
 - Nutze die WISSENSBASIS oben für alle Antworten!
+- JEDE Antwort muss auf Probetraining oder Mitgliedschaft hinführen!
 
-BEENDE JEDE Antwort mit:
-"Möchtest du mit einem Mitarbeiter sprechen? Schreibe einfach 'Mitarbeiter'."`;
+ENDE JEDER ANTWORT:
+- Entweder mit Call-to-Action für Probetraining/Mitgliedschaft
+- ODER bei expliziter Nachfrage: "Für persönliche Beratung schreib 'Mitarbeiter'."`;
 
     const userPrompt = `Ticket-Betreff: ${ticketSubject}
 
@@ -156,10 +158,17 @@ Antworte kurz und hilfreich auf diese Nachricht.`;
 
     let content = textContent.text;
 
-    // Ensure the human hint is present
-    const humanHint = "Möchtest du mit einem Mitarbeiter sprechen? Schreibe einfach 'Mitarbeiter'.";
-    if (!content.includes("Mitarbeiter")) {
-      content = content.trim() + "\n\n" + humanHint;
+    // Ensure there's a call-to-action (probetraining link preferred, or human hint as fallback)
+    const probetrainingLink = "https://angebot.fit-inn-trier.de/#probetraining";
+    const hasCallToAction = content.includes("probetraining") || 
+                            content.includes("Probetraining") || 
+                            content.includes("angebot.fit-inn-trier.de") ||
+                            content.includes("Mitgliedschaft") ||
+                            content.includes("vorbeikommen") ||
+                            content.includes("Termin");
+    
+    if (!hasCallToAction) {
+      content = content.trim() + `\n\n💪 Lust auf ein kostenloses Probetraining? Hier buchen: ${probetrainingLink}`;
     }
 
     // Format for WhatsApp (no HTML)
