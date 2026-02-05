@@ -5,6 +5,7 @@ import { generateAutoReply, wantsHuman, markHumanRequested, isAutoReplyEnabled }
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { sendNewTicketNotification } from '@/lib/resend';
 import { notifyNewMessage, notifyEscalation, notifyNewTicket } from '@/lib/push-notifications';
+import { startFollowupTracking, updateCustomerActivity, stopFollowupTracking, checkForConversion } from '@/lib/whatsapp-followup';
 import crypto from 'crypto';
 
 // Validate Twilio request signature
@@ -158,6 +159,15 @@ export async function POST(req: NextRequest) {
       // Add message to existing ticket
       console.log(`Adding message to existing ticket: ${existingTicket.ticketNumber}`);
 
+      // Update follow-up tracking (resets 24h window timer)
+      await updateCustomerActivity(existingTicket.id);
+      
+      // Check if customer indicates conversion (booked, signed up, etc.)
+      if (checkForConversion(messageContent)) {
+        await stopFollowupTracking(existingTicket.id);
+        console.log(`[Follow-up] Customer converted or opted out, stopped tracking`);
+      }
+
       // Check if customer wants to talk to a human
       const customerWantsHuman = wantsHuman(messageContent);
       if (customerWantsHuman) {
@@ -292,6 +302,9 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`New WhatsApp ticket created: ${ticket.ticketNumber}`);
+
+    // Start follow-up tracking for sales nurturing
+    await startFollowupTracking(ticket.id);
 
     // Notify admin about new WhatsApp ticket
     try {
