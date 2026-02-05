@@ -176,6 +176,6 @@ ESKALATION - Wenn jemand:
 
 Kontakt Team: info@fit-inn-trier.de oder 0651 30 85 24
 
-Buchungslink Probetraining: https://angebot.fit-inn-trier.de/#probetraining
-Buchungslink Mitgliedschaft: https://angebot.fit-inn-trier.de/#mitgliedschaft
+WICHTIG: Nutze die PERSONALISIERTEN BUCHUNGSLINKS aus dem Kontext oben! 
+Die sind auf jeden Kunden zugeschnitten, damit er das Formular nicht nochmal ausfüllen muss.
 `;

@@ -227,6 +227,7 @@ export async function POST(req: NextRequest) {
           ticketSubject: existingTicket.subject,
           conversationHistory: messages,
           isWhatsApp: true,
+          customerPhone: phoneNumber,
         });
 
         if (aiResult.success && aiResult.content) {
@@ -357,6 +358,7 @@ export async function POST(req: NextRequest) {
         customerName: profileName || phoneNumber,
         ticketSubject: ticket.subject,
         isWhatsApp: true,
+        customerPhone: phoneNumber,
       });
 
       if (aiResult.success && aiResult.content) {

@@ -76,6 +76,18 @@ export async function setAIStatus(ticketId: string, status: 'active' | 'escalate
 }
 
 /**
+ * Generate personalized booking URL with customer data (skips lead form)
+ */
+function getPersonalizedBookingUrl(customerName: string, customerPhone?: string, type: 'probetraining' | 'mitgliedschaft' = 'probetraining'): string {
+  const baseUrl = 'https://angebot.fit-inn-trier.de/';
+  const params = new URLSearchParams();
+  params.set('name', customerName);
+  if (customerPhone) params.set('phone', customerPhone);
+  const hash = type === 'probetraining' ? '#probetraining' : '#mitgliedschaft';
+  return `${baseUrl}?${params.toString()}${hash}`;
+}
+
+/**
  * Generate an auto-reply using AI with knowledge base context
  */
 export async function generateAutoReply(params: {
@@ -84,9 +96,14 @@ export async function generateAutoReply(params: {
   ticketSubject: string;
   conversationHistory?: TicketMessage[];
   isWhatsApp?: boolean;
+  customerPhone?: string;
 }): Promise<{ content: string; success: boolean; error?: string }> {
   try {
-    const { customerMessage, customerName, ticketSubject, conversationHistory, isWhatsApp } = params;
+    const { customerMessage, customerName, ticketSubject, conversationHistory, isWhatsApp, customerPhone } = params;
+    
+    // Generate personalized booking URLs
+    const probetrainingUrl = getPersonalizedBookingUrl(customerName, customerPhone, 'probetraining');
+    const mitgliedschaftUrl = getPersonalizedBookingUrl(customerName, customerPhone, 'mitgliedschaft');
 
     // Build conversation context from history
     let conversationContext = "";
@@ -118,6 +135,12 @@ export async function generateAutoReply(params: {
 
 ${FINN_KNOWLEDGE}
 
+=== PERSONALISIERTE BUCHUNGSLINKS FÜR DIESEN KUNDEN ===
+Probetraining: ${probetrainingUrl}
+Mitgliedschaft: ${mitgliedschaftUrl}
+WICHTIG: Nutze IMMER diese personalisierten Links oben! Sie sind auf den Kunden zugeschnitten.
+=== ENDE BUCHUNGSLINKS ===
+
 ${articlesContext ? `\n=== ZUSÄTZLICHE HILFE-ARTIKEL ===\n${articlesContext}\n=== ENDE HILFE-ARTIKEL ===` : ""}
 ${knowledgeContext ? `\n=== ZUSÄTZLICHE WEBSITE-INFOS ===\n${knowledgeContext}\n=== ENDE WEBSITE-INFOS ===` : ""}
 
@@ -127,9 +150,10 @@ WICHTIGE REGELN:
 - Bei Kündigungen, Beschwerden oder Vertragsfragen: Immer an Team verweisen
 - Nutze die WISSENSBASIS oben für alle Antworten!
 - JEDE Antwort muss auf Probetraining oder Mitgliedschaft hinführen!
+- NUTZE DIE PERSONALISIERTEN BUCHUNGSLINKS OBEN, nicht die generischen!
 
 ENDE JEDER ANTWORT:
-- Entweder mit Call-to-Action für Probetraining/Mitgliedschaft
+- Entweder mit Call-to-Action für Probetraining/Mitgliedschaft (nutze personalisierte Links!)
 - ODER bei expliziter Nachfrage: "Für persönliche Beratung schreib 'Mitarbeiter'."`;
 
     const userPrompt = `Ticket-Betreff: ${ticketSubject}
@@ -158,8 +182,7 @@ Antworte kurz und hilfreich auf diese Nachricht.`;
 
     let content = textContent.text;
 
-    // Ensure there's a call-to-action (probetraining link preferred, or human hint as fallback)
-    const probetrainingLink = "https://angebot.fit-inn-trier.de/#probetraining";
+    // Ensure there's a call-to-action (use personalized link!)
     const hasCallToAction = content.includes("probetraining") || 
                             content.includes("Probetraining") || 
                             content.includes("angebot.fit-inn-trier.de") ||
@@ -168,7 +191,7 @@ Antworte kurz und hilfreich auf diese Nachricht.`;
                             content.includes("Termin");
     
     if (!hasCallToAction) {
-      content = content.trim() + `\n\n💪 Lust auf ein kostenloses Probetraining? Hier buchen: ${probetrainingLink}`;
+      content = content.trim() + `\n\n💪 Lust auf ein kostenloses Probetraining? Hier buchen: ${probetrainingUrl}`;
     }
 
     // Format for WhatsApp (no HTML)
