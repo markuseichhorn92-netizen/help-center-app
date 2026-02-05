@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@vercel/kv';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
-import { createMessage, getTicketById } from '@/lib/tickets';
+import { createMessage, getTicket } from '@/lib/tickets';
 import { FollowupState } from '@/lib/whatsapp-followup';
 
 // Follow-up messages (rotated based on attempt number)
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
         if (reason === 'max_duration_reached' || reason === 'max_followups_reached') {
           if (!state.closed) {
             // Send goodbye and close
-            const ticket = await getTicketById(ticketId);
+            const ticket = await getTicket(ticketId);
             if (ticket && ticket.phone) {
               await sendWhatsAppMessage({
                 to: ticket.phone,
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
       }
       
       // Send follow-up
-      const ticket = await getTicketById(ticketId);
+      const ticket = await getTicket(ticketId);
       if (!ticket || !ticket.phone) {
         results.push({ ticketId, action: 'skipped', reason: 'no_phone' });
         continue;
