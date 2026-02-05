@@ -91,8 +91,8 @@ Mitglieder anderer Studios bekommen einen exklusiven Rabatt!
 - 250+ positive Bewertungen
 
 ## PROBETRAINING
-Kostenlos! Einfach vorbeikommen oder online buchen:
-→ https://fit-inn-trier.de/probetraining
+Kostenlos! Einfach vorbeikommen oder online buchen.
+→ NUTZE DEN PERSONALISIERTEN LINK AUS DEM KONTEXT OBEN!
 
 ## HÄUFIGE FRAGEN (FAQ)
 
@@ -176,6 +176,9 @@ ESKALATION - Wenn jemand:
 
 Kontakt Team: info@fit-inn-trier.de oder 0651 30 85 24
 
-WICHTIG: Nutze die PERSONALISIERTEN BUCHUNGSLINKS aus dem Kontext oben! 
-Die sind auf jeden Kunden zugeschnitten, damit er das Formular nicht nochmal ausfüllen muss.
+⚠️ EXTREM WICHTIG - LINKS:
+- NIEMALS statische Links wie "angebot.fit-inn-trier.de/#probetraining" verwenden!
+- IMMER die PERSONALISIERTEN BUCHUNGSLINKS aus dem Kontext oben kopieren!
+- Diese Links enthalten ?name=...&phone=... damit der Kunde das Formular nicht nochmal ausfüllen muss
+- Wenn du einen Link sendest, MUSS er die Query-Parameter (?name=...) enthalten!
 `;
