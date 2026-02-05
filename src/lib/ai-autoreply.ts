@@ -182,6 +182,30 @@ Antworte kurz und hilfreich auf diese Nachricht.`;
 
     let content = textContent.text;
 
+    // FORCE: Replace ALL static links with personalized ones (AI might ignore instructions)
+    const staticProbetrainingPatterns = [
+      /https?:\/\/angebot\.fit-inn-trier\.de\/?#probetraining/gi,
+      /https?:\/\/angebot\.fit-inn-trier\.de\/\?[^#\s]*#probetraining/gi,
+      /https?:\/\/fit-inn-trier\.de\/probetraining/gi,
+      /https?:\/\/fitinn-landing\.vercel\.app\/?#probetraining/gi,
+    ];
+    const staticMitgliedschaftPatterns = [
+      /https?:\/\/angebot\.fit-inn-trier\.de\/?#mitgliedschaft/gi,
+      /https?:\/\/angebot\.fit-inn-trier\.de\/\?[^#\s]*#mitgliedschaft/gi,
+      /https?:\/\/fitinn-landing\.vercel\.app\/?#mitgliedschaft/gi,
+    ];
+    
+    // Replace static probetraining links
+    for (const pattern of staticProbetrainingPatterns) {
+      content = content.replace(pattern, probetrainingUrl);
+    }
+    // Replace static mitgliedschaft links
+    for (const pattern of staticMitgliedschaftPatterns) {
+      content = content.replace(pattern, mitgliedschaftUrl);
+    }
+    
+    console.log('[AI-AutoReply] Personalized URLs:', { probetrainingUrl, mitgliedschaftUrl });
+
     // Ensure there's a call-to-action (use personalized link!)
     const hasCallToAction = content.includes("probetraining") || 
                             content.includes("Probetraining") || 
