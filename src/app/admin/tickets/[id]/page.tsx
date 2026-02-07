@@ -282,6 +282,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [forwardReplyToCustomer, setForwardReplyToCustomer] = useState(true);
   const [forwarding, setForwarding] = useState(false);
 
+  // Editable email state
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [editedEmail, setEditedEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
+
   // Rating state
   const [ticketRating, setTicketRating] = useState<{ rating: number; comment?: string } | null>(null);
   const [requestingRating, setRequestingRating] = useState(false);
@@ -885,6 +890,32 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       alert(err.message);
     } finally {
       setAiStatusLoading(false);
+    }
+  };
+
+  // Handle saving edited customer email
+  const handleSaveEmail = async () => {
+    if (!editedEmail.trim() || !editedEmail.includes('@')) {
+      alert('Bitte gib eine gültige E-Mail-Adresse ein');
+      return;
+    }
+    
+    setSavingEmail(true);
+    try {
+      const res = await fetch(`/api/admin/tickets/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerEmail: editedEmail.trim().toLowerCase() })
+      });
+      
+      if (!res.ok) throw new Error('Fehler beim Speichern');
+      
+      setTicket(prev => prev ? { ...prev, customerEmail: editedEmail.trim().toLowerCase() } : null);
+      setEditingEmail(false);
+    } catch (err: any) {
+      alert('Fehler: ' + err.message);
+    } finally {
+      setSavingEmail(false);
     }
   };
 
@@ -2522,12 +2553,65 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   </span>
                 </div>
               </div>
-              <a
-                href={`mailto:${ticket.customerEmail}`}
-                className="text-brand hover:text-brand-dark text-sm break-all"
-              >
-                {ticket.customerEmail}
-              </a>
+              {editingEmail ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="email"
+                    value={editedEmail}
+                    onChange={(e) => setEditedEmail(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-sm border border-apple-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
+                    placeholder="E-Mail-Adresse"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveEmail}
+                    disabled={savingEmail}
+                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                    title="Speichern"
+                  >
+                    {savingEmail ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setEditingEmail(false)}
+                    className="p-1.5 text-apple-gray-400 hover:bg-apple-gray-100 rounded-lg transition-colors"
+                    title="Abbrechen"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group">
+                  <a
+                    href={`mailto:${ticket.customerEmail}`}
+                    className="text-brand hover:text-brand-dark text-sm break-all"
+                  >
+                    {ticket.customerEmail}
+                  </a>
+                  <button
+                    onClick={() => {
+                      setEditedEmail(ticket.customerEmail);
+                      setEditingEmail(true);
+                    }}
+                    className="p-1 text-apple-gray-300 hover:text-apple-gray-600 opacity-0 group-hover:opacity-100 transition-all"
+                    title="E-Mail ändern"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                </div>
+              )}
               {/* Last Seen */}
               {!customerPresence.online && customerPresence.lastSeen && (
                 <p className="text-xs text-apple-gray-400">

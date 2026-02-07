@@ -88,6 +88,43 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const sessionCookie = req.cookies.get('admin_session');
+  if (!sessionCookie?.value) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const { customerEmail, customerName, phone } = body;
+
+    // Update allowed customer fields
+    const updateData: Record<string, any> = {};
+    if (customerEmail) updateData.customerEmail = customerEmail.toLowerCase().trim();
+    if (customerName) updateData.customerName = customerName.trim();
+    if (phone !== undefined) updateData.phone = phone?.trim() || null;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ message: 'Keine Änderungen angegeben.' }, { status: 400 });
+    }
+
+    const updatedTicket = await updateTicket(id, updateData);
+
+    if (!updatedTicket) {
+      return NextResponse.json({ message: 'Ticket nicht gefunden.' }, { status: 404 });
+    }
+
+    return NextResponse.json(updatedTicket);
+  } catch (error) {
+    console.error('Failed to patch ticket:', error);
+    return NextResponse.json({ message: 'Fehler beim Aktualisieren des Tickets.' }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -164,7 +164,7 @@ export async function getAllTickets(): Promise<Ticket[]> {
 
 export async function updateTicket(
   id: string,
-  updates: Partial<Pick<Ticket, 'status' | 'priority' | 'assignedTo'>>
+  updates: Partial<Pick<Ticket, 'status' | 'priority' | 'assignedTo' | 'customerEmail' | 'customerName' | 'phone'>>
 ): Promise<Ticket | null> {
   const ticket = await getTicket(id);
   if (!ticket) {
@@ -201,6 +201,15 @@ export async function updateTicket(
   );
 
   await kv.hmset(`ticket:${id}`, updatedTicketForKV);
+
+  // Update email index if customerEmail changed
+  if (updates.customerEmail && updates.customerEmail !== ticket.customerEmail) {
+    await Promise.all([
+      kv.srem(`tickets:email:${ticket.customerEmail.toLowerCase()}`, id),
+      kv.sadd(`tickets:email:${updates.customerEmail.toLowerCase()}`, id)
+    ]);
+  }
+
   return updatedTicket;
 }
 
