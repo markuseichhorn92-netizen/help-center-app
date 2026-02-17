@@ -212,6 +212,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [textareaRows, setTextareaRows] = useState(4);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const prevMessagesCountRef = useRef(0);
@@ -557,14 +558,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     return () => clearInterval(interval);
   }, [id]);
 
-  // Only scroll to bottom when NEW messages are added, not on initial load
+  // Scroll to top (newest message) when messages change
   useEffect(() => {
-    if (initialLoadDone && messages.length > prevMessagesCountRef.current) {
-      // New message was added, scroll to it
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length > 0) {
+      // Always scroll to top where newest messages are
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = 0;
+      }
     }
     prevMessagesCountRef.current = messages.length;
-  }, [messages, initialLoadDone]);
+  }, [messages]);
 
   // Poll customer presence
   useEffect(() => {
@@ -1795,7 +1798,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </span>
             </div>
             {/* Messages - Neueste zuerst */}
-            <div className="max-h-[500px] overflow-y-auto p-6 space-y-4">
+            <div ref={messagesContainerRef} className="max-h-[500px] overflow-y-auto p-6 space-y-4">
               {/* Neueste Nachrichten zuerst anzeigen */}
               {[...messages].reverse().map((msg, index) => {
                 const isUnread = msg.sender === "customer" && !msg.isRead;
