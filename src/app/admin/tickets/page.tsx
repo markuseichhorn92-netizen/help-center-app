@@ -951,10 +951,17 @@ export default function TicketsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-apple-gray-100">
-                  {paginatedTickets.map((ticket, index) => (
+                  {paginatedTickets.map((ticket, index) => {
+                    const hasUnread = (ticket.unreadCount || 0) > 0;
+                    return (
                     <tr
                       key={ticket.id}
-                      className={`hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''} ${ticket.aiStatus === 'escalated' ? 'bg-orange-50/50' : ''}`}
+                      className={`transition-colors duration-150 cursor-pointer ${
+                        selectedTickets.has(ticket.id) ? 'bg-brand/5' : 
+                        hasUnread ? 'bg-amber-50 hover:bg-amber-100 border-l-4 border-l-amber-400' : 
+                        ticket.aiStatus === 'escalated' ? 'bg-orange-50/50 hover:bg-orange-100' : 
+                        'hover:bg-apple-gray-50'
+                      }`}
                     >
                       <td className="px-4 py-5" onClick={(e) => e.stopPropagation()}>
                         <input
@@ -985,7 +992,8 @@ export default function TicketsPage() {
                               </span>
                             )}
                           </div>
-                          <span className="text-base font-medium text-apple-gray-600">
+                          <span className={`text-base ${hasUnread ? 'font-bold text-apple-gray-700' : 'font-medium text-apple-gray-600'}`}>
+                            {hasUnread && <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>}
                             {ticket.subject}
                           </span>
                         </div>
@@ -1020,18 +1028,25 @@ export default function TicketsPage() {
                         })}
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
 
             {/* Mobile Cards */}
             <div className="md:hidden divide-y divide-apple-gray-100">
-              {paginatedTickets.map((ticket) => (
+              {paginatedTickets.map((ticket) => {
+                const hasUnread = (ticket.unreadCount || 0) > 0;
+                return (
                 <div
                   key={ticket.id}
                   onClick={() => window.location.href = `/admin/tickets/${ticket.id}`}
-                  className={`p-4 hover:bg-apple-gray-50 transition-colors duration-150 cursor-pointer ${selectedTickets.has(ticket.id) ? 'bg-brand/5' : ''} ${ticket.aiStatus === 'escalated' ? 'bg-orange-50/50 border-l-4 border-l-orange-400' : ''}`}
+                  className={`p-4 transition-colors duration-150 cursor-pointer ${
+                    selectedTickets.has(ticket.id) ? 'bg-brand/5' : 
+                    hasUnread ? 'bg-amber-50 border-l-4 border-l-amber-400' : 
+                    ticket.aiStatus === 'escalated' ? 'bg-orange-50/50 border-l-4 border-l-orange-400' : 
+                    'hover:bg-apple-gray-50'
+                  }`}
                 >
                   <div className="flex items-start gap-3">
                     <div onClick={(e) => e.stopPropagation()}>
@@ -1056,7 +1071,8 @@ export default function TicketsPage() {
                               </span>
                             )}
                           </div>
-                          <span className="text-base font-medium text-apple-gray-600 block truncate">
+                          <span className={`text-base block truncate ${hasUnread ? 'font-bold text-apple-gray-700' : 'font-medium text-apple-gray-600'}`}>
+                            {hasUnread && <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></span>}
                             {ticket.subject}
                           </span>
                           {ticket.aiStatus === 'escalated' && (
@@ -1092,7 +1108,7 @@ export default function TicketsPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </>
         )}
