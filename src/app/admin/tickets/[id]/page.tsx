@@ -1775,10 +1775,31 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             {/* Main Content - Messages */}
             <div className="lg:col-span-2">
           <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
-            {/* Messages */}
+            {/* Messages Header */}
+            <div className="px-6 py-3 bg-apple-gray-50 border-b border-apple-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-apple-gray-600">
+                  {messages.length} {messages.length === 1 ? 'Nachricht' : 'Nachrichten'}
+                </span>
+                {messages.filter(m => m.sender === 'customer' && !m.isRead).length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-white bg-red-500 rounded-full animate-pulse">
+                    {messages.filter(m => m.sender === 'customer' && !m.isRead).length} ungelesen
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-apple-gray-400 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                </svg>
+                Neueste oben
+              </span>
+            </div>
+            {/* Messages - Neueste zuerst */}
             <div className="max-h-[500px] overflow-y-auto p-6 space-y-4">
-              {messages.map((msg) => {
+              {/* Neueste Nachrichten zuerst anzeigen */}
+              {[...messages].reverse().map((msg, index) => {
                 const isUnread = msg.sender === "customer" && !msg.isRead;
+                const isNewest = index === 0;
                 return (
                   <div
                     key={msg.id}
@@ -1789,13 +1810,25 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         msg.sender === "admin"
                           ? "bg-brand text-white"
                           : isUnread
-                          ? "bg-blue-50 text-apple-gray-600 ring-2 ring-blue-200"
+                          ? "bg-amber-50 text-apple-gray-600 ring-2 ring-amber-300 border-l-4 border-l-amber-400"
                           : "bg-apple-gray-100 text-apple-gray-600"
                       }`}
                     >
-                      {isUnread && (
-                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center w-5 h-5 text-xs font-semibold text-white bg-red-500 rounded-full">
+                      {/* Neueste Nachricht Badge */}
+                      {isNewest && (
+                        <span className="absolute -top-3 left-4 inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-white bg-green-500 rounded-full shadow-md">
+                          <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                          Neueste
+                        </span>
+                      )}
+                      {isUnread && !isNewest && (
+                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold text-white bg-red-500 rounded-full">
                           Neu
+                        </span>
+                      )}
+                      {isUnread && isNewest && (
+                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold text-white bg-red-500 rounded-full animate-pulse">
+                          Ungelesen
                         </span>
                       )}
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
