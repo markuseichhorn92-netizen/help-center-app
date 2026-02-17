@@ -102,6 +102,8 @@ export default function TicketsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [newItemsAvailable, setNewItemsAvailable] = useState(false);
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt" | "status">("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Fetch emails in background (without blocking UI)
   const fetchEmailsInBackground = async () => {
@@ -453,17 +455,27 @@ export default function TicketsPage() {
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       }
 
-      // Sort by status priority first (open > in_progress > resolved > closed)
-      const statusOrder = { open: 0, in_progress: 1, resolved: 2, closed: 3 };
-      const statusDiff = statusOrder[a.status] - statusOrder[b.status];
-      if (statusDiff !== 0) return statusDiff;
+      // Configurable sorting
+      const multiplier = sortOrder === "desc" ? -1 : 1;
+      
+      if (sortBy === "status") {
+        const statusOrder = { open: 0, in_progress: 1, resolved: 2, closed: 3 };
+        const statusDiff = statusOrder[a.status] - statusOrder[b.status];
+        if (statusDiff !== 0) return statusDiff * multiplier;
+        // Secondary sort by createdAt
+        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * multiplier;
+      }
+      
+      if (sortBy === "createdAt") {
+        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * multiplier;
+      }
+      
+      if (sortBy === "updatedAt") {
+        return (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()) * multiplier;
+      }
 
-      // Then by unreadCount (descending)
-      const unreadDiff = (b.unreadCount || 0) - (a.unreadCount || 0);
-      if (unreadDiff !== 0) return unreadDiff;
-
-      // Finally by updatedAt (newest first)
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      // Default: by createdAt desc
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
 
   // Pagination
@@ -728,6 +740,34 @@ export default function TicketsPage() {
               </svg>
             </button>
           )}
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="flex items-center gap-2">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "createdAt" | "updatedAt" | "status")}
+            className="px-3 py-2.5 bg-white border border-apple-gray-200 rounded-full text-sm text-apple-gray-600 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer"
+          >
+            <option value="createdAt">Eingang</option>
+            <option value="updatedAt">Aktualisiert</option>
+            <option value="status">Status</option>
+          </select>
+          <button
+            onClick={() => setSortOrder(sortOrder === "desc" ? "asc" : "desc")}
+            className="p-2.5 bg-white border border-apple-gray-200 rounded-full hover:bg-apple-gray-50 transition-colors"
+            title={sortOrder === "desc" ? "Neueste zuerst" : "Älteste zuerst"}
+          >
+            {sortOrder === "desc" ? (
+              <svg className="w-5 h-5 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-apple-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+              </svg>
+            )}
+          </button>
         </div>
 
         {/* Auto-Refresh Toggle */}
