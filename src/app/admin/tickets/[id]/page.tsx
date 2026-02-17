@@ -558,16 +558,32 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     return () => clearInterval(interval);
   }, [id]);
 
-  // Scroll to top (newest message) when messages change
+  // Scroll state for "scroll to top" button
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Only scroll to top on INITIAL load, not on every update
   useEffect(() => {
-    if (messages.length > 0) {
-      // Always scroll to top where newest messages are
+    if (messages.length > 0 && prevMessagesCountRef.current === 0) {
+      // Initial load - scroll to top once
       if (messagesContainerRef.current) {
         messagesContainerRef.current.scrollTop = 0;
       }
     }
     prevMessagesCountRef.current = messages.length;
   }, [messages]);
+
+  // Track scroll position to show/hide "scroll to top" button
+  const handleMessagesScroll = () => {
+    if (messagesContainerRef.current) {
+      setShowScrollTop(messagesContainerRef.current.scrollTop > 100);
+    }
+  };
+
+  const scrollToTop = () => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   // Poll customer presence
   useEffect(() => {
@@ -1777,7 +1793,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Main Content - Messages */}
             <div className="lg:col-span-2">
-          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden">
+          <div className="bg-white rounded-apple-xl shadow-card border border-apple-gray-100 overflow-hidden relative">
             {/* Messages Header */}
             <div className="px-6 py-3 bg-apple-gray-50 border-b border-apple-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1798,7 +1814,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </span>
             </div>
             {/* Messages - Neueste zuerst */}
-            <div ref={messagesContainerRef} className="max-h-[500px] overflow-y-auto p-6 space-y-4">
+            <div ref={messagesContainerRef} onScroll={handleMessagesScroll} className="max-h-[500px] overflow-y-auto p-6 space-y-4 relative">
               {/* Neueste Nachrichten zuerst anzeigen */}
               {[...messages].reverse().map((msg, index) => {
                 const isUnread = msg.sender === "customer" && !msg.isRead;
@@ -1956,6 +1972,19 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               )}
               <div ref={messagesEndRef} />
             </div>
+            {/* Scroll to Top Button - fixed within the card */}
+            {showScrollTop && (
+              <button
+                onClick={scrollToTop}
+                className="absolute top-16 right-6 z-10 flex items-center gap-2 px-3 py-2 bg-brand text-white font-medium rounded-full shadow-lg hover:bg-brand-dark transition-all"
+                title="Zur neuesten Nachricht"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <span className="text-sm">Nach oben</span>
+              </button>
+            )}
 
             {/* Reply Form */}
             <div 
