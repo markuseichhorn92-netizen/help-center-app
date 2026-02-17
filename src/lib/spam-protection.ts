@@ -26,6 +26,7 @@ const DISPOSABLE_EMAIL_DOMAINS = [
 
 // Spam keywords that indicate spam content
 const SPAM_KEYWORDS = [
+  // Classic spam
   'cryptocurrency',
   'bitcoin investment',
   'earn money fast',
@@ -52,6 +53,147 @@ const SPAM_KEYWORDS = [
   'crypto trading',
   'forex trading',
   'binary options',
+];
+
+// Marketing/Newsletter indicators - higher threshold needed
+const MARKETING_KEYWORDS = [
+  'newsletter',
+  'unsubscribe',
+  'abmelden',
+  'abbestellen',
+  'email preferences',
+  'e-mail-einstellungen',
+  'view in browser',
+  'im browser ansehen',
+  'no longer wish to receive',
+  'nicht mehr erhalten',
+  'ihre vorteile',
+  'exklusives angebot',
+  'jetzt sichern',
+  'nur noch heute',
+  'zeitlich begrenzt',
+  'sonderangebot',
+  'rabatt sichern',
+  'gutschein',
+  'promo code',
+  'black friday',
+  'cyber monday',
+  'kostenlose lieferung',
+  'gratis versand',
+  'jetzt bestellen',
+  'jetzt kaufen',
+  'jetzt shoppen',
+  'sale %',
+  '% rabatt',
+  'bis zu 50%',
+  'bis zu 70%',
+  'super sale',
+  'flash sale',
+  'limited edition',
+  'neu im sortiment',
+  'neue kollektion',
+  'bestseller',
+  'top angebot',
+  'email campaign',
+  'marketing',
+  'promotional',
+  'special offer',
+  'exclusive deal',
+  'early access',
+  'vip zugang',
+  'member exclusive',
+  'treue-bonus',
+  'treuepunkte',
+  'kundenkarte',
+  'payback',
+  'deutschlandcard',
+];
+
+// Domains that are typically mass-mailers / marketing
+const MARKETING_SENDER_DOMAINS = [
+  'mail.mailchimp.com',
+  'mailchimp.com',
+  'sendgrid.net',
+  'sendgrid.com',
+  'mailgun.org',
+  'mailgun.com',
+  'sendinblue.com',
+  'brevo.com',
+  'klaviyo.com',
+  'hubspot.com',
+  'hubspotmail.com',
+  'mailjet.com',
+  'constantcontact.com',
+  'aweber.com',
+  'getresponse.com',
+  'activecampaign.com',
+  'drip.com',
+  'convertkit.com',
+  'flodesk.com',
+  'omnisend.com',
+  'emarsys.com',
+  'salesforce.com',
+  'exacttarget.com',
+  'responsys.com',
+  'cheetahmail.com',
+  'experian.com',
+  'returnpath.com',
+  'e.newsletter',
+  'newsletter.',
+  'news.',
+  'marketing.',
+  'promo.',
+  'noreply',
+  'no-reply',
+  'donotreply',
+  'do-not-reply',
+  'bounce',
+  'mailer-daemon',
+  // German bulk senders
+  'inxmail.com',
+  'cleverreach.com',
+  'newsletter2go.com',
+  'rapidmail.de',
+  'evalanche.com',
+  'artegic.com',
+  'optivo.com',
+  'ecircle.com',
+  'xqueue.com',
+  // Common commercial senders
+  'amazon.de',
+  'amazon.com',
+  'ebay.de',
+  'ebay.com',
+  'paypal.de',
+  'paypal.com',
+  'linkedin.com',
+  'facebookmail.com',
+  'youtube.com',
+  'google.com',
+  'apple.com',
+  'microsoft.com',
+  'spotify.com',
+  'netflix.com',
+  'zalando.de',
+  'aboutyou.de',
+  'otto.de',
+  'mediamarkt.de',
+  'saturn.de',
+  'lidl.de',
+  'aldi.de',
+  'rewe.de',
+  'edeka.de',
+  'dm.de',
+  'rossmann.de',
+  'ikea.com',
+  'booking.com',
+  'airbnb.com',
+  'expedia.de',
+  'check24.de',
+  'verivox.de',
+  'idealo.de',
+  'guenstiger.de',
+  'billiger.de',
 ];
 
 // KV Keys
@@ -373,19 +515,217 @@ export async function getSpamStats(): Promise<{
 
 /**
  * Check if an email should be processed (for IMAP)
- * Less strict than web form - mainly checks blocklist
+ * Aggressive filtering for marketing/newsletter emails
+ * Only allows through: customer inquiries, invoices, important requests
  */
 export async function checkEmailForSpam(
   senderEmail: string,
   subject: string,
   content: string
 ): Promise<SpamCheckResult> {
-  return checkForSpam({
+  const emailLower = senderEmail.toLowerCase();
+  const subjectLower = subject.toLowerCase();
+  const contentLower = content.toLowerCase();
+  const fullText = `${subjectLower} ${contentLower}`;
+
+  // 1. First run basic spam check
+  const basicCheck = await checkForSpam({
     email: senderEmail,
     subject,
     content,
-    skipRateLimit: true, // Don't rate limit incoming emails
+    skipRateLimit: true,
   });
+
+  if (basicCheck.isSpam) {
+    return basicCheck;
+  }
+
+  // 2. Check if sender domain is a known mass-mailer
+  const senderDomain = emailLower.split('@')[1] || '';
+  for (const marketingDomain of MARKETING_SENDER_DOMAINS) {
+    if (senderDomain.includes(marketingDomain) || emailLower.includes(marketingDomain)) {
+      return {
+        isSpam: true,
+        reason: `Marketing-Absender: ${senderDomain}`,
+        score: 100,
+        details: {
+          rateLimited: false,
+          blockedEmail: false,
+          blockedDomain: true,
+          disposableEmail: false,
+          spamContent: false,
+          tooManyLinks: false,
+          honeypotTriggered: false,
+        },
+      };
+    }
+  }
+
+  // 3. Check for noreply/newsletter sender patterns
+  if (
+    emailLower.includes('noreply') ||
+    emailLower.includes('no-reply') ||
+    emailLower.includes('donotreply') ||
+    emailLower.includes('newsletter') ||
+    emailLower.includes('marketing') ||
+    emailLower.includes('promo') ||
+    emailLower.includes('news@') ||
+    emailLower.includes('info@') && MARKETING_SENDER_DOMAINS.some(d => senderDomain.includes(d))
+  ) {
+    return {
+      isSpam: true,
+      reason: `Automatischer Absender: ${emailLower}`,
+      score: 100,
+      details: {
+        rateLimited: false,
+        blockedEmail: true,
+        blockedDomain: false,
+        disposableEmail: false,
+        spamContent: false,
+        tooManyLinks: false,
+        honeypotTriggered: false,
+      },
+    };
+  }
+
+  // 4. Count marketing keywords
+  let marketingScore = 0;
+  let marketingKeywordsFound: string[] = [];
+  
+  for (const keyword of MARKETING_KEYWORDS) {
+    if (fullText.includes(keyword.toLowerCase())) {
+      marketingScore += 15;
+      marketingKeywordsFound.push(keyword);
+    }
+  }
+
+  // 5. Check for WHITELIST patterns (things that should ALWAYS pass)
+  const isLikelyCustomerInquiry = 
+    // Direct questions
+    fullText.includes('frage') ||
+    fullText.includes('fragen') ||
+    fullText.includes('können sie') ||
+    fullText.includes('könnten sie') ||
+    fullText.includes('würden sie') ||
+    fullText.includes('bitte um') ||
+    fullText.includes('ich möchte') ||
+    fullText.includes('ich würde gerne') ||
+    fullText.includes('ich hätte gerne') ||
+    fullText.includes('interesse an') ||
+    fullText.includes('wie funktioniert') ||
+    fullText.includes('was kostet') ||
+    fullText.includes('wann ist') ||
+    fullText.includes('wo finde ich') ||
+    fullText.includes('können wir') ||
+    fullText.includes('termin') ||
+    fullText.includes('anmeldung') ||
+    fullText.includes('mitgliedschaft') ||
+    fullText.includes('probetraining') ||
+    fullText.includes('kündigung') ||
+    fullText.includes('vertrag') ||
+    fullText.includes('beschwerde') ||
+    fullText.includes('reklamation') ||
+    fullText.includes('problem mit') ||
+    fullText.includes('hilfe bei') ||
+    fullText.includes('unterstützung') ||
+    // Invoices & important documents
+    fullText.includes('rechnung') ||
+    fullText.includes('invoice') ||
+    fullText.includes('zahlung') ||
+    fullText.includes('überweisung') ||
+    fullText.includes('mahnung') ||
+    fullText.includes('quittung') ||
+    fullText.includes('beleg') ||
+    fullText.includes('bestätigung ihrer') ||
+    // Personal greetings (indicates real person)
+    fullText.includes('sehr geehrte') ||
+    fullText.includes('sehr geehrter') ||
+    fullText.includes('liebe frau') ||
+    fullText.includes('lieber herr') ||
+    fullText.includes('hallo fit-inn') ||
+    fullText.includes('guten tag');
+
+  // If it looks like a customer inquiry, let it through
+  if (isLikelyCustomerInquiry) {
+    return {
+      isSpam: false,
+      score: 0,
+      details: {
+        rateLimited: false,
+        blockedEmail: false,
+        blockedDomain: false,
+        disposableEmail: false,
+        spamContent: false,
+        tooManyLinks: false,
+        honeypotTriggered: false,
+      },
+    };
+  }
+
+  // 6. Block if too many marketing keywords
+  if (marketingScore >= 45) {
+    return {
+      isSpam: true,
+      reason: `Marketing/Newsletter erkannt: ${marketingKeywordsFound.slice(0, 3).join(', ')}`,
+      score: marketingScore,
+      details: {
+        rateLimited: false,
+        blockedEmail: false,
+        blockedDomain: false,
+        disposableEmail: false,
+        spamContent: true,
+        tooManyLinks: false,
+        honeypotTriggered: false,
+      },
+    };
+  }
+
+  // 7. Check for excessive HTML (newsletters are usually heavily formatted)
+  const htmlTagCount = (content.match(/<[^>]+>/g) || []).length;
+  const textLength = content.replace(/<[^>]+>/g, '').length;
+  const htmlRatio = htmlTagCount / Math.max(textLength / 100, 1);
+  
+  if (htmlRatio > 5 && marketingScore >= 15) {
+    return {
+      isSpam: true,
+      reason: 'Newsletter-Format erkannt (viel HTML, wenig Text)',
+      score: 80,
+      details: {
+        rateLimited: false,
+        blockedEmail: false,
+        blockedDomain: false,
+        disposableEmail: false,
+        spamContent: true,
+        tooManyLinks: false,
+        honeypotTriggered: false,
+      },
+    };
+  }
+
+  // 8. Check for tracking pixels (1x1 images, common in newsletters)
+  if (content.includes('width="1"') || content.includes('height="1"') || content.includes('1x1')) {
+    marketingScore += 20;
+  }
+
+  // Final check
+  if (marketingScore >= 30) {
+    return {
+      isSpam: true,
+      reason: 'Wahrscheinlich Marketing/Newsletter',
+      score: marketingScore,
+      details: {
+        rateLimited: false,
+        blockedEmail: false,
+        blockedDomain: false,
+        disposableEmail: false,
+        spamContent: true,
+        tooManyLinks: false,
+        honeypotTriggered: false,
+      },
+    };
+  }
+
+  return basicCheck;
 }
 
 /**
