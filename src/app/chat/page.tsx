@@ -6,8 +6,8 @@ import Script from "next/script";
 
 declare global {
   interface Window {
-    respondIO?: {
-      open?: () => void;
+    $respond?: {
+      do?: (action: string) => void;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       [key: string]: any;
     };
@@ -18,8 +18,8 @@ export default function ChatPage() {
   useEffect(() => {
     // Auto-open chat widget when it's ready
     const checkAndOpenWidget = () => {
-      if (window.respondIO?.open) {
-        window.respondIO.open();
+      if (window.$respond?.do) {
+        window.$respond.do('chat:open');
       }
     };
 
@@ -46,8 +46,8 @@ export default function ChatPage() {
         onLoad={() => {
           // Open widget once script loads
           setTimeout(() => {
-            if (window.respondIO?.open) {
-              window.respondIO.open();
+            if (window.$respond?.do) {
+              window.$respond.do('chat:open');
             }
           }, 500);
         }}
@@ -107,8 +107,8 @@ export default function ChatPage() {
         {/* Fallback Button */}
         <button
           onClick={() => {
-            if (window.respondIO?.open) {
-              window.respondIO.open();
+            if (window.$respond?.do) {
+              window.$respond.do('chat:open');
             }
           }}
           className="px-8 py-4 bg-gradient-to-r from-brand to-brand-dark text-white font-semibold rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
