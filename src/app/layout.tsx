@@ -83,9 +83,8 @@ export default function RootLayout({
 
         {/* respond.io Live Chat Widget */}
         <script
-          id="respondio__widget"
-          src="https://cdn.respond.io/webchat/widget/widget.js?cId=5109ea42b3bc2f831ad35ad0db15280"
-          async
+          id="respondio__growth_tool"
+          src="https://cdn.respond.io/widget/widget.js?wId=c870a85b-64c0-463d-a46c-faeefd1b0c3e"
         />
       </body>
     </html>
