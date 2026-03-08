@@ -80,6 +80,13 @@ export default function RootLayout({
 
         {/* Anonymous Page Tracking (no cookies, DSGVO-konform) */}
         <PageTracker />
+
+        {/* respond.io Live Chat Widget */}
+        <script
+          id="respondio__widget"
+          src="https://cdn.respond.io/webchat/widget/widget.js?cId=5109ea42b3bc2f831ad35ad0db15280"
+          async
+        />
       </body>
     </html>
   );
