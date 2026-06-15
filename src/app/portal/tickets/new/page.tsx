@@ -140,20 +140,20 @@ export default function NewTicketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-apple-gray-50">
+    <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg">
       {/* Header */}
-      <header className="bg-white border-b border-apple-gray-200 sticky top-0 z-10">
+      <header className="bg-white dark:bg-dark-surface border-b border-apple-gray-200 dark:border-dark-border sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-3">
             <Link
               href="/portal/tickets"
-              className="p-2 -ml-2 hover:bg-apple-gray-50 rounded-apple transition-colors"
+              className="p-2 -ml-2 hover:bg-apple-gray-50 dark:hover:bg-[#2C2C2E] rounded-apple transition-colors"
             >
-              <svg className="w-5 h-5 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-apple-gray-400 dark:text-apple-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <h1 className="text-lg font-semibold text-apple-gray-600">Neues Ticket erstellen</h1>
+            <h1 className="text-lg font-semibold text-apple-gray-600 dark:text-dark-text">Neues Ticket erstellen</h1>
           </div>
         </div>
       </header>
@@ -163,14 +163,14 @@ export default function NewTicketPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 text-red-700 px-4 py-3 rounded-apple-lg text-sm">
+            <div className="bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 px-4 py-3 rounded-apple-lg text-sm">
               {error}
             </div>
           )}
 
           {/* Name (optional) */}
           <div>
-            <label className="block text-sm font-medium text-apple-gray-600 mb-2">
+            <label className="block text-sm font-medium text-apple-gray-600 dark:text-dark-text mb-2">
               Dein Name (optional)
             </label>
             <input
@@ -178,13 +178,13 @@ export default function NewTicketPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Max Mustermann"
-              className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-apple-gray-600"
+              className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 dark:border-dark-border focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 dark:focus:ring-brand/40 text-apple-gray-600 dark:bg-[#2C2C2E] dark:text-dark-text"
             />
           </div>
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium text-apple-gray-600 mb-2">
+            <label className="block text-sm font-medium text-apple-gray-600 dark:text-dark-text mb-2">
               Betreff *
             </label>
             <input
@@ -192,14 +192,14 @@ export default function NewTicketPage() {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Worum geht es?"
-              className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-apple-gray-600"
+              className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 dark:border-dark-border focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 dark:focus:ring-brand/40 text-apple-gray-600 dark:bg-[#2C2C2E] dark:text-dark-text"
               required
             />
           </div>
 
           {/* Message */}
           <div>
-            <label className="block text-sm font-medium text-apple-gray-600 mb-2">
+            <label className="block text-sm font-medium text-apple-gray-600 dark:text-dark-text mb-2">
               Deine Nachricht *
             </label>
             <textarea
@@ -207,14 +207,14 @@ export default function NewTicketPage() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Beschreibe dein Anliegen so detailliert wie möglich..."
               rows={6}
-              className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 text-apple-gray-600 resize-none"
+              className="w-full px-4 py-3 rounded-apple-lg border border-apple-gray-200 dark:border-dark-border focus:outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 dark:focus:ring-brand/40 text-apple-gray-600 dark:bg-[#2C2C2E] dark:text-dark-text resize-none"
               required
             />
           </div>
 
           {/* File Attachments */}
           <div>
-            <label className="block text-sm font-medium text-apple-gray-600 mb-2">
+            <label className="block text-sm font-medium text-apple-gray-600 dark:text-dark-text mb-2">
               Anhänge (optional)
             </label>
 
@@ -234,22 +234,22 @@ export default function NewTicketPage() {
                 {pendingFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 bg-apple-gray-100 px-3 py-2 rounded-lg text-sm"
+                    className="flex items-center gap-2 bg-apple-gray-100 dark:bg-[#38383A] px-3 py-2 rounded-lg text-sm"
                   >
                     {file.type.startsWith("image/") ? (
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     ) : (
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     )}
-                    <span className="text-apple-gray-600 truncate max-w-[150px]">{file.name}</span>
+                    <span className="text-apple-gray-600 dark:text-dark-text truncate max-w-[150px]">{file.name}</span>
                     <button
                       type="button"
                       onClick={() => removePendingFile(index)}
-                      className="text-apple-gray-400 hover:text-red-500 transition-colors"
+                      className="text-apple-gray-400 dark:text-apple-gray-300 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -265,14 +265,14 @@ export default function NewTicketPage() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={pendingFiles.length >= 3}
-              className="flex items-center gap-2 px-4 py-2 border border-apple-gray-200 rounded-apple-lg text-sm text-apple-gray-500 hover:bg-apple-gray-50 hover:border-apple-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 border border-apple-gray-200 dark:border-dark-border rounded-apple-lg text-sm text-apple-gray-500 dark:text-apple-gray-300 hover:bg-apple-gray-50 dark:hover:bg-[#2C2C2E] hover:border-apple-gray-300 dark:hover:border-apple-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
               </svg>
               {pendingFiles.length >= 3 ? "Max. 3 Dateien" : "Datei anhängen"}
             </button>
-            <p className="text-xs text-apple-gray-400 mt-2">
+            <p className="text-xs text-apple-gray-400 dark:text-apple-gray-300 mt-2">
               Max. 3 Dateien, je 5 MB. Erlaubt: Bilder, PDF, Word, Text.
             </p>
           </div>
@@ -303,13 +303,13 @@ export default function NewTicketPage() {
             </button>
             <Link
               href="/portal/tickets"
-              className="px-6 py-3 border border-apple-gray-200 text-apple-gray-600 font-medium rounded-apple-lg hover:bg-apple-gray-50 transition-colors text-center"
+              className="px-6 py-3 border border-apple-gray-200 dark:border-dark-border text-apple-gray-600 dark:text-dark-text font-medium rounded-apple-lg hover:bg-apple-gray-50 dark:hover:bg-[#2C2C2E] transition-colors text-center"
             >
               Abbrechen
             </Link>
           </div>
 
-          <p className="text-sm text-apple-gray-400 text-center">
+          <p className="text-sm text-apple-gray-400 dark:text-apple-gray-300 text-center">
             * Pflichtfelder
           </p>
         </form>

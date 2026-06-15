@@ -17,10 +17,10 @@ interface Ticket {
 }
 
 const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
-  open: { label: "Offen", color: "text-blue-700", bg: "bg-blue-100" },
-  in_progress: { label: "In Bearbeitung", color: "text-yellow-700", bg: "bg-yellow-100" },
-  resolved: { label: "Gelöst", color: "text-green-700", bg: "bg-green-100" },
-  closed: { label: "Geschlossen", color: "text-gray-600", bg: "bg-gray-100" },
+  open: { label: "Offen", color: "text-blue-700 dark:text-blue-300", bg: "bg-blue-100 dark:bg-blue-950/40" },
+  in_progress: { label: "In Bearbeitung", color: "text-yellow-700 dark:text-yellow-300", bg: "bg-yellow-100 dark:bg-yellow-950/40" },
+  resolved: { label: "Gelöst", color: "text-green-700 dark:text-green-300", bg: "bg-green-100 dark:bg-green-950/40" },
+  closed: { label: "Geschlossen", color: "text-gray-600 dark:text-apple-gray-300", bg: "bg-gray-100 dark:bg-[#38383A]" },
 };
 
 const channelIcons: Record<string, React.ReactNode> = {
@@ -116,22 +116,22 @@ export default function PortalTicketsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-apple-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <svg className="animate-spin w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24">
+          <svg className="animate-spin w-8 h-8 text-brand dark:text-brand-light" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          <p className="text-apple-gray-400">Tickets werden geladen...</p>
+          <p className="text-apple-gray-400 dark:text-apple-gray-300">Tickets werden geladen...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-apple-gray-50">
+    <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg">
       {/* Header */}
-      <header className="bg-white border-b border-apple-gray-200 sticky top-0 z-10">
+      <header className="bg-white dark:bg-dark-surface border-b border-apple-gray-200 dark:border-dark-border sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -142,8 +142,8 @@ export default function PortalTicketsPage() {
                 height={20}
                 className="h-5 w-auto"
               />
-              <span className="text-apple-gray-300">|</span>
-              <h1 className="text-lg font-semibold text-apple-gray-600">Meine Tickets</h1>
+              <span className="text-apple-gray-300 dark:text-apple-gray-300">|</span>
+              <h1 className="text-lg font-semibold text-apple-gray-600 dark:text-dark-text">Meine Tickets</h1>
             </div>
             <div className="flex items-center gap-3">
               <Link
@@ -157,7 +157,7 @@ export default function PortalTicketsPage() {
               </Link>
               <button
               onClick={handleLogout}
-              className="text-sm text-apple-gray-400 hover:text-apple-gray-600 transition-colors flex items-center gap-1"
+              className="text-sm text-apple-gray-400 dark:text-apple-gray-300 hover:text-apple-gray-600 dark:hover:text-dark-text transition-colors flex items-center gap-1"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -172,26 +172,26 @@ export default function PortalTicketsPage() {
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-6">
         {error ? (
-          <div className="bg-white rounded-apple-xl shadow-card p-8 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white dark:bg-dark-surface rounded-apple-xl shadow-card p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-950/40 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-apple-gray-600 mb-3">{error}</h2>
-            <Link href="/portal" className="text-brand hover:text-brand-dark transition-colors">
+            <h2 className="text-xl font-bold text-apple-gray-600 dark:text-dark-text mb-3">{error}</h2>
+            <Link href="/portal" className="text-brand dark:text-brand-light hover:text-brand-dark transition-colors">
               Zurück zum Portal
             </Link>
           </div>
         ) : tickets.length === 0 ? (
-          <div className="bg-white rounded-apple-xl shadow-card p-8 text-center">
-            <div className="w-16 h-16 bg-apple-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-8 h-8 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white dark:bg-dark-surface rounded-apple-xl shadow-card p-8 text-center">
+            <div className="w-16 h-16 bg-apple-gray-100 dark:bg-[#38383A] rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-8 h-8 text-apple-gray-400 dark:text-apple-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-apple-gray-600 mb-3">Keine Tickets gefunden</h2>
-            <p className="text-apple-gray-400 mb-6">
+            <h2 className="text-xl font-bold text-apple-gray-600 dark:text-dark-text mb-3">Keine Tickets gefunden</h2>
+            <p className="text-apple-gray-400 dark:text-apple-gray-300 mb-6">
               Sie haben noch keine Support-Anfragen gestellt.
             </p>
             <Link
@@ -219,14 +219,14 @@ export default function PortalTicketsPage() {
                   className={`px-4 py-2 rounded-apple-lg text-sm font-medium whitespace-nowrap transition-colors ${
                     filter === tab.key
                       ? "bg-brand text-white"
-                      : "bg-white text-apple-gray-500 hover:bg-apple-gray-100"
+                      : "bg-white dark:bg-dark-surface text-apple-gray-500 dark:text-apple-gray-300 hover:bg-apple-gray-100 dark:hover:bg-[#38383A]"
                   }`}
                 >
                   {tab.label}
                   <span className={`ml-2 px-1.5 py-0.5 rounded-full text-xs ${
                     filter === tab.key
                       ? "bg-white/20"
-                      : "bg-apple-gray-100"
+                      : "bg-apple-gray-100 dark:bg-[#38383A]"
                   }`}>
                     {tab.count}
                   </span>
@@ -244,7 +244,7 @@ export default function PortalTicketsPage() {
                   <Link
                     key={ticket.id}
                     href={`/portal/ticket/${ticket.id}`}
-                    className="block bg-white rounded-apple-lg shadow-card hover:shadow-lg transition-shadow p-4"
+                    className="block bg-white dark:bg-dark-surface rounded-apple-lg shadow-card hover:shadow-lg transition-shadow p-4"
                   >
                     <div className="flex items-start gap-4">
                       {/* Status Icon */}
@@ -263,26 +263,26 @@ export default function PortalTicketsPage() {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-xs font-semibold text-brand">
+                          <span className="font-mono text-xs font-semibold text-brand dark:text-brand-light">
                             {ticket.ticketNumber}
                           </span>
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.color}`}>
                             {status.label}
                           </span>
-                          <span className="text-apple-gray-300" title={channel}>
+                          <span className="text-apple-gray-300 dark:text-apple-gray-300" title={channel}>
                             {channelIcons[channel] || channelIcons.web}
                           </span>
                         </div>
-                        <h3 className="font-medium text-apple-gray-600 truncate">
+                        <h3 className="font-medium text-apple-gray-600 dark:text-dark-text truncate">
                           {ticket.subject}
                         </h3>
-                        <p className="text-sm text-apple-gray-400 mt-1">
+                        <p className="text-sm text-apple-gray-400 dark:text-apple-gray-300 mt-1">
                           Aktualisiert: {formatDate(ticket.updatedAt)}
                         </p>
                       </div>
 
                       {/* Arrow */}
-                      <svg className="w-5 h-5 text-apple-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-apple-gray-300 dark:text-apple-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
@@ -292,7 +292,7 @@ export default function PortalTicketsPage() {
             </div>
 
             {filteredTickets.length === 0 && (
-              <div className="text-center py-12 text-apple-gray-400">
+              <div className="text-center py-12 text-apple-gray-400 dark:text-apple-gray-300">
                 Keine Tickets in dieser Kategorie
               </div>
             )}

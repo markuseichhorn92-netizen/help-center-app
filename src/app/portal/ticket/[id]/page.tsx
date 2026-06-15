@@ -30,10 +30,10 @@ interface Ticket {
 }
 
 const statusLabels: Record<string, { label: string; color: string; bg: string }> = {
-  open: { label: "Offen", color: "text-blue-700", bg: "bg-blue-100" },
-  in_progress: { label: "In Bearbeitung", color: "text-yellow-700", bg: "bg-yellow-100" },
-  resolved: { label: "Gelöst", color: "text-green-700", bg: "bg-green-100" },
-  closed: { label: "Geschlossen", color: "text-gray-600", bg: "bg-gray-100" },
+  open: { label: "Offen", color: "text-blue-700 dark:text-blue-300", bg: "bg-blue-100 dark:bg-blue-950/40" },
+  in_progress: { label: "In Bearbeitung", color: "text-yellow-700 dark:text-yellow-300", bg: "bg-yellow-100 dark:bg-yellow-950/40" },
+  resolved: { label: "Gelöst", color: "text-green-700 dark:text-green-300", bg: "bg-green-100 dark:bg-green-950/40" },
+  closed: { label: "Geschlossen", color: "text-gray-600 dark:text-apple-gray-300", bg: "bg-gray-100 dark:bg-[#38383A]" },
 };
 
 // Format message content based on channel and content type
@@ -171,9 +171,12 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
     // Initial fetch
     fetchMessages();
 
-    // Poll for new messages
+    // Poll for new messages (paused while the tab is hidden)
     const pollInterval = isAdminOnline ? 3000 : 15000; // 3s when admin online, 15s otherwise
-    const interval = setInterval(fetchMessages, pollInterval);
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      fetchMessages();
+    }, pollInterval);
 
     return () => clearInterval(interval);
   }, [resolvedParams.id, isAdminOnline]);
@@ -193,7 +196,10 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
     };
 
     checkAdminPresence();
-    const interval = setInterval(checkAdminPresence, 30000); // Check every 30s
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      checkAdminPresence();
+    }, 30000); // Check every 30s, paused while tab hidden
 
     return () => clearInterval(interval);
   }, []);
@@ -212,9 +218,13 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
       }
     };
 
-    // Send immediately and then every 10 seconds
+    // Send immediately and then every 10 seconds (paused while tab hidden -
+    // a hidden tab correctly counts the customer as away)
     sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 10000);
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      sendHeartbeat();
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [resolvedParams.id]);
@@ -435,9 +445,9 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-apple-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <svg className="animate-spin w-8 h-8 text-brand" fill="none" viewBox="0 0 24 24">
+          <svg className="animate-spin w-8 h-8 text-brand dark:text-brand-light" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
               cx="12"
@@ -452,7 +462,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-          <p className="text-apple-gray-400">Ticket wird geladen...</p>
+          <p className="text-apple-gray-400 dark:text-apple-gray-300">Ticket wird geladen...</p>
         </div>
       </div>
     );
@@ -460,11 +470,11 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
 
   if (error || !ticket) {
     return (
-      <div className="min-h-screen bg-apple-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-apple-xl shadow-card p-8 text-center max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-dark-surface rounded-apple-xl shadow-card p-8 text-center max-w-md">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-950/40 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg
-              className="w-8 h-8 text-red-500"
+              className="w-8 h-8 text-red-500 dark:text-red-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -477,10 +487,10 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-apple-gray-600 mb-3">
+          <h2 className="text-xl font-bold text-apple-gray-600 dark:text-dark-text mb-3">
             {error || "Ticket nicht gefunden"}
           </h2>
-          <p className="text-apple-gray-400 mb-6">
+          <p className="text-apple-gray-400 dark:text-apple-gray-300 mb-6">
             Das Ticket konnte nicht geladen werden. Möglicherweise ist die Sitzung abgelaufen.
           </p>
           <Link
@@ -497,19 +507,19 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
   const status = statusLabels[ticket.status] || statusLabels.open;
 
   return (
-    <div className="h-[100dvh] bg-apple-gray-50 flex flex-col overflow-hidden">
+    <div className="h-[100dvh] bg-apple-gray-50 dark:bg-dark-bg flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-apple-gray-200 flex-shrink-0 z-10">
+      <header className="bg-white dark:bg-dark-surface border-b border-apple-gray-200 dark:border-dark-border flex-shrink-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Logo & Back */}
             <div className="flex items-center gap-3">
               <Link
                 href="/portal/tickets"
-                className="p-2 -ml-2 hover:bg-apple-gray-50 rounded-apple transition-colors"
+                className="p-2 -ml-2 hover:bg-apple-gray-50 dark:hover:bg-[#2C2C2E] rounded-apple transition-colors"
                 title="Alle Tickets"
               >
-                <svg className="w-5 h-5 text-apple-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-apple-gray-400 dark:text-apple-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </Link>
@@ -525,7 +535,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
             {/* Ticket Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-                <span className="font-mono text-sm font-semibold text-brand">
+                <span className="font-mono text-sm font-semibold text-brand dark:text-brand-light">
                   {ticket.ticketNumber}
                 </span>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.color}`}>
@@ -538,17 +548,17 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
             <div className="flex items-center gap-2">
               <div
                 className={`w-2.5 h-2.5 rounded-full ${
-                  isAdminOnline ? "bg-green-500 animate-pulse" : "bg-gray-300"
+                  isAdminOnline ? "bg-green-500 animate-pulse" : "bg-gray-300 dark:bg-[#48484A]"
                 }`}
               />
-              <span className="text-xs text-apple-gray-400 hidden sm:inline">
+              <span className="text-xs text-apple-gray-400 dark:text-apple-gray-300 hidden sm:inline">
                 {isAdminOnline ? "Support online" : "Support offline"}
               </span>
             </div>
           </div>
 
           {/* Subject */}
-          <h1 className="text-lg font-semibold text-apple-gray-600 mt-2 truncate">
+          <h1 className="text-lg font-semibold text-apple-gray-600 dark:text-dark-text mt-2 truncate">
             {ticket.subject}
           </h1>
         </div>
@@ -560,8 +570,8 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
           {/* Welcome Message */}
           {messages.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-16 h-16 bg-brand/10 dark:bg-brand-light/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-brand dark:text-brand-light" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -570,7 +580,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                   />
                 </svg>
               </div>
-              <p className="text-apple-gray-400">Noch keine Nachrichten vorhanden.</p>
+              <p className="text-apple-gray-400 dark:text-apple-gray-300">Noch keine Nachrichten vorhanden.</p>
             </div>
           )}
 
@@ -587,7 +597,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 {/* Date Header */}
                 {showDateHeader && (
                   <div className="text-center my-6">
-                    <span className="bg-apple-gray-100 text-apple-gray-400 text-xs px-3 py-1 rounded-full">
+                    <span className="bg-apple-gray-100 dark:bg-[#38383A] text-apple-gray-400 dark:text-apple-gray-300 text-xs px-3 py-1 rounded-full">
                       {new Date(message.createdAt).toLocaleDateString("de-DE", {
                         weekday: "long",
                         day: "numeric",
@@ -603,13 +613,13 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                     className={`max-w-[85%] sm:max-w-[70%] rounded-apple-lg px-4 py-3 overflow-hidden break-words ${
                       isCustomer
                         ? "bg-gradient-to-br from-brand to-brand-dark text-white rounded-br-md"
-                        : "bg-white border border-apple-gray-200 text-apple-gray-600 rounded-bl-md"
+                        : "bg-white dark:bg-dark-surface-elevated border border-apple-gray-200 dark:border-dark-border text-apple-gray-600 dark:text-dark-text rounded-bl-md"
                     }`}
                     style={{ wordBreak: "break-word" }}
                   >
                     {/* Sender Name (for admin messages) */}
                     {!isCustomer && (
-                      <p className="text-xs font-medium text-brand mb-1">
+                      <p className="text-xs font-medium text-brand dark:text-brand-light mb-1">
                         {message.senderName}
                       </p>
                     )}
@@ -617,7 +627,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                     {/* Message Content */}
                     <div
                       className={`text-sm break-words overflow-hidden ${
-                        isCustomer ? "text-white" : "text-apple-gray-600"
+                        isCustomer ? "text-white" : "text-apple-gray-600 dark:text-dark-text"
                       }`}
                       style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}
                       dangerouslySetInnerHTML={{ __html: formatMessageContent(message.content, ticket?.channel) }}
@@ -635,7 +645,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                             className={`flex items-center gap-2 text-xs ${
                               isCustomer
                                 ? "text-white/80 hover:text-white"
-                                : "text-brand hover:text-brand-dark"
+                                : "text-brand dark:text-brand-light hover:text-brand-dark"
                             }`}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -655,7 +665,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                     {/* Time */}
                     <p
                       className={`text-xs mt-1 ${
-                        isCustomer ? "text-white/70" : "text-apple-gray-300"
+                        isCustomer ? "text-white/70" : "text-apple-gray-300 dark:text-apple-gray-300"
                       }`}
                     >
                       {formatDate(message.createdAt)}
@@ -673,11 +683,11 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
 
       {/* Message Input */}
       {ticket.status !== "closed" ? (
-        <div className="bg-white border-t border-apple-gray-200 flex-shrink-0">
+        <div className="bg-white dark:bg-dark-surface border-t border-apple-gray-200 dark:border-dark-border flex-shrink-0">
           <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto px-4 py-4">
             {/* Admin Online Indicator */}
             {isAdminOnline && (
-              <div className="flex items-center gap-2 text-xs text-green-600 mb-2">
+              <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400 mb-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                 <span>Support ist online - Antworten in Echtzeit</span>
               </div>
@@ -685,7 +695,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
 
             {/* Upload Error */}
             {uploadError && (
-              <div className="flex items-center gap-2 text-xs text-red-600 mb-2 bg-red-50 px-3 py-2 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-300 mb-2 bg-red-50 dark:bg-red-950/40 px-3 py-2 rounded-lg">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -693,7 +703,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 <button
                   type="button"
                   onClick={() => setUploadError(null)}
-                  className="ml-auto text-red-400 hover:text-red-600"
+                  className="ml-auto text-red-400 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -708,22 +718,22 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 {pendingFiles.map((file, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 bg-apple-gray-100 px-3 py-2 rounded-lg text-sm"
+                    className="flex items-center gap-2 bg-apple-gray-100 dark:bg-[#38383A] px-3 py-2 rounded-lg text-sm"
                   >
                     {file.type.startsWith("image/") ? (
-                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     ) : (
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     )}
-                    <span className="text-apple-gray-600 truncate max-w-[150px]">{file.name}</span>
+                    <span className="text-apple-gray-600 dark:text-dark-text truncate max-w-[150px]">{file.name}</span>
                     <button
                       type="button"
                       onClick={() => removePendingFile(index)}
-                      className="text-apple-gray-400 hover:text-red-500 transition-colors"
+                      className="text-apple-gray-400 dark:text-apple-gray-300 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -753,10 +763,10 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                   onKeyDown={handleKeyDown}
                   placeholder="Ihre Nachricht..."
                   rows={1}
-                  className="w-full px-4 py-3 border border-apple-gray-200 rounded-apple-lg focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all outline-none resize-none text-apple-gray-600 pr-12"
+                  className="w-full px-4 py-3 border border-apple-gray-200 dark:border-dark-border rounded-apple-lg focus:ring-2 focus:ring-brand/20 dark:focus:ring-brand/40 focus:border-brand transition-all outline-none resize-none text-apple-gray-600 dark:bg-[#2C2C2E] dark:text-dark-text pr-12"
                   style={{ maxHeight: "150px" }}
                 />
-                <span className="absolute right-3 bottom-3 text-xs text-apple-gray-300">
+                <span className="absolute right-3 bottom-3 text-xs text-apple-gray-300 dark:text-apple-gray-300">
                   ↵
                 </span>
               </div>
@@ -766,7 +776,7 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={pendingFiles.length >= 3 || isSending}
-                className="p-3 text-apple-gray-400 hover:text-brand hover:bg-apple-gray-50 rounded-apple-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                className="p-3 text-apple-gray-400 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light hover:bg-apple-gray-50 dark:hover:bg-[#2C2C2E] rounded-apple-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                 title={pendingFiles.length >= 3 ? "Max. 3 Dateien" : "Datei anhängen"}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -809,17 +819,17 @@ export default function PortalTicketPage({ params }: { params: Promise<{ id: str
                 )}
               </button>
             </div>
-            <p className="text-xs text-apple-gray-300 mt-2">
+            <p className="text-xs text-apple-gray-300 dark:text-apple-gray-300 mt-2">
               Enter zum Senden, Shift+Enter für neue Zeile. Max. 3 Dateien (je 5 MB).
             </p>
           </form>
         </div>
       ) : (
-        <div className="bg-apple-gray-50 border-t border-apple-gray-200 flex-shrink-0">
+        <div className="bg-apple-gray-50 dark:bg-dark-bg border-t border-apple-gray-200 dark:border-dark-border flex-shrink-0">
           <div className="max-w-4xl mx-auto px-4 py-4 text-center">
-            <p className="text-apple-gray-400 text-sm">
+            <p className="text-apple-gray-400 dark:text-apple-gray-300 text-sm">
               Dieses Ticket wurde geschlossen.{" "}
-              <Link href="/portal" className="text-brand hover:text-brand-dark">
+              <Link href="/portal" className="text-brand dark:text-brand-light hover:text-brand-dark">
                 Neues Ticket erstellen
               </Link>
             </p>

@@ -60,12 +60,12 @@ export default function PortalLoginPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-apple-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-apple-xl shadow-card p-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="bg-white dark:bg-dark-surface rounded-apple-xl shadow-card p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 dark:bg-green-950/40 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg
-                className="w-8 h-8 text-green-600"
+                className="w-8 h-8 text-green-600 dark:text-green-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -78,15 +78,15 @@ export default function PortalLoginPage() {
                 />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-apple-gray-600 mb-3">
+            <h2 className="text-2xl font-bold text-apple-gray-600 dark:text-dark-text mb-3">
               E-Mail gesendet
             </h2>
-            <p className="text-apple-gray-400 mb-6">
+            <p className="text-apple-gray-400 dark:text-apple-gray-300 mb-6">
               Wir haben einen Zugangslink an{" "}
-              <span className="font-medium text-apple-gray-500">{email}</span>{" "}
+              <span className="font-medium text-apple-gray-500 dark:text-dark-text">{email}</span>{" "}
               gesendet. Bitte prüfen Sie Ihr Postfach.
             </p>
-            <div className="bg-apple-gray-50 rounded-apple p-4 text-sm text-apple-gray-400">
+            <div className="bg-apple-gray-50 dark:bg-[#2C2C2E] rounded-apple p-4 text-sm text-apple-gray-400 dark:text-apple-gray-300">
               <p>
                 Der Link ist 7 Tage gültig. Sollten Sie keine E-Mail erhalten haben,
                 prüfen Sie bitte Ihren Spam-Ordner.
@@ -98,7 +98,7 @@ export default function PortalLoginPage() {
                 setEmail("");
                 setTicketNumber("");
               }}
-              className="mt-6 text-brand hover:text-brand-dark transition-colors text-sm font-medium"
+              className="mt-6 text-brand dark:text-brand-light hover:text-brand-dark transition-colors text-sm font-medium"
             >
               Anderen Zugang anfordern
             </button>
@@ -111,11 +111,11 @@ export default function PortalLoginPage() {
   const urlError = getUrlError();
 
   return (
-    <div className="min-h-screen bg-apple-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center bg-white rounded-apple-lg shadow-card p-4 mb-6">
+          <div className="inline-flex items-center justify-center bg-white dark:bg-dark-surface rounded-apple-lg shadow-card p-4 mb-6">
             <Image
               src="https://cdn.sanity.io/images/6qiktmvm/production/e33b949b11d3aa8b60befb3f5f537803a8c48700-2917x486.png"
               alt="FIT INN Logo"
@@ -124,18 +124,18 @@ export default function PortalLoginPage() {
               className="h-6 w-auto"
             />
           </div>
-          <h1 className="text-3xl font-bold text-apple-gray-600 mb-2">
+          <h1 className="text-3xl font-bold text-apple-gray-600 dark:text-dark-text mb-2">
             Kundenportal
           </h1>
-          <p className="text-apple-gray-400">
+          <p className="text-apple-gray-400 dark:text-apple-gray-300">
             Verfolgen Sie den Status Ihrer Tickets
           </p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-apple-xl shadow-card p-8">
+        <div className="bg-white dark:bg-dark-surface rounded-apple-xl shadow-card p-8">
           {(error || urlError) && (
-            <div className="bg-red-50 border border-red-200 rounded-apple p-4 mb-6">
+            <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-apple p-4 mb-6">
               <div className="flex items-start gap-3">
                 <svg
                   className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
@@ -150,7 +150,7 @@ export default function PortalLoginPage() {
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
-                <p className="text-sm text-red-700">{error || urlError}</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{error || urlError}</p>
               </div>
             </div>
           )}
@@ -159,7 +159,7 @@ export default function PortalLoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-apple-gray-500 mb-2"
+                className="block text-sm font-medium text-apple-gray-500 dark:text-dark-text mb-2"
               >
                 E-Mail-Adresse *
               </label>
@@ -170,9 +170,9 @@ export default function PortalLoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="ihre@email.de"
-                className="w-full px-4 py-3 border border-apple-gray-200 rounded-apple-lg focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all outline-none text-apple-gray-600"
+                className="w-full px-4 py-3 border border-apple-gray-200 dark:border-dark-border rounded-apple-lg focus:ring-2 focus:ring-brand/20 dark:focus:ring-brand/40 focus:border-brand transition-all outline-none text-apple-gray-600 dark:bg-[#2C2C2E] dark:text-dark-text"
               />
-              <p className="mt-1.5 text-xs text-apple-gray-300">
+              <p className="mt-1.5 text-xs text-apple-gray-300 dark:text-apple-gray-300">
                 Die E-Mail-Adresse, mit der Sie das Ticket erstellt haben
               </p>
             </div>
@@ -180,10 +180,10 @@ export default function PortalLoginPage() {
             <div>
               <label
                 htmlFor="ticketNumber"
-                className="block text-sm font-medium text-apple-gray-500 mb-2"
+                className="block text-sm font-medium text-apple-gray-500 dark:text-dark-text mb-2"
               >
                 Ticketnummer{" "}
-                <span className="text-apple-gray-300 font-normal">(optional)</span>
+                <span className="text-apple-gray-300 dark:text-apple-gray-300 font-normal">(optional)</span>
               </label>
               <input
                 type="text"
@@ -191,9 +191,9 @@ export default function PortalLoginPage() {
                 value={ticketNumber}
                 onChange={(e) => setTicketNumber(e.target.value.toUpperCase())}
                 placeholder="TKT-001"
-                className="w-full px-4 py-3 border border-apple-gray-200 rounded-apple-lg focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all outline-none text-apple-gray-600 font-mono"
+                className="w-full px-4 py-3 border border-apple-gray-200 dark:border-dark-border rounded-apple-lg focus:ring-2 focus:ring-brand/20 dark:focus:ring-brand/40 focus:border-brand transition-all outline-none text-apple-gray-600 dark:bg-[#2C2C2E] dark:text-dark-text font-mono"
               />
-              <p className="mt-1.5 text-xs text-apple-gray-300">
+              <p className="mt-1.5 text-xs text-apple-gray-300 dark:text-apple-gray-300">
                 Lassen Sie das Feld leer, um alle Ihre Tickets zu sehen
               </p>
             </div>
@@ -247,10 +247,10 @@ export default function PortalLoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-apple-gray-100">
-            <div className="flex items-start gap-3 text-sm text-apple-gray-400">
+          <div className="mt-6 pt-6 border-t border-apple-gray-100 dark:border-dark-border">
+            <div className="flex items-start gap-3 text-sm text-apple-gray-400 dark:text-apple-gray-300">
               <svg
-                className="w-5 h-5 text-brand flex-shrink-0 mt-0.5"
+                className="w-5 h-5 text-brand dark:text-brand-light flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -271,12 +271,12 @@ export default function PortalLoginPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 text-center text-sm text-apple-gray-300">
+        <div className="mt-6 text-center text-sm text-apple-gray-300 dark:text-apple-gray-300">
           <p>
             Probleme beim Zugang?{" "}
             <a
               href="mailto:support@fit-inn-trier.de"
-              className="text-brand hover:text-brand-dark transition-colors"
+              className="text-brand dark:text-brand-light hover:text-brand-dark transition-colors"
             >
               Kontaktieren Sie uns
             </a>

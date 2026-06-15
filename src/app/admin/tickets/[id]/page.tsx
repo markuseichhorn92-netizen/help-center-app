@@ -522,6 +522,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
     // Auto-refresh messages every 5 seconds for real-time status updates
     const interval = setInterval(async () => {
+      // Skip polling while the tab is hidden (saves bandwidth/battery).
+      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const messagesRes = await fetch(`/api/admin/tickets/${id}/messages`, {
           credentials: 'same-origin'
@@ -605,7 +607,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     };
 
     checkCustomerPresence();
-    const interval = setInterval(checkCustomerPresence, 10000); // Check every 10s - optimized
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      checkCustomerPresence();
+    }, 10000); // Check every 10s - optimized, paused while tab hidden
 
     return () => clearInterval(interval);
   }, [id]);
@@ -646,8 +651,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       }
     };
 
-    // Check typing indicator every 3s - optimized for performance
-    const interval = setInterval(checkTyping, 3000);
+    // Check typing indicator every 3s - optimized, paused while tab hidden
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      checkTyping();
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [id]);

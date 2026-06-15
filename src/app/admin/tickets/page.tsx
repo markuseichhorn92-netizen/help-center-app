@@ -164,6 +164,8 @@ export default function TicketsPage() {
 
     // Ticket refresh every 15 seconds - optimized for performance
     const ticketInterval = setInterval(async () => {
+      // Skip polling while the tab is hidden (saves bandwidth/battery).
+      if (typeof document !== 'undefined' && document.hidden) return;
       try {
         const fetchedTickets = await fetchTickets();
 
@@ -190,6 +192,7 @@ export default function TicketsPage() {
 
     // Email fetch every 60 seconds - optimized for performance
     const emailInterval = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
       await fetchEmailsInBackground();
       const fetchedTickets = await fetchTickets();
       setTickets(fetchedTickets);
