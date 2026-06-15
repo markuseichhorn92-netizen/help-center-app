@@ -429,7 +429,7 @@ export default function ArticlePage() {
             transition={{ delay: 0.4 }}
           >
             <div
-              className="prose prose-lg max-w-none text-[#6E6E73] dark:text-[#A1A1A6] leading-relaxed
+              className="prose prose-lg max-w-prose text-[#6E6E73] dark:text-[#A1A1A6] leading-relaxed
                          prose-headings:text-[#1D1D1F] dark:prose-headings:text-[#F5F5F7] prose-headings:font-semibold prose-headings:tracking-tight
                          prose-headings:scroll-mt-24
                          prose-a:text-brand dark:prose-a:text-[#A8D4DE] prose-a:no-underline hover:prose-a:underline

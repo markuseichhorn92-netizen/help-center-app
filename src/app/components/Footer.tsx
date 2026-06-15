@@ -133,6 +133,7 @@ export default function Footer() {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label={social.name}
                   className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors duration-200"
                   whileHover={{ scale: 1.15, rotate: 5 }}
                   whileTap={{ scale: 0.95 }}
@@ -156,13 +157,13 @@ export default function Footer() {
           viewport={{ once: true }}
           transition={{ delay: 0.5 }}
         >
-          <p className="text-white/50 text-sm">
+          <p className="text-white/70 text-sm">
             &copy; {new Date().getFullYear()} Fit-Inn Trier. Alle Rechte vorbehalten.
           </p>
           <motion.div whileHover={{ scale: 1.05 }}>
             <Link
               href="/admin"
-              className="text-white/30 text-xs hover:text-white/60 transition-colors duration-200 flex items-center gap-1"
+              className="text-white/60 text-xs hover:text-white transition-colors duration-200 flex items-center gap-1"
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />

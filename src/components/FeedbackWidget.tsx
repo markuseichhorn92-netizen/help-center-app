@@ -120,12 +120,12 @@ export default function FeedbackWidget({ articleId }: FeedbackWidgetProps) {
 
   if (loading) {
     return (
-      <div className="bg-apple-gray-50 rounded-apple-xl p-6 text-center">
+      <div className="bg-apple-gray-50 dark:bg-[#1C1C1E] rounded-apple-xl p-6 text-center">
         <div className="animate-pulse">
-          <div className="h-5 bg-apple-gray-200 rounded w-48 mx-auto mb-4"></div>
+          <div className="h-5 bg-apple-gray-200 dark:bg-[#38383A] rounded w-48 mx-auto mb-4"></div>
           <div className="flex justify-center gap-3">
-            <div className="h-10 bg-apple-gray-200 rounded-full w-32"></div>
-            <div className="h-10 bg-apple-gray-200 rounded-full w-32"></div>
+            <div className="h-10 bg-apple-gray-200 dark:bg-[#38383A] rounded-full w-32"></div>
+            <div className="h-10 bg-apple-gray-200 dark:bg-[#38383A] rounded-full w-32"></div>
           </div>
         </div>
       </div>
@@ -133,41 +133,41 @@ export default function FeedbackWidget({ articleId }: FeedbackWidgetProps) {
   }
 
   return (
-    <div className="bg-apple-gray-50 rounded-apple-xl p-6 border border-apple-gray-100">
+    <div className="bg-apple-gray-50 dark:bg-[#1C1C1E] rounded-apple-xl p-6 border border-apple-gray-100 dark:border-[#38383A]">
       {showThanks ? (
         <div className="text-center animate-fade-in">
-          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 bg-green-100 dark:bg-green-950/40 rounded-full flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-lg font-medium text-apple-gray-600">Danke für dein Feedback!</p>
-          <p className="text-sm text-apple-gray-400 mt-1">
+          <p className="text-lg font-medium text-apple-gray-600 dark:text-dark-text">Danke für dein Feedback!</p>
+          <p className="text-sm text-apple-gray-400 dark:text-apple-gray-300 mt-1">
             Deine Meinung hilft uns, unsere Artikel zu verbessern.
           </p>
         </div>
       ) : voted ? (
         <div className="text-center">
-          <p className="text-sm font-medium text-apple-gray-600 mb-4">
+          <p className="text-sm font-medium text-apple-gray-600 dark:text-dark-text mb-4">
             Du hast diesen Artikel als {voted === 'helpful' ? 'hilfreich' : 'nicht hilfreich'} bewertet.
           </p>
           {feedback && feedback.helpful + feedback.notHelpful > 0 && (
             <div className="flex items-center justify-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <div className="w-8 h-8 bg-green-100 dark:bg-green-950/40 rounded-full flex items-center justify-center">
                   <span className="text-sm">👍</span>
                 </div>
-                <span className="text-sm text-apple-gray-600">{feedback.helpful}</span>
+                <span className="text-sm text-apple-gray-600 dark:text-dark-text">{feedback.helpful}</span>
               </div>
-              <div className="w-32 h-2 bg-apple-gray-200 rounded-full overflow-hidden">
+              <div className="w-32 h-2 bg-apple-gray-200 dark:bg-[#38383A] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-green-500 rounded-full transition-all duration-500"
+                  className="h-full bg-green-500 dark:bg-green-600 rounded-full transition-all duration-500"
                   style={{ width: `${feedback.helpfulPercent}%` }}
                 />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-apple-gray-600">{feedback.notHelpful}</span>
-                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                <span className="text-sm text-apple-gray-600 dark:text-dark-text">{feedback.notHelpful}</span>
+                <div className="w-8 h-8 bg-red-100 dark:bg-red-950/40 rounded-full flex items-center justify-center">
                   <span className="text-sm">👎</span>
                 </div>
               </div>
@@ -176,14 +176,14 @@ export default function FeedbackWidget({ articleId }: FeedbackWidgetProps) {
         </div>
       ) : (
         <div className="text-center">
-          <p className="text-lg font-medium text-apple-gray-600 mb-4">
+          <p className="text-lg font-medium text-apple-gray-600 dark:text-dark-text mb-4">
             War dieser Artikel hilfreich?
           </p>
           <div className="flex justify-center gap-3">
             <button
               onClick={() => submitVote(true)}
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-apple-gray-600 font-medium rounded-full border border-apple-gray-200 hover:bg-green-50 hover:border-green-200 hover:text-green-700 transition-all duration-200 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-[#2C2C2E] text-apple-gray-600 dark:text-dark-text font-medium rounded-full border border-apple-gray-200 dark:border-[#38383A] hover:bg-green-50 hover:border-green-200 hover:text-green-700 dark:hover:bg-green-950/40 dark:hover:border-green-900 dark:hover:text-green-300 transition-all duration-200 disabled:opacity-50"
             >
               <span className="text-lg">👍</span>
               Ja, danke!
@@ -191,7 +191,7 @@ export default function FeedbackWidget({ articleId }: FeedbackWidgetProps) {
             <button
               onClick={() => submitVote(false)}
               disabled={submitting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-apple-gray-600 font-medium rounded-full border border-apple-gray-200 hover:bg-red-50 hover:border-red-200 hover:text-red-700 transition-all duration-200 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-[#2C2C2E] text-apple-gray-600 dark:text-dark-text font-medium rounded-full border border-apple-gray-200 dark:border-[#38383A] hover:bg-red-50 hover:border-red-200 hover:text-red-700 dark:hover:bg-red-950/40 dark:hover:border-red-900 dark:hover:text-red-300 transition-all duration-200 disabled:opacity-50"
             >
               <span className="text-lg">👎</span>
               Nicht wirklich
