@@ -1,11 +1,6 @@
-import { createClient } from '@vercel/kv';
+import { kv } from './kv';
 import { getDocument, Document } from './documents';
 import crypto from 'crypto';
-
-const kv = createClient({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
 
 export interface ShareLink {
   token: string;

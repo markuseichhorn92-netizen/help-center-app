@@ -1,10 +1,5 @@
-import { createClient } from '@vercel/kv';
+import { kv } from './kv';
 import { Ticket, getTicket, getAllTickets, getTicketMessages } from './tickets';
-
-const kv = createClient({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
 
 // SLA Configuration
 export interface SLAConfig {

@@ -1,6 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser, ParsedMail } from 'mailparser';
-import { createClient } from '@vercel/kv';
+import { kv } from './kv';
 import { put } from '@vercel/blob';
 import { createTicket, createMessage, findTicketByNumber, updateTicket, Attachment, createSpamTicket, findMessageByExternalId } from './tickets';
 import { parseTicketNumberFromSubject, sendTicketConfirmation, sendNewTicketNotification } from './resend';
@@ -9,11 +9,6 @@ import { generatePortalToken } from './portal';
 import { notifyNewMessage, notifyNewTicket } from './push-notifications';
 import { createDocument } from './documents';
 import { checkEmailForSpam } from './spam-protection';
-
-const kv = createClient({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
 
 interface IMAPConfig {
   host: string;

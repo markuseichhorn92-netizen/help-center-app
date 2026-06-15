@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRatingStats, getAllRatingsWithContact, TicketRatingWithContact } from '@/lib/ticket-rating';
-import { createClient } from '@vercel/kv';
-
-const kv = createClient({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
+import { kv } from '@/lib/kv';
 
 export interface CSATTrendPoint {
   date: string;

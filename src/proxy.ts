@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Protect portal routes (except login page and auth API)
@@ -41,12 +41,14 @@ export function middleware(req: NextRequest) {
     // Fall back to Basic Auth for API compatibility (e.g., external tools)
     const basicAuth = req.headers.get('authorization');
 
-    if (basicAuth) {
+    const ADMIN_USER = process.env.ADMIN_USER;
+    const ADMIN_PASS = process.env.ADMIN_PASS;
+
+    // Only allow Basic Auth when credentials are actually configured -
+    // never fall back to default/factory credentials.
+    if (basicAuth && ADMIN_USER && ADMIN_PASS) {
       const authValue = basicAuth.split(' ')[1];
       const [user, password] = Buffer.from(authValue, 'base64').toString().split(':');
-
-      const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-      const ADMIN_PASS = process.env.ADMIN_PASS || 'adminpass';
 
       if (user === ADMIN_USER && password === ADMIN_PASS) {
         return NextResponse.next();

@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@vercel/kv';
+import { kv } from '@/lib/kv';
 import { logSearch } from '@/lib/search-analytics';
-
-const kv = createClient({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
 
 interface Article {
   id: string;

@@ -3,6 +3,7 @@ import { getTicket } from '@/lib/tickets';
 import { ensureContactFromTicket } from '@/lib/contacts';
 import { sendTicketReply } from '@/lib/resend';
 import { generatePortalToken } from '@/lib/portal';
+import { kv } from '@/lib/kv';
 
 // POST /api/admin/tickets/create - Create new ticket from admin
 export async function POST(req: NextRequest) {
@@ -46,13 +47,6 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString();
 
     // Create ticket manually to set it as admin-initiated
-    const { kv } = await import('@vercel/kv').then(m => ({
-      kv: m.createClient({
-        url: process.env.KV_REST_API_URL || '',
-        token: process.env.KV_REST_API_TOKEN || '',
-      })
-    }));
-
     // Generate proper ticket number
     const counter = await kv.incr('tickets:counter');
     const properTicketNumber = `TKT-${String(counter).padStart(3, '0')}`;

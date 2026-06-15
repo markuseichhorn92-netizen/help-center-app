@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -18,16 +19,10 @@ export const metadata: Metadata = {
   title: "FIT INN Hilfe-Center",
   description: "Das Hilfe-Center von FIT INN Trier",
   manifest: "/manifest.json",
-  themeColor: "#0a4958",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "FIT INN Admin",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
   },
   icons: {
     icon: "/favicon.png",
@@ -37,6 +32,13 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
     "mobile-web-app-capable": "yes",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#0a4958",
 };
 
 export default function RootLayout({
@@ -81,10 +83,11 @@ export default function RootLayout({
         {/* Anonymous Page Tracking (no cookies, DSGVO-konform) */}
         <PageTracker />
 
-        {/* respond.io Live Chat Widget */}
-        <script
+        {/* respond.io Live Chat Widget - lazy-loaded so it never blocks interactivity */}
+        <Script
           id="respondio__growth_tool"
           src="https://cdn.respond.io/widget/widget.js?wId=c870a85b-64c0-463d-a46c-faeefd1b0c3e"
+          strategy="lazyOnload"
         />
       </body>
     </html>

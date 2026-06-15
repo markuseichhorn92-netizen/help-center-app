@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { kv } from '@/lib/kv';
 
 // GET /api/admin/dashboard - Get dashboard statistics
 export async function GET(req: NextRequest) {
@@ -9,13 +10,6 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { kv } = await import('@vercel/kv').then(m => ({
-      kv: m.createClient({
-        url: process.env.KV_REST_API_URL || '',
-        token: process.env.KV_REST_API_TOKEN || '',
-      })
-    }));
-
     // Get all ticket IDs
     const ticketIds = await kv.smembers('tickets:ids');
 

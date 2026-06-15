@@ -1,11 +1,6 @@
-import { createClient } from '@vercel/kv';
+import { kv } from './kv';
 import crypto from 'crypto';
 import { getTicket } from './tickets';
-
-const kv = createClient({
-  url: process.env.KV_REST_API_URL || '',
-  token: process.env.KV_REST_API_TOKEN || '',
-});
 
 export interface TicketRating {
   id: string;
