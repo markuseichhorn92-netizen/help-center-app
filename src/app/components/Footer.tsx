@@ -14,7 +14,6 @@ const footerLinks = {
   kontakt: [
     { name: 'Support', href: '/support' },
     { name: 'Meine Tickets', href: '/portal' },
-    { name: 'Kontaktformular', href: 'https://fit-inn-trier.de/kontakt', external: true },
   ],
 };
 
