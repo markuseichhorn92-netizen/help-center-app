@@ -1,4 +1,5 @@
 import { createClient } from '@vercel/kv';
+import { unstable_cache } from 'next/cache';
 
 const kv = createClient({
   url: process.env.KV_REST_API_URL || '',
@@ -24,25 +25,39 @@ export const defaultCategories: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>
   { name: 'Sonstiges', icon: 'more', description: 'Weitere Themen & Fragen', order: 4 },
 ];
 
-// Get all categories sorted by order
-export async function getAllCategories(): Promise<Category[]> {
-  const categoryIds = await kv.smembers('categories:ids');
+// Get all categories sorted by order (uncached KV read)
+async function getAllCategoriesUncached(): Promise<Category[]> {
+  try {
+    const categoryIds = await kv.smembers('categories:ids');
 
-  if (!categoryIds || categoryIds.length === 0) {
+    if (!categoryIds || categoryIds.length === 0) {
+      return [];
+    }
+
+    const categories = await Promise.all(
+      categoryIds.map(async (id) => {
+        const category = await kv.hgetall(`category:${id}`);
+        return category as unknown as Category;
+      })
+    );
+
+    return categories
+      .filter((c): c is Category => c !== null && Object.keys(c).length > 0)
+      .sort((a, b) => a.order - b.order);
+  } catch (error) {
+    // Degrade gracefully (e.g. KV unreachable during build-time prerender).
+    console.error('Failed to read categories from KV:', error);
     return [];
   }
-
-  const categories = await Promise.all(
-    categoryIds.map(async (id) => {
-      const category = await kv.hgetall(`category:${id}`);
-      return category as unknown as Category;
-    })
-  );
-
-  return categories
-    .filter((c): c is Category => c !== null && Object.keys(c).length > 0)
-    .sort((a, b) => a.order - b.order);
 }
+
+// Cached wrapper (60s). Categories change rarely; invalidate on write with
+// revalidateTag('categories').
+export const getAllCategories = unstable_cache(
+  getAllCategoriesUncached,
+  ['all-categories'],
+  { revalidate: 60, tags: ['categories'] }
+);
 
 // Get category by ID
 export async function getCategoryById(id: string): Promise<Category | null> {
