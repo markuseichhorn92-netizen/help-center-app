@@ -3,28 +3,17 @@ import { createTicket, createSpamTicket } from '@/lib/tickets';
 import { ensureContactFromTicket } from '@/lib/contacts';
 import { sendNewTicketNotification } from '@/lib/resend';
 import { checkForSpam } from '@/lib/spam-protection';
+import { publicTicketSchema, validateBody } from '@/lib/validation';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { subject, customerName, customerEmail, content, priority, honeypot } = body;
 
-    // Validation
-    if (!subject || !customerName || !customerEmail || !content) {
-      return NextResponse.json(
-        { message: 'Alle Pflichtfelder müssen ausgefüllt werden.' },
-        { status: 400 }
-      );
+    const validation = validateBody(publicTicketSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({ message: validation.error }, { status: 400 });
     }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(customerEmail)) {
-      return NextResponse.json(
-        { message: 'Bitte geben Sie eine gültige E-Mail-Adresse an.' },
-        { status: 400 }
-      );
-    }
+    const { subject, customerName, customerEmail, content, priority, honeypot } = validation.data;
 
     // Get IP address for rate limiting
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0] ||

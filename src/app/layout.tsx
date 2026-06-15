@@ -6,6 +6,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieBanner from "@/components/CookieBanner";
 import { PageTracker } from "@/components/PageTracker";
+import MotionProvider from "@/components/MotionProvider";
 
 // Optimized font loading with next/font
 const inter = Inter({
@@ -66,19 +67,21 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col bg-apple-gray-50 dark:bg-dark-bg font-sans transition-colors duration-300">
-        {/* Glass Header */}
-        <Header />
+        <MotionProvider>
+          {/* Glass Header */}
+          <Header />
 
-        {/* Main Content */}
-        <main className="flex-grow">
-          {children}
-        </main>
+          {/* Main Content */}
+          <main className="flex-grow">
+            {children}
+          </main>
 
-        {/* Footer */}
-        <Footer />
+          {/* Footer */}
+          <Footer />
 
-        {/* Cookie Banner */}
-        <CookieBanner />
+          {/* Cookie Banner */}
+          <CookieBanner />
+        </MotionProvider>
 
         {/* Anonymous Page Tracking (no cookies, DSGVO-konform) */}
         <PageTracker />

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyPortalSession } from "@/lib/portal";
 import { createTicket, createMessage } from "@/lib/tickets";
 import { sendNewTicketNotification } from "@/lib/resend";
+import { portalTicketSchema, validateBody } from "@/lib/validation";
 
 // POST: Create a new ticket from the portal
 export async function POST(req: NextRequest) {
@@ -18,14 +19,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { subject, message, name, attachments } = body;
 
-    if (!subject || !message) {
-      return NextResponse.json(
-        { error: "Betreff und Nachricht sind erforderlich" },
-        { status: 400 }
-      );
+    const validation = validateBody(portalTicketSchema, body);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+    const { subject, message, name } = validation.data;
+    // Attachments keep their original shape (not stripped by the schema).
+    const attachments = body.attachments;
 
     // Validate attachments if provided
     if (attachments && Array.isArray(attachments)) {
