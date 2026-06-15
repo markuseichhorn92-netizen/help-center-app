@@ -21,16 +21,19 @@ export default function GlowCard({
   isSelected = false,
 }: GlowCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const glowRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
+  // Write the glow position straight to the DOM via refs — no setState, so
+  // moving the mouse no longer triggers a React re-render of the card.
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    setMousePosition({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
+    const card = cardRef.current;
+    const glow = glowRef.current;
+    if (!card || !glow) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    glow.style.background = `radial-gradient(400px circle at ${x}px ${y}px, ${glowColor}, transparent 40%)`;
   };
 
   return (
@@ -47,11 +50,12 @@ export default function GlowCard({
       whileHover={{ y: -8, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >
-      {/* Glow Effect */}
-      <motion.div
+      {/* Glow Effect - position updated imperatively via glowRef (no re-render) */}
+      <div
+        ref={glowRef}
         className="absolute -inset-px rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
         style={{
-          background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, ${glowColor}, transparent 40%)`,
+          background: `radial-gradient(400px circle at 50% 50%, ${glowColor}, transparent 40%)`,
         }}
       />
 
