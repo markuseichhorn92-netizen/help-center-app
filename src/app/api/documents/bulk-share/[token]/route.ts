@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateBulkShareAccess, getBulkShareLink } from '@/lib/share';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import { Readable } from 'stream';
 
 // GET: Access bulk shared documents (PUBLIC - no auth required)
@@ -44,7 +44,7 @@ export async function GET(
 
     // If download requested, create ZIP archive
     if (download) {
-      const archive = archiver('zip', { zlib: { level: 5 } });
+      const archive = new ZipArchive({ zlib: { level: 5 } });
       const chunks: Buffer[] = [];
 
       archive.on('data', (chunk: Buffer) => chunks.push(chunk));

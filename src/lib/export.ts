@@ -1,5 +1,4 @@
-import archiver from 'archiver';
-import { Readable } from 'stream';
+import { ZipArchive } from 'archiver';
 import { getDocument, listInvoices, Document } from './documents';
 
 export interface ExportOptions {
@@ -47,13 +46,13 @@ export async function getDocumentsForExport(options: ExportOptions): Promise<Doc
 // Create a ZIP archive from documents
 export async function createDocumentZip(documents: Document[]): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
-    const archive = archiver('zip', {
+    const archive = new ZipArchive({
       zlib: { level: 5 } // Medium compression
     });
 
     const chunks: Buffer[] = [];
 
-    archive.on('data', (chunk) => {
+    archive.on('data', (chunk: Buffer) => {
       chunks.push(chunk);
     });
 
@@ -61,7 +60,7 @@ export async function createDocumentZip(documents: Document[]): Promise<Buffer> 
       resolve(Buffer.concat(chunks));
     });
 
-    archive.on('error', (err) => {
+    archive.on('error', (err: Error) => {
       reject(err);
     });
 

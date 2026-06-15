@@ -11,9 +11,6 @@ const footerLinks = {
     { name: 'Impressum', href: '/impressum' },
     { name: 'Datenschutz', href: '/datenschutz' },
   ],
-  kontakt: [
-    { name: 'Meine Tickets', href: '/portal' },
-  ],
 };
 
 const socialLinks = [
@@ -51,7 +48,7 @@ export default function Footer() {
       <FloatingOrbs count={6} colors={['#ffffff', '#cfe5ea', '#ffb54f']} />
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-10 md:gap-12">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-10 md:gap-12">
           {/* Column 1: Logo & Address */}
           <motion.div
             className="md:col-span-1 space-y-4"
@@ -121,38 +118,7 @@ export default function Footer() {
             </ul>
           </motion.div>
 
-          {/* Column 3: Kontakt */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-apple-gray-300 mb-4">Kontakt</h3>
-            <ul className="space-y-3">
-              {footerLinks.kontakt.map((link, index) => (
-                <motion.li
-                  key={link.name}
-                  initial={{ opacity: 0, x: -10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                >
-                  <Link
-                    href={link.href}
-                    className="group text-white/70 text-sm hover:text-white transition-colors duration-200 flex items-center gap-2"
-                  >
-                    <motion.span
-                      className="w-0 h-0.5 bg-brand-light transition-all duration-200 group-hover:w-4"
-                    />
-                    {link.name}
-                  </Link>
-                </motion.li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Column 4: Social Media */}
+          {/* Column 3: Social Media */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
