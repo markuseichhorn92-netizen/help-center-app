@@ -6,7 +6,6 @@ import { useParams } from 'next/navigation';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import FeedbackWidget from '@/components/FeedbackWidget';
 import RelatedArticles from '@/components/RelatedArticles';
-import ContactCTA from '@/components/ContactCTA';
 import { ScrollReveal, MagneticButton } from '@/components/animations';
 
 interface Article {
@@ -456,13 +455,6 @@ export default function ArticlePage() {
             currentArticleId={id}
             category={article.category}
           />
-        </ScrollReveal>
-
-        {/* Contact CTA */}
-        <ScrollReveal delay={0.7}>
-          <div className="mt-8">
-            <ContactCTA articleId={id} articleTitle={article.title} />
-          </div>
         </ScrollReveal>
 
         {/* Bottom Navigation */}

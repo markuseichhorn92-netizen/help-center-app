@@ -12,7 +12,6 @@ const footerLinks = {
     { name: 'Datenschutz', href: '/datenschutz' },
   ],
   kontakt: [
-    { name: 'Support', href: '/support' },
     { name: 'Meine Tickets', href: '/portal' },
   ],
 };
@@ -139,29 +138,15 @@ export default function Footer() {
                   viewport={{ once: true }}
                   transition={{ delay: 0.3 + index * 0.1 }}
                 >
-                  {link.external ? (
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group text-white/70 text-sm hover:text-white transition-colors duration-200 flex items-center gap-2"
-                    >
-                      <motion.span
-                        className="w-0 h-0.5 bg-brand-light transition-all duration-200 group-hover:w-4"
-                      />
-                      {link.name}
-                    </a>
-                  ) : (
-                    <Link
-                      href={link.href}
-                      className="group text-white/70 text-sm hover:text-white transition-colors duration-200 flex items-center gap-2"
-                    >
-                      <motion.span
-                        className="w-0 h-0.5 bg-brand-light transition-all duration-200 group-hover:w-4"
-                      />
-                      {link.name}
-                    </Link>
-                  )}
+                  <Link
+                    href={link.href}
+                    className="group text-white/70 text-sm hover:text-white transition-colors duration-200 flex items-center gap-2"
+                  >
+                    <motion.span
+                      className="w-0 h-0.5 bg-brand-light transition-all duration-200 group-hover:w-4"
+                    />
+                    {link.name}
+                  </Link>
                 </motion.li>
               ))}
             </ul>

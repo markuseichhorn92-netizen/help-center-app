@@ -75,12 +75,6 @@ export default function Header() {
           {/* Desktop Navigation */}
           <nav className="hidden sm:flex items-center gap-6">
             <Link
-              href="/support"
-              className="text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200"
-            >
-              Support
-            </Link>
-            <Link
               href="/portal"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200"
             >
@@ -132,13 +126,6 @@ export default function Header() {
         {/* Mobile Menu Dropdown */}
         {mobileMenuOpen && (
           <div className="sm:hidden border-t border-apple-gray-200/50 dark:border-dark-border py-4 space-y-3 animate-fade-in">
-            <Link
-              href="/support"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-sm font-medium text-apple-gray-500 dark:text-apple-gray-300 hover:text-brand dark:hover:text-brand-light transition-colors duration-200 py-2"
-            >
-              Support
-            </Link>
             <Link
               href="/portal"
               onClick={() => setMobileMenuOpen(false)}
