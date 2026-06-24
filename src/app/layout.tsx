@@ -86,10 +86,12 @@ export default function RootLayout({
         {/* Anonymous Page Tracking (no cookies, DSGVO-konform) */}
         <PageTracker />
 
-        {/* respond.io Live Chat Widget - lazy-loaded so it never blocks interactivity */}
+        {/* jexitychat Live Chat Widget - lazy-loaded so it never blocks interactivity */}
         <Script
-          id="respondio__growth_tool"
-          src="https://cdn.respond.io/widget/widget.js?wId=c870a85b-64c0-463d-a46c-faeefd1b0c3e"
+          id="jexitychat-widget"
+          src="https://cdn.jexitychat.de/widget/latest/widget.js"
+          data-org-slug="fit-inn-trier"
+          data-proj-slug="fit-inn-trier-web"
           strategy="lazyOnload"
         />
       </body>
