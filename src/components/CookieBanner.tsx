@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -22,6 +23,7 @@ export default function CookieBanner() {
     marketing: false,
     timestamp: 0,
   });
+  const pathname = usePathname();
 
   useEffect(() => {
     // Check if consent was already given
@@ -67,6 +69,11 @@ export default function CookieBanner() {
   const saveSelection = () => {
     saveConsent(consent);
   };
+
+  // No cookie banner on the embeddable fullscreen chat page.
+  if (pathname?.startsWith("/chat/embed")) {
+    return null;
+  }
 
   return (
     <AnimatePresence>

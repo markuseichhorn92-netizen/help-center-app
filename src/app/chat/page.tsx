@@ -3,20 +3,12 @@
 import { useEffect } from "react";
 import Link from "next/link";
 
-declare global {
-  interface Window {
-    $respond?: {
-      do?: (action: string) => void;
-    };
-  }
-}
-
 export default function ChatPage() {
   useEffect(() => {
-    // Auto-open chat when widget is ready
+    // Auto-open chat when the jexitychat widget is ready
     const openChat = () => {
-      if (window.$respond?.do) {
-        window.$respond.do('chat:open');
+      if (window.JexityChat?.open) {
+        window.JexityChat.open();
         return true;
       }
       return false;
@@ -51,7 +43,7 @@ export default function ChatPage() {
       </div>
 
       <button
-        onClick={() => window.$respond?.do?.('chat:open')}
+        onClick={() => window.JexityChat?.open()}
         className="px-8 py-4 bg-gradient-to-r from-brand to-brand-dark text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all"
       >
         💬 Chat öffnen
