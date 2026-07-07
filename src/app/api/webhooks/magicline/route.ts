@@ -30,6 +30,22 @@ export async function POST(request: NextRequest) {
         
       case 'CONTRACT_CREATED':
         console.log(`[Magicline] New contract for customer ${payload.data?.customerId}`);
+        // Weiterleitung der kompletten Original-Payload an die Fit-Inn Mitglieder-App.
+        // Diese verschickt daraufhin automatisch die Zugangs-/Willkommensmail an das
+        // neue Mitglied. Fehler dürfen die 200-Antwort an Magicline nicht beeinflussen.
+        try {
+          await fetch(
+            'https://mitglieder.fit-inn-trier.de/api/webhooks/magicline?key=' +
+              encodeURIComponent(process.env.FITINN_WEBHOOK_KEY || ''),
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }
+          );
+        } catch (err) {
+          console.error('Fit-Inn-Weiterleitung fehlgeschlagen:', err);
+        }
         // TODO: Send notification to Sir
         break;
         
