@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useSpring } from 'motion/react';
 import FeedbackWidget from '@/components/FeedbackWidget';
 import RelatedArticles from '@/components/RelatedArticles';
 import ContactCTA from '@/components/ContactCTA';
