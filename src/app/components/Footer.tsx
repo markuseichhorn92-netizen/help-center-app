@@ -15,7 +15,7 @@ export default function Footer() {
             <p className="mt-4 max-w-xs text-sm text-white/70">Fit-Inn Trier · Auf Hirtenberg 8 · 54296 Trier</p>
           </div>
           <nav aria-label="Hilfe" className="grid content-start gap-1">
-            <h2 className="hc-eyebrow mb-2 !text-white/60">Hilfe</h2>
+            <h2 className="hc-eyebrow mb-2 !text-white/75">Hilfe</h2>
             <Link href="/chat" className={link}>KI-Assistent fragen</Link>
             <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className={link}>WhatsApp schreiben</a>
             <a href={PHONE_HREF} className={link}>Telefon {PHONE_DISPLAY}</a>
@@ -23,7 +23,7 @@ export default function Footer() {
             <Link href="/portal" className={link}>Meine Anfragen</Link>
           </nav>
           <nav aria-label="Rechtliches" className="grid content-start gap-1">
-            <h2 className="hc-eyebrow mb-2 !text-white/60">Fit-Inn</h2>
+            <h2 className="hc-eyebrow mb-2 !text-white/75">Fit-Inn</h2>
             <a href="https://fit-inn-trier.de" className={link}>Zur Website</a>
             <Link href="/impressum" className={link}>Impressum</Link>
             <Link href="/datenschutz" className={link}>Datenschutz</Link>
@@ -32,9 +32,9 @@ export default function Footer() {
           </nav>
         </div>
         <div className="border-t border-white/10">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 text-xs text-white/60 sm:px-6">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 text-xs text-white/75 sm:px-6">
             <span>© {new Date().getFullYear()} Fit-Inn Trier</span>
-            <Link href="/admin" className="text-white/40 hover:text-white/70">Admin</Link>
+            <Link href="/admin" className="text-white/75 hover:text-white">Admin</Link>
           </div>
         </div>
       </footer>

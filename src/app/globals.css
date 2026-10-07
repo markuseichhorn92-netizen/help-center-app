@@ -1050,15 +1050,13 @@ html.dark body {
 .hc-prose h3 { font-weight: 700; font-size: 1.125rem; margin: 1.2em 0 .5em; }
 .hc-prose table { width: 100%; }
 .hc-prose img { max-width: 100%; height: auto; border-radius: 12px; }
+@keyframes hc-rise { from { transform: translateY(14px); opacity: .3 } to { transform: none; opacity: 1 } }
+.hc-rise { animation: hc-rise .5s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes hc-pop { 0% { transform: scale(.6); opacity: 0 } 60% { transform: scale(1.15); opacity: 1 } 100% { transform: scale(1) } }
 .hc-pop { animation: hc-pop .45s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes hc-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(46,157,107,.5) } 50% { box-shadow: 0 0 0 6px rgba(46,157,107,0) } }
 .hc-live { animation: hc-pulse 2.4s ease-out infinite; }
-/* View Transitions (React <ViewTransition>) */
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
-::view-transition-old(hc-title) , ::view-transition-new(hc-title) { animation-duration: .3s; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
-  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

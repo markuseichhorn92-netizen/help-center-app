@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence,  useReducedMotion } from 'motion/react';
+import * as m from 'motion/react-m';
 import { CheckIcon, ThumbDownIcon, ThumbUpIcon } from './icons';
 
 type Vote = 'helpful' | 'not_helpful' | null;
@@ -43,25 +44,25 @@ export default function ArticleFeedback({ articleId, contact }: { articleId: str
       <div className="hc-card p-5 text-center" aria-live="polite">
         <AnimatePresence mode="wait" initial={false}>
           {!vote ? (
-            <motion.div key="ask" exit={reduce ? undefined : { opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
+            <m.div key="ask" exit={reduce ? undefined : { opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
               <h2 className="text-lg font-extrabold">War das hilfreich?</h2>
               <div className="mt-3 flex justify-center gap-3">
                 <button type="button" className={btn} disabled={busy} onClick={() => send(true)}><ThumbUpIcon /> Ja</button>
                 <button type="button" className={btn} disabled={busy} onClick={() => send(false)}><ThumbDownIcon /> Nein</button>
               </div>
-            </motion.div>
+            </m.div>
           ) : (
-            <motion.div key="thanks" initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-2 py-1">
+            <m.div key="thanks" initial={reduce ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-2 py-1">
               <span className="hc-pop grid h-11 w-11 place-items-center rounded-full bg-[#e8f6ee] text-xl text-ok"><CheckIcon /></span>
               <p className="font-extrabold">{vote === 'helpful' ? 'Danke für dein Feedback!' : 'Danke – das tut uns leid.'}</p>
               {vote === 'not_helpful' && <p className="text-sm text-mut dark:text-[#9fb4ba]">Dann hilft dir unser Team direkt weiter:</p>}
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>
       <AnimatePresence>
         {vote === 'not_helpful' && (
-          <motion.div
+          <m.div
             initial={reduce ? false : { height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -69,7 +70,7 @@ export default function ArticleFeedback({ articleId, contact }: { articleId: str
             className="overflow-hidden"
           >
             <div className="pt-4">{contact}</div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

@@ -13,7 +13,7 @@ export default async function Header() {
     <HeaderShell>
       <header className="sticky top-0 z-50 border-b border-line bg-white/90 backdrop-blur dark:border-[#1d4650] dark:bg-[#07181d]/90">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-3" aria-label="Fit-Inn Trier Hilfe-Center, Startseite">
+          <Link href="/" className="flex items-center gap-3">
             <Image src="/fitinn-logo.png" alt="Fit-Inn Trier" width={2917} height={486} priority sizes="170px" className="h-6 w-auto dark:brightness-0 dark:invert sm:h-7" />
             <span className="hidden text-base font-extrabold tracking-tight sm:inline">Hilfe-Center</span>
           </Link>

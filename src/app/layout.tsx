@@ -1,13 +1,11 @@
-/// <reference types="react/experimental" />
-import { ViewTransition } from "react";
 import type { Metadata, Viewport } from "next";
 import { Archivo, IBM_Plex_Mono } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieBanner from "@/components/CookieBanner";
 import { PageTracker } from "@/components/PageTracker";
+import ChatWidgetLoader from "@/components/help/ChatWidgetLoader";
 import MotionProvider from "@/components/MotionProvider";
 
 const archivo = Archivo({ subsets: ["latin"], display: "swap", variable: "--font-archivo" });
@@ -47,19 +45,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a href="#main" className="hc-skip">Zum Inhalt springen</a>
         <MotionProvider>
           <Header />
-          <main id="main" className="flex-grow"><ViewTransition>{children}</ViewTransition></main>
+          <main id="main" className="flex-grow">{children}</main>
           <Footer />
           <CookieBanner />
         </MotionProvider>
         <PageTracker />
-        {/* jexitychat Live-Chat-Widget – lazy, blockiert nie die Interaktion */}
-        <Script
-          id="jexitychat-widget"
-          src="https://cdn.jexitychat.de/widget/latest/widget.js"
-          data-org-slug="fit-inn-trier"
-          data-proj-slug="fit-inn-trier-web"
-          strategy="lazyOnload"
-        />
+        <ChatWidgetLoader />
       </body>
     </html>
   );

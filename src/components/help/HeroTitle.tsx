@@ -1,34 +1,17 @@
-'use client';
-
-import { motion, useReducedMotion } from 'motion/react';
-
+// Reiner Server-Render: Text ist sofort sichtbar (LCP), die Animation läuft per CSS (hc-rise) und
+// wird bei prefers-reduced-motion global abgeschaltet.
 export default function HeroTitle() {
-  const reduce = useReducedMotion();
   const words = ['Wie', 'können', 'wir', 'dir', 'helfen?'];
   return (
     <div>
-      <h1 className="text-[2.1rem] font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl" aria-label={words.join(' ')}>
+      <h1 className="text-[2.1rem] font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
         {words.map((w, i) => (
-          <motion.span
-            key={w + i}
-            aria-hidden
-            className="mr-[.25em] inline-block"
-            initial={reduce ? false : { opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: i * 0.06, ease: [0.2, 0.7, 0.2, 1] }}
-          >
+          <span key={w + i} className="hc-rise mr-[.25em] inline-block" style={{ animationDelay: `${i * 60}ms` }}>
             {w}
-          </motion.span>
+          </span>
         ))}
       </h1>
-      <motion.p
-        className="mt-3 text-base text-[#cfe5ea] sm:text-lg"
-        initial={reduce ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.35, duration: 0.5 }}
-      >
-        Frag einfach – die Antwort ist meist nur einen Klick entfernt.
-      </motion.p>
+      <p className="mt-3 text-base text-[#cfe5ea] sm:text-lg">Frag einfach – die Antwort ist meist nur einen Klick entfernt.</p>
     </div>
   );
 }

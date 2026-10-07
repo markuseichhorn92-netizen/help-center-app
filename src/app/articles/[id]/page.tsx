@@ -70,11 +70,9 @@ export default async function ArticlePage({ params }: Props) {
       </p>
 
       {parsed.kurz && (
-        <Reveal className="mt-6">
-          <p className="rounded-2xl border-l-4 border-teal bg-teal-soft p-4 text-base leading-relaxed dark:bg-[#12404b]">
-            <strong>Kurz gesagt:</strong> {parsed.kurz}
-          </p>
-        </Reveal>
+        <p className="mt-6 rounded-2xl border-l-4 border-teal bg-teal-soft p-4 text-base leading-relaxed dark:bg-[#12404b]">
+          <strong>Kurz gesagt:</strong> {parsed.kurz}
+        </p>
       )}
 
       {parsed.headings.length >= 3 && (

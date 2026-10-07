@@ -1,6 +1,7 @@
 'use client';
 
-import { motion, useReducedMotion } from 'motion/react';
+import {  useReducedMotion } from 'motion/react';
+import * as m from 'motion/react-m';
 import type { ReactNode } from 'react';
 
 // Dezenter Scroll-Reveal. Bei prefers-reduced-motion: kein Versatz, keine Verzögerung.
@@ -8,7 +9,7 @@ export function Reveal({ children, delay = 0, y = 14, className, as = 'div' }: {
   children: ReactNode; delay?: number; y?: number; className?: string; as?: 'div' | 'li' | 'section';
 }) {
   const reduce = useReducedMotion();
-  const Tag = motion[as];
+  const Tag = m[as];
   return (
     <Tag
       className={className}

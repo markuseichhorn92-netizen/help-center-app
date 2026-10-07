@@ -1,12 +1,16 @@
 "use client";
 
-import { MotionConfig } from "motion/react";
+import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 
 /**
- * Makes all framer-motion animations respect the user's
- * "prefers-reduced-motion" OS setting. With `reducedMotion="user"`, transform/
- * layout animations are reduced to opacity-only (or skipped) for those users.
+ * - respektiert prefers-reduced-motion (reducedMotion="user")
+ * - LazyMotion: schlanke Animations-Features für die öffentlichen Seiten (m-Komponenten),
+ *   `motion`-Komponenten im Admin-Bereich funktionieren unverändert weiter.
  */
 export default function MotionProvider({ children }: { children: React.ReactNode }) {
-  return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
+  return (
+    <LazyMotion features={domAnimation}>
+      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+    </LazyMotion>
+  );
 }

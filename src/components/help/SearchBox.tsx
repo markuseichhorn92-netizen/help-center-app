@@ -2,7 +2,8 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence,  useReducedMotion } from 'motion/react';
+import * as m from 'motion/react-m';
 import { search, type SearchDoc } from '@/lib/help/search';
 import { ChevronIcon, DocIcon, SearchIcon, SparkIcon, WhatsAppIcon } from './icons';
 import { WHATSAPP_URL } from './ContactBlock';
@@ -119,7 +120,7 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
 
       <AnimatePresence>
         {open && (
-          <motion.div
+          <m.div
             initial={reduce ? false : { opacity: 0, y: -8, scale: 0.985 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6 }}
@@ -158,7 +159,7 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
               )}
             </ul>
             <div className="h-2" />
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
       <p className="sr-only" role="status" aria-live="polite">{open && !empty ? (noHit ? 'Keine Treffer' : `${hits.length} Vorschläge`) : ''}</p>

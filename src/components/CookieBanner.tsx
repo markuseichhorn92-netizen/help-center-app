@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "motion/react";
+import {  AnimatePresence } from 'motion/react';
+import * as m from 'motion/react-m';
 
 interface CookieConsent {
   necessary: boolean;
@@ -45,7 +46,7 @@ export default function CookieBanner() {
   return (
     <AnimatePresence>
       {showBanner && (
-        <motion.div
+        <m.div
           role="region"
           aria-label="Cookie-Hinweis"
           className="fixed inset-x-0 bottom-0 z-[2147483647] p-3 sm:p-4"
@@ -76,7 +77,7 @@ export default function CookieBanner() {
               </button>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

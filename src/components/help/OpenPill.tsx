@@ -13,7 +13,8 @@ export default function OpenPill({ data, compact = false }: { data: OpeningData 
     return () => clearInterval(t);
   }, [data]);
 
-  if (!status) return compact ? null : <span className="hidden h-8 w-64 md:inline-block" aria-hidden />;
+  // Platz reservieren, damit der Header nach dem Laden nicht springt (CLS).
+  if (!status) return compact ? <div className="h-[31px] border-t border-line md:hidden dark:border-[#1d4650]" aria-hidden /> : <span className="hidden h-9 w-64 md:inline-block" aria-hidden />;
   const dot = (
     <span className={`h-2 w-2 shrink-0 rounded-full ${status.open ? 'hc-live bg-[#2e9d6b]' : 'bg-[#9aa9ae]'}`} aria-hidden />
   );

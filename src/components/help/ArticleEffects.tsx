@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { motion, useReducedMotion, useScroll, useSpring } from 'motion/react';
+import {  useReducedMotion, useScroll, useSpring } from 'motion/react';
+import * as m from 'motion/react-m';
 
 // Lesefortschritt (dünne Linie oben) + anonymer Aufruf-Zähler (max. 1×/30 Min je Artikel).
 export default function ArticleEffects({ articleId }: { articleId: string }) {
@@ -18,7 +19,7 @@ export default function ArticleEffects({ articleId }: { articleId: string }) {
   }, [articleId]);
 
   return (
-    <motion.div
+    <m.div
       aria-hidden
       className="fixed inset-x-0 top-0 z-[60] h-[3px] origin-left bg-gold"
       style={{ scaleX: reduce ? scrollYProgress : scaleX }}
