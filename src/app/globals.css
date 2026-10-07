@@ -6,7 +6,21 @@
 
 /* Theme configuration for Tailwind v4 */
 @theme {
-  --font-family-sans: var(--font-inter), 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-family-sans: var(--font-archivo), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: var(--font-plex), ui-monospace, monospace;
+
+  /* Fit-Inn Hilfe-Center (Relaunch 2026) */
+  --color-p9: #06323c;
+  --color-p7: #094b5a;
+  --color-teal: #3f97ab;
+  --color-teal-soft: #e3f1f4;
+  --color-gold: #dd9b43;
+  --color-gold-ink: #8a5200;
+  --color-ink: #14252d;
+  --color-mut: #4e6068;
+  --color-line: #dce7ea;
+  --color-surface: #f4f8f9;
+  --color-ok: #14543a;
 
   /* FIT INN Brand colors */
   --color-brand: #0a4958;
@@ -63,13 +77,14 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
   overflow-x: hidden;
 }
 
 body {
-  background-color: #FBFBFD;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-  color: #1D1D1F;
+  background-color: #f4f8f9;
+  font-family: var(--font-archivo), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: #14252d;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -991,4 +1006,46 @@ html.dark body {
 
 .chat-message-content em {
   font-style: italic;
+}
+
+
+/* ===== Hilfe-Center Relaunch 2026 ===== */
+.hc-mono { font-family: var(--font-plex), ui-monospace, monospace; }
+.hc-eyebrow {
+  font-family: var(--font-plex), ui-monospace, monospace;
+  font-size: 0.75rem; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 500;
+  color: var(--color-mut);
+}
+.dark .hc-eyebrow { color: #9fb4ba; }
+.hc-card { background: #fff; border: 1px solid var(--color-line); border-radius: 16px; }
+.dark .hc-card { background: #0d2b33; border-color: #1d4650; }
+.hc-hero { background: linear-gradient(160deg, #06323c, #094b5a); color: #fff; }
+.dark .hc-hero { background: linear-gradient(160deg, #041f26, #07343f); }
+.dark body, html.dark body { background-color: #07181d; color: #e8f1f3; }
+:focus-visible { outline: 3px solid #3f97ab; outline-offset: 2px; border-radius: 6px; }
+.hc-skip { position: absolute; left: 12px; top: -60px; z-index: 100; background: #fff; color: #094b5a; padding: 10px 16px; border-radius: 10px; font-weight: 700; transition: top .15s; }
+.hc-skip:focus { top: 12px; }
+.hc-prose { max-width: 68ch; font-size: 1.0625rem; line-height: 1.7; color: inherit; }
+.hc-prose p { margin: 0 0 1em; }
+.hc-prose ul, .hc-prose ol { margin: 0 0 1em 1.25em; }
+.hc-prose ul { list-style: disc; } .hc-prose ol { list-style: decimal; }
+.hc-prose li { margin: .35em 0; padding-left: .2em; }
+.hc-prose li > p { margin: 0; }
+.hc-prose a { color: #094b5a; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.dark .hc-prose a { color: #8ccbd9; }
+.hc-prose strong { font-weight: 700; }
+.hc-prose h3 { font-weight: 700; font-size: 1.125rem; margin: 1.2em 0 .5em; }
+.hc-prose table { width: 100%; }
+.hc-prose img { max-width: 100%; height: auto; border-radius: 12px; }
+@keyframes hc-pop { 0% { transform: scale(.6); opacity: 0 } 60% { transform: scale(1.15); opacity: 1 } 100% { transform: scale(1) } }
+.hc-pop { animation: hc-pop .45s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes hc-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(46,157,107,.5) } 50% { box-shadow: 0 0 0 6px rgba(46,157,107,0) } }
+.hc-live { animation: hc-pulse 2.4s ease-out infinite; }
+/* View Transitions (React <ViewTransition>) */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; animation-timing-function: ease; }
+::view-transition-old(hc-title) , ::view-transition-new(hc-title) { animation-duration: .3s; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

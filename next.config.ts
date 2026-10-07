@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  // Image optimization for external sources
   images: {
     remotePatterns: [
       {
@@ -12,8 +11,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Compress static assets
   compress: true,
+  poweredByHeader: false,
 };
 
 export default nextConfig;

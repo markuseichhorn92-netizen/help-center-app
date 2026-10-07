@@ -1,91 +1,56 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+/// <reference types="react/experimental" />
+import { ViewTransition } from "react";
+import type { Metadata, Viewport } from "next";
+import { Archivo, IBM_Plex_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieBanner from "@/components/CookieBanner";
 import { PageTracker } from "@/components/PageTracker";
 
-// Optimized font loading with next/font
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-inter",
-});
+const archivo = Archivo({ subsets: ["latin"], display: "swap", variable: "--font-archivo" });
+const plex = IBM_Plex_Mono({ subsets: ["latin"], display: "swap", weight: ["500"], variable: "--font-plex" });
+
+const SITE = "https://hilfe.fit-inn-trier.de";
 
 export const metadata: Metadata = {
-  title: "FIT INN Hilfe-Center",
-  description: "Das Hilfe-Center von FIT INN Trier",
+  metadataBase: new URL(SITE),
+  title: { default: "Hilfe-Center | Fit-Inn Trier", template: "%s | Hilfe-Center Fit-Inn Trier" },
+  description: "Antworten rund um deine Mitgliedschaft, Öffnungszeiten und das Training im Fit-Inn Trier – oder frag direkt per KI-Assistent, WhatsApp oder Telefon.",
   manifest: "/manifest.json",
-  themeColor: "#0a4958",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "FIT INN Admin",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
-  icons: {
-    icon: "/favicon.png",
-    apple: "/favicon.png",
-  },
-  other: {
-    "apple-mobile-web-app-capable": "yes",
-    "mobile-web-app-capable": "yes",
-  },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Fit-Inn Hilfe" },
+  icons: { icon: "/favicon.png", apple: "/favicon.png" },
+  openGraph: { siteName: "Hilfe-Center Fit-Inn Trier", locale: "de_DE", type: "website" },
+  other: { "mobile-web-app-capable": "yes" },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+// Zoom bleibt erlaubt (WCAG 1.4.4).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#094b5a",
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="de" className={inter.variable} suppressHydrationWarning>
+    <html lang="de" className={`${archivo.variable} ${plex.variable}`} suppressHydrationWarning>
       <head>
-        {/* Prevent flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var theme = localStorage.getItem('theme');
-                  if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                    document.documentElement.classList.add('dark');
-                  }
-                } catch (e) {}
-              })();
-            `,
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
       </head>
-      <body className="antialiased min-h-screen flex flex-col bg-apple-gray-50 dark:bg-dark-bg font-sans transition-colors duration-300">
-        {/* Glass Header */}
+      <body className="flex min-h-screen flex-col bg-surface font-sans text-ink antialiased dark:bg-[#07181d] dark:text-[#e8f1f3]">
+        <a href="#main" className="hc-skip">Zum Inhalt springen</a>
         <Header />
-
-        {/* Main Content */}
-        <main className="flex-grow">
-          {children}
-        </main>
-
-        {/* Footer */}
+        <main id="main" className="flex-grow"><ViewTransition>{children}</ViewTransition></main>
         <Footer />
-
-        {/* Cookie Banner */}
         <CookieBanner />
-
-        {/* Anonymous Page Tracking (no cookies, DSGVO-konform) */}
         <PageTracker />
-
-        {/* respond.io Live Chat Widget */}
-        <script
-          id="respondio__growth_tool"
-          src="https://cdn.respond.io/widget/widget.js?wId=c870a85b-64c0-463d-a46c-faeefd1b0c3e"
-        />
+        {/* respond.io Chat-Widget erst nach dem Laden der Seite, damit es Start und Interaktion nicht bremst */}
+        <Script id="respondio__growth_tool" strategy="lazyOnload" src="https://cdn.respond.io/widget/widget.js?wId=c870a85b-64c0-463d-a46c-faeefd1b0c3e" />
       </body>
     </html>
   );
