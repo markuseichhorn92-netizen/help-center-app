@@ -1,6 +1,6 @@
 "use client";
 
-import { MotionConfig } from "framer-motion";
+import { MotionConfig } from "motion/react";
 
 /**
  * Makes all framer-motion animations respect the user's

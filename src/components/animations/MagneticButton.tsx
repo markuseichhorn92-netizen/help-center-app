@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
 interface MagneticButtonProps {
   children: ReactNode;

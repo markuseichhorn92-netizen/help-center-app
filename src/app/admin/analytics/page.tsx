@@ -668,7 +668,7 @@ export default function AnalyticsPage() {
                       tickFormatter={(d) => new Date(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
                     />
                     <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip labelFormatter={(d) => new Date(d).toLocaleDateString("de-DE")} />
+                    <Tooltip labelFormatter={(d) => new Date(d as string).toLocaleDateString("de-DE")} />
                     <Bar dataKey="count" fill="#3b82f6" name="Neue Tickets" />
                   </BarChart>
                 </ResponsiveContainer>
