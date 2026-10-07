@@ -1052,11 +1052,16 @@ html.dark body {
 .hc-prose img { max-width: 100%; height: auto; border-radius: 12px; }
 @keyframes hc-rise { from { transform: translateY(14px); opacity: .3 } to { transform: none; opacity: 1 } }
 .hc-rise { animation: hc-rise .5s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes hc-reveal { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@supports (animation-timeline: view()) {
+  .hc-reveal { animation: hc-reveal linear both; animation-timeline: view(); animation-range: entry calc(var(--hc-d, 0%) * 0.6) entry calc(40% + var(--hc-d, 0%) * 0.6); }
+}
 @keyframes hc-pop { 0% { transform: scale(.6); opacity: 0 } 60% { transform: scale(1.15); opacity: 1 } 100% { transform: scale(1) } }
 .hc-pop { animation: hc-pop .45s cubic-bezier(.2,.8,.2,1) both; }
 @keyframes hc-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(46,157,107,.5) } 50% { box-shadow: 0 0 0 6px rgba(46,157,107,0) } }
 .hc-live { animation: hc-pulse 2.4s ease-out infinite; }
 @media (prefers-reduced-motion: reduce) {
+  .hc-reveal { animation: none !important; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
