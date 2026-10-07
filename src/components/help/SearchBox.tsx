@@ -32,6 +32,12 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
   const noHit = !empty && hits.length === 0;
   const total = items.length + (noHit ? 2 : 0);
 
+  // Suchanfrage per URL (?q=…, z. B. aus der schema.org-SearchAction) übernehmen.
+  useEffect(() => {
+    const preset = new URLSearchParams(window.location.search).get('q')?.slice(0, 100);
+    if (preset) { setQ(preset); setOpen(true); }
+  }, []);
+
   // Taste „/“ fokussiert die Suche.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -58,7 +64,7 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
     return () => clearTimeout(t);
   }, [noHit, q]);
 
-  const go = (id: string) => { setOpen(false); router.push(`/articles/${id}`); };
+  const go = (id: string) => { setOpen(false); router.push(`/artikel/${id}`); };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setActive((a) => (a + 1) % Math.max(total, 1)); }

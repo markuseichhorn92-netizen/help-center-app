@@ -8,7 +8,7 @@ export function headingsOf(html: string): string[] {
 export function buildSearchDocs(articles: HelpArticle[], categories: HelpCategory[]): SearchDoc[] {
   const catName = new Map(categories.map((c) => [c.id, c.name]));
   return articles.map((a) => ({
-    id: a.id,
+    id: a.slug,
     title: a.title,
     category: (a.category && catName.get(a.category)) || '',
     headings: headingsOf(a.content).join(' · '),

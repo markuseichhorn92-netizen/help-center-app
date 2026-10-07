@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
     ],
   },
   compress: true,
+  async rewrites() {
+    // Markdown-Version jedes Artikels: /artikel/<slug>.md
+    return { beforeFiles: [{ source: '/artikel/:slug.md', destination: '/md/artikel/:slug' }], afterFiles: [], fallback: [] };
+  },
   poweredByHeader: false,
 };
 

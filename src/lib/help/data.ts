@@ -2,6 +2,10 @@ import { kv } from '@/lib/kv';
 import { unstable_cache } from 'next/cache';
 import { getConfig } from '@/lib/dashboard/kv';
 import type { OpeningData } from './hours';
+import { assignSlugs } from './slug';
+
+import { SITE, stripHtml } from './text';
+export { SITE, stripHtml };
 
 // Nur für lokale Entwicklung ohne KV-Zugang: Daten von der Live-Seite lesen.
 const DEV_ORIGIN = process.env.HELP_DATA_ORIGIN;
@@ -12,6 +16,7 @@ export interface HelpCategory {
   icon: string;
   description?: string;
   order: number;
+  slug: string;
 }
 
 export interface HelpArticle {
@@ -21,6 +26,7 @@ export interface HelpArticle {
   category?: string;
   createdAt: string;
   updatedAt: string;
+  slug: string;
 }
 
 async function devJson<T>(path: string): Promise<T> {
@@ -31,13 +37,13 @@ async function devJson<T>(path: string): Promise<T> {
 
 async function loadArticles(): Promise<HelpArticle[]> {
   try {
-    if (DEV_ORIGIN) return await devJson<HelpArticle[]>('/api/articles');
+    if (DEV_ORIGIN) return assignSlugs(await devJson<Omit<HelpArticle, 'slug'>[]>('/api/articles'), (a) => a.title);
     const ids: string[] = await kv.smembers('articles:ids');
     const rows = await Promise.all(
       ids.map(async (id) => ({ id, ...(await kv.hgetall(`article:${id}`)) }) as unknown as HelpArticle & { published?: boolean }),
     );
-    return rows
-      .filter((a) => a.published && a.title)
+    const published = rows.filter((a) => a.published && a.title);
+    return assignSlugs(published, (a) => a.title)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (e) {
     console.error('getPublishedArticles failed', e);
@@ -50,19 +56,23 @@ export const getPublishedArticles = unstable_cache(loadArticles, ['help-articles
 export const getCategories = unstable_cache(loadCategories, ['help-categories'], { revalidate: 60, tags: ['help'] });
 export const getOpeningConfig = unstable_cache(loadOpeningConfig, ['help-opening'], { revalidate: 300, tags: ['help'] });
 
-export async function getArticle(id: string): Promise<HelpArticle | null> {
+export async function getArticleBySlug(slug: string): Promise<HelpArticle | null> {
+  const all = await getPublishedArticles();
+  return all.find((a) => a.slug === slug) ?? null;
+}
+
+export async function getArticleById(id: string): Promise<HelpArticle | null> {
   const all = await getPublishedArticles();
   return all.find((a) => a.id === id) ?? null;
 }
 
 async function loadCategories(): Promise<HelpCategory[]> {
   try {
-    if (DEV_ORIGIN) return await devJson<HelpCategory[]>('/api/categories');
+    if (DEV_ORIGIN) return assignSlugs(await devJson<Omit<HelpCategory, 'slug'>[]>('/api/categories'), (c) => c.name).sort((a, b) => Number(a.order) - Number(b.order));
     const ids: string[] = await kv.smembers('categories:ids');
     const rows = await Promise.all(ids.map((id) => kv.hgetall(`category:${id}`)));
-    return (rows.filter((c) => c && Object.keys(c).length > 0) as unknown as HelpCategory[]).sort(
-      (a, b) => Number(a.order) - Number(b.order),
-    );
+    const cats = rows.filter((c) => c && Object.keys(c).length > 0) as unknown as HelpCategory[];
+    return assignSlugs(cats, (c) => c.name).sort((a, b) => Number(a.order) - Number(b.order));
   } catch (e) {
     console.error('getCategories failed', e);
     return [];
@@ -82,19 +92,6 @@ async function loadOpeningConfig(): Promise<OpeningData | null> {
   }
 }
 
-export function stripHtml(html: string): string {
-  return html
-    .replace(/<(br|\/p|\/li|\/h[1-6])\s*\/?>/gi, ' ')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 export function readingMinutes(html: string): number {
   const words = stripHtml(html).split(' ').length;

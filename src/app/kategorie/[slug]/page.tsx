@@ -12,20 +12,20 @@ export async function generateStaticParams() {
   return []; // On-Demand-ISR: Seite wird beim ersten Aufruf gerendert und dann 60 s gecacht
 }
 
-type Props = { params: Promise<{ id: string }> };
+type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const cat = (await getCategories()).find((c) => c.id === id);
-  return cat ? { title: cat.name, description: cat.description, alternates: { canonical: `/kategorie/${id}` } } : {};
+  const { slug } = await params;
+  const cat = (await getCategories()).find((c) => c.slug === slug);
+  return cat ? { title: cat.name, description: cat.description, alternates: { canonical: `/kategorie/${cat.slug}` } } : {};
 }
 
 export default async function CategoryPage({ params }: Props) {
-  const { id } = await params;
+  const { slug } = await params;
   const [categories, articles] = await Promise.all([getCategories(), getPublishedArticles()]);
-  const cat = categories.find((c) => c.id === id);
+  const cat = categories.find((c) => c.slug === slug);
   if (!cat) notFound();
-  const list = articles.filter((a) => a.category === id).sort((a, b) => a.title.localeCompare(b.title, 'de'));
+  const list = articles.filter((a) => a.category === cat.id).sort((a, b) => a.title.localeCompare(b.title, 'de'));
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
@@ -43,7 +43,7 @@ export default async function CategoryPage({ params }: Props) {
         {list.map((a, i) => (
           <li key={a.id} className="border-b border-line last:border-0 dark:border-[#1d4650]">
             <Reveal delay={Math.min(i, 6) * 0.04} y={8}>
-              <Link href={`/articles/${a.id}`} className="group flex items-center gap-3 px-4 py-4 transition-colors hover:bg-teal-soft/60 dark:hover:bg-[#12404b]/60">
+              <Link href={`/artikel/${a.slug}`} className="group flex items-center gap-3 px-4 py-4 transition-colors hover:bg-teal-soft/60 dark:hover:bg-[#12404b]/60">
                 <DocIcon className="shrink-0 text-xl text-teal" />
                 <span className="min-w-0 flex-1">
                   <strong className="block leading-snug">{a.title}</strong>

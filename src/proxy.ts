@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // Alte Kategorie-Adressen (/kategorie/<uuid>) → 301 auf den Slug (Route-Handler).
+  const legacyCat = pathname.match(/^\/kategorie\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i);
+  if (legacyCat) return NextResponse.rewrite(new URL(`/legacy/kategorie/${legacyCat[1]}`, req.url));
+
   // Protect portal routes (except login page and auth API)
   if (pathname.startsWith('/portal/ticket') || pathname.startsWith('/portal/tickets')) {
     const portalSession = req.cookies.get('portal_session');
@@ -66,5 +70,5 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*', '/portal/ticket/:path*', '/portal/tickets/:path*'],
+  matcher: ['/kategorie/:id','/admin/:path*', '/api/admin/:path*', '/portal/ticket/:path*', '/portal/tickets/:path*'],
 };
