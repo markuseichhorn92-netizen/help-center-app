@@ -487,10 +487,15 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
           // Notify admin about new email ticket
           try {
             await sendNewTicketNotification({
+              ticketId: ticket.id,
               ticketNumber: ticket.ticketNumber,
               customerName: senderName,
               customerEmail: senderEmail,
               subject: cleanSubject,
+              content: content.trim(),
+              category: classification.category,
+              createdAt: ticket.createdAt,
+              attachments,
               channel: 'email',
               isEscalation: false,
             });

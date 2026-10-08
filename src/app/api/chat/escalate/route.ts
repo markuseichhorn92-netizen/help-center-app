@@ -107,10 +107,13 @@ export async function POST(req: NextRequest) {
     // Send notification to admin
     try {
       await sendNewTicketNotification({
+        ticketId: ticket.id,
         ticketNumber: ticket.ticketNumber,
         customerName: name || email.split("@")[0],
         customerEmail: email,
         subject: "Chat-Anfrage: Mitarbeiter gewünscht",
+        content: chatHistoryHtml,
+        createdAt: ticket.createdAt,
         channel: "web",
         isEscalation: true,
       });

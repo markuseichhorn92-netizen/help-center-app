@@ -310,10 +310,15 @@ export async function POST(req: NextRequest) {
     // Notify admin about new WhatsApp ticket
     try {
       await sendNewTicketNotification({
+        ticketId: ticket.id,
         ticketNumber: ticket.ticketNumber,
         customerName: profileName || phoneNumber,
         customerEmail: `${phoneNumber}@whatsapp`,
+        phone: phoneNumber,
         subject: ticket.subject,
+        content: messageContent,
+        createdAt: ticket.createdAt,
+        attachments: attachments.length > 0 ? attachments : undefined,
         channel: 'whatsapp',
         isEscalation: false,
       });

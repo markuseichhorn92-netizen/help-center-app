@@ -65,10 +65,13 @@ export async function POST(req: NextRequest) {
     // Notify admin about new ticket
     try {
       await sendNewTicketNotification({
+        ticketId: ticket.id,
         ticketNumber: ticket.ticketNumber,
         customerName,
         customerEmail,
         subject,
+        content,
+        createdAt: ticket.createdAt,
         channel: 'web',
         isEscalation: false,
       });

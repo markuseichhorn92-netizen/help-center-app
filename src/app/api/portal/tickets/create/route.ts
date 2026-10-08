@@ -63,10 +63,14 @@ export async function POST(req: NextRequest) {
     // Send notification to admin
     try {
       await sendNewTicketNotification({
+        ticketId: ticket.id,
         ticketNumber: ticket.ticketNumber,
         customerName: name || session.email.split("@")[0],
         customerEmail: session.email,
         subject,
+        content: message,
+        createdAt: ticket.createdAt,
+        attachments: attachments || undefined,
         channel: "web",
         isEscalation: false,
       });

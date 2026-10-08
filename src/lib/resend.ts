@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { TicketMessage } from './tickets';
+import { buildAdminNotification } from './admin-notification';
 
 // Lazy-initialize Resend client to avoid build-time errors
 let resendClient: Resend | null = null;
@@ -515,98 +516,41 @@ export async function sendSessionSummaryEmail(
   }
 }
 
-// Send notification to admin when new ticket is created
+// Send notification to admin when new ticket is created (mit komplettem Anfrage-Inhalt)
 export async function sendNewTicketNotification(params: {
+  ticketId?: string;
   ticketNumber: string;
   customerName: string;
   customerEmail: string;
   subject: string;
   channel: string;
   isEscalation?: boolean;
+  content?: string;
+  phone?: string;
+  category?: 'kundenanfrage' | 'sonstiges';
+  createdAt?: string;
+  attachments?: Array<{ filename: string; size: number }>;
 }): Promise<boolean> {
-  const { ticketNumber, customerName, customerEmail, subject, channel, isEscalation } = params;
+  // Sonstiges (Newsletter, Systemmails) löst keine Benachrichtigung aus
+  if (params.category === 'sonstiges') return false;
 
   // Admin email to notify
   const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || SUPPORT_EMAIL;
 
   try {
     const resend = getResend();
-
-    const channelLabel = channel === 'whatsapp' ? 'WhatsApp' : channel === 'web' ? 'Web-Chat' : 'E-Mail';
-    const typeLabel = isEscalation ? '🚨 Eskaliert vom KI-Chat' : '📩 Neues Ticket';
+    const mail = buildAdminNotification({ ...params, baseUrl: BASE_URL });
 
     await resend.emails.send({
       from: `FIT INN System <${SUPPORT_EMAIL}>`,
       to: adminEmail,
-      subject: `${typeLabel}: ${ticketNumber} - ${subject}`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;">
-          <div style="max-width: 500px; margin: 20px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-
-            <div style="background: linear-gradient(135deg, #0a4958 0%, #0d5a6b 100%); padding: 24px; text-align: center;">
-              <h1 style="margin: 0; color: white; font-size: 20px; font-weight: 600;">
-                ${isEscalation ? '🚨 Chat-Eskalation' : '📩 Neues Ticket'}
-              </h1>
-            </div>
-
-            <div style="padding: 24px;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #86868B; font-size: 14px;">Ticket-Nr:</td>
-                  <td style="padding: 8px 0; font-weight: 600; color: #1d1d1f;">${ticketNumber}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #86868B; font-size: 14px;">Kunde:</td>
-                  <td style="padding: 8px 0; color: #1d1d1f;">${customerName}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #86868B; font-size: 14px;">E-Mail:</td>
-                  <td style="padding: 8px 0; color: #1d1d1f;">${customerEmail}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #86868B; font-size: 14px;">Betreff:</td>
-                  <td style="padding: 8px 0; color: #1d1d1f;">${subject}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #86868B; font-size: 14px;">Kanal:</td>
-                  <td style="padding: 8px 0; color: #1d1d1f;">${channelLabel}</td>
-                </tr>
-              </table>
-
-              ${isEscalation ? `
-                <div style="margin-top: 16px; padding: 12px; background: #fef3c7; border-radius: 8px;">
-                  <p style="margin: 0; color: #92400e; font-size: 14px;">
-                    <strong>Hinweis:</strong> Der Kunde hat im KI-Chat um persönliche Hilfe gebeten.
-                  </p>
-                </div>
-              ` : ''}
-
-              <div style="margin-top: 24px; text-align: center;">
-                <a href="${BASE_URL}/admin/tickets"
-                   style="display: inline-block; padding: 12px 24px; background: #0a4958; color: white; text-decoration: none; border-radius: 8px; font-weight: 500;">
-                  Ticket öffnen
-                </a>
-              </div>
-            </div>
-
-            <div style="padding: 16px; background: #f5f5f7; text-align: center;">
-              <p style="margin: 0; color: #86868B; font-size: 12px;">
-                Diese Benachrichtigung wurde automatisch gesendet.
-              </p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `,
+      ...(mail.replyTo ? { replyTo: mail.replyTo } : {}),
+      subject: mail.subject,
+      html: mail.html,
+      text: mail.text,
     });
 
-    console.log(`Admin notification sent for ticket ${ticketNumber}`);
+    console.log(`Admin notification sent for ticket ${params.ticketNumber}`);
     return true;
   } catch (error) {
     console.error('Failed to send admin notification:', error);
