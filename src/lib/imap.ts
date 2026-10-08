@@ -230,6 +230,9 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
         }
         const failKey = `email:fail:${config.auth.user}:${uid}`;
         const emailKey = `email:processed:${config.auth.user}:${uid}`;
+        // Lock per message: cron and manual admin run must not process the same mail twice
+        const gotLock = await kv.set(`email:lock:${config.auth.user}:${uid}`, Date.now(), { nx: true, ex: 150 });
+        if (!gotLock) continue;
         try {
           await withTimeout((async () => {
           const messageSize = await withTimeout(
