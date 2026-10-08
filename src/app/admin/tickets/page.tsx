@@ -407,12 +407,8 @@ export default function TicketsPage() {
           return false;
         }
       } else if (filterStatus === "all") {
-        // "Alle" shows only active tickets (not closed or resolved) that are NOT being handled by AI
+        // "Alle" shows all active tickets (not closed or resolved), incl. those handled by AI
         if (t.status === "closed" || t.status === "resolved") {
-          return false;
-        }
-        // Also exclude tickets that are currently being handled by AI
-        if (t.aiStatus === "active") {
           return false;
         }
       } else if (filterStatus === "open") {

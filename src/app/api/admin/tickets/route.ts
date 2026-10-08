@@ -8,9 +8,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const allTickets = await getAllTicketsWithUnreadCount();
-    // Filter: Nur WhatsApp-Tickets anzeigen (E-Mails werden über Superhuman bearbeitet)
-    const tickets = allTickets.filter(t => t.channel === 'whatsapp');
+    const tickets = await getAllTicketsWithUnreadCount();
     return NextResponse.json(tickets);
   } catch (error) {
     console.error('Failed to load tickets:', error);
