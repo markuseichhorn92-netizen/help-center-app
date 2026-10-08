@@ -21,6 +21,10 @@ export interface Ticket {
   deletedAt?: string; // Soft delete timestamp (for trash)
   isSpam?: boolean; // Marked as spam
   spamReason?: string; // Why it was marked as spam
+  category?: 'kundenanfrage' | 'sonstiges'; // E-Mail-Einordnung (fehlt = Kundenanfrage)
+  categoryReason?: string; // Grund der Einordnung
+  categorySource?: 'rule' | 'ai' | 'learned' | 'default' | 'manual';
+  important?: boolean; // Wichtig/intern (z. B. Bewerbung)
 }
 
 // Internal notes (only visible to admins)
@@ -79,6 +83,7 @@ export async function createTicket(data: {
   channel?: 'email' | 'whatsapp' | 'web';
   phone?: string;
   emailMessageId?: string;
+  classification?: { category: 'kundenanfrage' | 'sonstiges'; reason: string; source: 'rule' | 'ai' | 'learned' | 'default' | 'manual'; important?: boolean };
 }): Promise<{ ticket: Ticket; message: TicketMessage }> {
   const ticketId = crypto.randomUUID();
   const ticketNumber = await generateTicketNumber();
@@ -98,6 +103,12 @@ export async function createTicket(data: {
     // AI only for WhatsApp and Portal/Chat - NOT for emails
     aiStatus: data.channel === 'email' ? 'disabled' : 'active',
     ...(data.phone && { phone: data.phone }),
+    ...(data.classification && {
+      category: data.classification.category,
+      categoryReason: data.classification.reason,
+      categorySource: data.classification.source,
+      ...(data.classification.important && { important: true }),
+    }),
   };
 
   // Filter out undefined/null values for Redis
@@ -207,6 +218,19 @@ export async function updateTicket(
   }
 
   return updatedTicket;
+}
+
+// Kategorie am Ticket ändern (manuell durch Admin). Setzt nichts zurück, löscht nichts.
+export async function setTicketCategory(
+  id: string,
+  category: 'kundenanfrage' | 'sonstiges',
+  reason: string
+): Promise<Ticket | null> {
+  const ticket = await getTicket(id);
+  if (!ticket) return null;
+  const updatedAt = new Date().toISOString();
+  await kv.hset(`ticket:${id}`, { category, categoryReason: reason, categorySource: 'manual', updatedAt });
+  return { ...ticket, category, categoryReason: reason, categorySource: 'manual', updatedAt };
 }
 
 export async function deleteTicket(id: string): Promise<boolean> {

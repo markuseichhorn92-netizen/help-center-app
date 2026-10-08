@@ -17,6 +17,9 @@ interface Ticket {
   unreadCount?: number;
   channel?: "email" | "whatsapp" | "web";
   aiStatus?: "active" | "escalated" | "disabled";
+  category?: "kundenanfrage" | "sonstiges";
+  categoryReason?: string;
+  important?: boolean;
 }
 
 // Channel icon component
@@ -39,6 +42,25 @@ function ChannelIcon({ channel }: { channel?: string }) {
       </svg>
     </span>
   );
+}
+
+// Badge für Einordnung: Sonstiges bzw. Wichtig/Intern (Bewerbungen); Kundenanfrage ohne Badge
+function CategoryBadge({ ticket }: { ticket: Ticket }) {
+  if (ticket.category === "sonstiges") {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-slate-600 bg-slate-100 rounded-full" title={ticket.categoryReason || "Sonstiges"}>
+        Sonstiges
+      </span>
+    );
+  }
+  if (ticket.important) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-indigo-700 bg-indigo-100 rounded-full" title={ticket.categoryReason || "Wichtig/Intern"}>
+        Wichtig/Intern
+      </span>
+    );
+  }
+  return null;
 }
 
 const statusConfig = {
@@ -170,9 +192,12 @@ export default function TicketsPage() {
         const fetchedTickets = await fetchTickets();
 
         // Check if there are new tickets or updates
-        const hasNewItems = fetchedTickets.length > tickets.length ||
-          fetchedTickets.some((ft, idx) => {
-            const existingTicket = tickets[idx];
+        // "Sonstiges" löst keinen Hinweis "Neue Nachrichten" aus
+        const freshCustomer = fetchedTickets.filter(t => t.category !== "sonstiges");
+        const knownCustomer = tickets.filter(t => t.category !== "sonstiges");
+        const hasNewItems = freshCustomer.length > knownCustomer.length ||
+          freshCustomer.some((ft, idx) => {
+            const existingTicket = knownCustomer[idx];
             return existingTicket && (
               ft.updatedAt !== existingTicket.updatedAt ||
               (ft.unreadCount || 0) > (existingTicket.unreadCount || 0)
@@ -376,8 +401,26 @@ export default function TicketsPage() {
     }
   };
 
+  const matchesSearch = (t: Ticket) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      t.ticketNumber.toLowerCase().includes(query) ||
+      t.subject.toLowerCase().includes(query) ||
+      t.customerName.toLowerCase().includes(query) ||
+      t.customerEmail.toLowerCase().includes(query)
+    );
+  };
+
   const filteredTickets = tickets
     .filter(t => {
+      // "Sonstiges" (Newsletter, Rechnungen, Systemmails) nur im eigenen Filter, sonst ausgeblendet
+      if (filterStatus === "other") {
+        return t.category === "sonstiges" && matchesSearch(t);
+      }
+      if (t.category === "sonstiges") {
+        return false;
+      }
       // Status filter
       if (filterStatus === "unread") {
         // "Neue Nachrichten" shows only ACTIVE tickets with unread messages
@@ -490,18 +533,22 @@ export default function TicketsPage() {
   // Helper: check if ticket is active (not closed or resolved)
   const isActiveTicket = (t: Ticket) => t.status !== "closed" && t.status !== "resolved";
 
+  // Zählerkacheln zählen nur Kundenanfragen; "Sonstiges" hat eigenen Zähler
+  const otherCount = tickets.filter(t => t.category === "sonstiges").length;
+  const customerTickets = tickets.filter(t => t.category !== "sonstiges");
+
   const stats = {
-    total: tickets.length,
+    total: customerTickets.length,
     // "open" count excludes tickets that are being handled by AI
-    open: tickets.filter(t => t.status === "open" && t.aiStatus !== "active").length,
-    inProgress: tickets.filter(t => t.status === "in_progress").length,
-    resolved: tickets.filter(t => t.status === "resolved").length,
+    open: customerTickets.filter(t => t.status === "open" && t.aiStatus !== "active").length,
+    inProgress: customerTickets.filter(t => t.status === "in_progress").length,
+    resolved: customerTickets.filter(t => t.status === "resolved").length,
     // Only count unread for ACTIVE tickets (not closed/resolved)
-    unread: tickets.filter(t => isActiveTicket(t) && (t.unreadCount || 0) > 0).length,
+    unread: customerTickets.filter(t => isActiveTicket(t) && (t.unreadCount || 0) > 0).length,
     // Only count AI handling for ACTIVE tickets
-    aiHandling: tickets.filter(t => isActiveTicket(t) && t.aiStatus === "active").length,
+    aiHandling: customerTickets.filter(t => isActiveTicket(t) && t.aiStatus === "active").length,
     // Only count escalated for ACTIVE tickets
-    escalated: tickets.filter(t => isActiveTicket(t) && t.aiStatus === "escalated").length,
+    escalated: customerTickets.filter(t => isActiveTicket(t) && t.aiStatus === "escalated").length,
   };
 
   if (loading) {
@@ -806,6 +853,7 @@ export default function TicketsPage() {
           { value: "in_progress", label: "In Bearbeitung" },
           { value: "resolved", label: "Gelöst" },
           { value: "closed", label: "Geschlossen" },
+          { value: "other", label: "Sonstiges", count: otherCount },
         ].map((filter) => (
           <button
             key={filter.value}
@@ -836,6 +884,7 @@ export default function TicketsPage() {
               </svg>
             )}
             {filter.label}
+            {filter.value === "other" && ` (${filter.count ?? 0})`}
             {(filter.value === "unread" || filter.value === "escalated" || filter.value === "ai_handling") && filter.count !== undefined && filter.count > 0 && (
               <span className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full ${
                 filterStatus === filter.value ? "bg-white/20 text-white"
@@ -974,6 +1023,7 @@ export default function TicketsPage() {
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2 mb-1">
                             <ChannelIcon channel={ticket.channel} />
+                            <CategoryBadge ticket={ticket} />
                             <span className="text-xs font-mono text-apple-gray-400">
                               {ticket.ticketNumber}
                             </span>
@@ -1061,6 +1111,7 @@ export default function TicketsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <ChannelIcon channel={ticket.channel} />
+                            <CategoryBadge ticket={ticket} />
                             <span className="text-xs font-mono text-apple-gray-400">
                               {ticket.ticketNumber}
                             </span>

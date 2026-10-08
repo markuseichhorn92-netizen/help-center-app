@@ -10,6 +10,8 @@ import { generatePortalToken } from './portal';
 import { notifyNewMessage, notifyNewTicket } from './push-notifications';
 import { createDocument } from './documents';
 import { checkEmailForSpam } from './spam-protection';
+import { classifyEmail } from './mail-classifier';
+import { classifyWithAi, loadLearnedSenders } from './mail-classifier-io';
 
 interface IMAPConfig {
   host: string;
@@ -410,7 +412,28 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             return;
           }
 
+          // Einordnen: Kundenanfrage (Standard) oder Sonstiges (Newsletter, Rechnungen, Systemmails)
+          const headers: Record<string, string> = {};
+          for (const name of ['list-unsubscribe', 'list-id', 'precedence', 'auto-submitted', 'x-mailer']) {
+            const v = parsed.headers.get(name);
+            if (v) headers[name] = typeof v === 'string' ? v : String((v as { text?: string }).text ?? v);
+          }
+          const classification = await classifyEmail(
+            {
+              fromEmail: senderEmail,
+              fromName: senderName,
+              subject: cleanSubject,
+              text: parsed.text || content.replace(/<[^>]*>/g, ' '),
+              headers,
+              attachmentNames: (parsed.attachments || []).map((a) => a.filename || ''),
+            },
+            { learned: await loadLearnedSenders(), ai: classifyWithAi }
+          );
+          const isOther = classification.category === 'sonstiges';
+          debug.push(`Einordnung (hash=${hashId(senderEmail)}): ${classification.category} [${classification.source}]`);
+
           const { ticket } = await createTicket({
+            classification,
             subject: cleanSubject,
             customerName: senderName,
             customerEmail: senderEmail,
@@ -424,15 +447,25 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
           // Mark as processed right away (idempotent even if later steps time out)
           await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
 
-          // Ensure contact exists
-          await ensureContactFromTicket({
-            name: senderName,
-            email: senderEmail,
-          });
+          // Ensure contact exists (nicht für Sonstiges – keine Newsletter-Absender als Kontakte)
+          if (!isOther) {
+            await ensureContactFromTicket({
+              name: senderName,
+              email: senderEmail,
+            });
+          }
 
           // Create document entries for attachments (for OCR processing)
           if (attachments.length > 0) {
             await createDocumentsFromAttachments(attachments, ticket.id, senderEmail);
+          }
+
+          // Sonstiges: weder Benachrichtigung noch Antwort/Bestätigung
+          if (isOther) {
+            console.log(`Created ticket ${ticket.ticketNumber} from email (Sonstiges)`);
+            results.processed++;
+            await client.messageFlagsAdd(uid, ['\\Seen']);
+            return;
           }
 
           // Generate portal token for direct access

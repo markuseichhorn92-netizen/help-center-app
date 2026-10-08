@@ -61,6 +61,10 @@ interface Ticket {
   phone?: string;
   tags?: string[];
   aiStatus?: 'active' | 'escalated' | 'disabled';
+  category?: 'kundenanfrage' | 'sonstiges';
+  categoryReason?: string;
+  categorySource?: string;
+  important?: boolean;
 }
 
 interface TicketNote {
@@ -1669,6 +1673,40 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             <span className="text-sm font-mono text-apple-gray-400">{ticket.ticketNumber}</span>
           </div>
           <h1 className="text-2xl font-bold text-apple-gray-600 ml-8">{ticket.subject}</h1>
+          {ticket.channel === 'email' && (
+            <div className="ml-8 mt-2 flex flex-wrap items-center gap-2 text-sm">
+              <span
+                className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${
+                  ticket.category === 'sonstiges' ? 'text-slate-600 bg-slate-100' : ticket.important ? 'text-indigo-700 bg-indigo-100' : 'text-green-700 bg-green-50'
+                }`}
+              >
+                {ticket.category === 'sonstiges' ? 'Sonstiges' : ticket.important ? 'Kundenanfrage · Wichtig/Intern' : 'Kundenanfrage'}
+              </span>
+              {ticket.categoryReason && <span className="text-xs text-apple-gray-400">{ticket.categoryReason}</span>}
+              <button
+                onClick={async () => {
+                  const target = ticket.category === 'sonstiges' ? 'kundenanfrage' : 'sonstiges';
+                  const remember = window.confirm(
+                    `Als "${target === 'kundenanfrage' ? 'Kundenanfrage' : 'Sonstiges'}" einordnen.\n\nAbsender für künftige Mails merken?\nOK = merken, Abbrechen = nur dieses Ticket`
+                  );
+                  const res = await fetch(`/api/admin/tickets/${ticket.id}/category`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: target, remember }),
+                  });
+                  if (res.ok) {
+                    const updated = await res.json();
+                    setTicket((prev) => (prev ? { ...prev, ...updated } : prev));
+                  } else {
+                    alert('Umsortieren hat nicht geklappt.');
+                  }
+                }}
+                className="px-2.5 py-1 text-xs font-medium rounded-full border border-apple-gray-200 text-apple-gray-500 hover:bg-apple-gray-50"
+              >
+                {ticket.category === 'sonstiges' ? 'Ist Kundenanfrage' : 'Ist Sonstiges'}
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3 self-start lg:self-center">
           <button
