@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { ImapFlow } from 'imapflow';
 import { simpleParser, ParsedMail } from 'mailparser';
 import { kv } from './kv';
@@ -18,6 +19,44 @@ interface IMAPConfig {
     user: string;
     pass: string;
   };
+}
+
+// Time budget per cron run (Vercel maxDuration is 300 s)
+const RUN_BUDGET_MS = 240_000;
+const PER_MESSAGE_TIMEOUT_MS = 90_000;
+const OP_TIMEOUT_MS = 45_000;
+const MAX_MESSAGE_BYTES = 25 * 1024 * 1024;
+const MAX_FAILURES_PER_MESSAGE = 3;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Timeout nach ${Math.round(ms / 1000)}s: ${label}`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Log-safe identifier: never log subject, sender or Message-ID in clear text
+function hashId(value: string): string {
+  return createHash('sha1').update(value).digest('hex').slice(0, 10);
+}
+
+// Make a problematic mail visible in the admin ticket list instead of blocking every run
+async function reportSkippedMessage(info: { uid: number; size?: number; reason: string; hash: string }): Promise<void> {
+  try {
+    await kv.lpush('email:skipped', JSON.stringify({ ...info, at: new Date().toISOString() }));
+    await kv.ltrim('email:skipped', 0, 99);
+    await createTicket({
+      subject: 'E-Mail-Import fehlgeschlagen – bitte im Postfach prüfen',
+      customerName: 'System',
+      customerEmail: process.env.SUPPORT_EMAIL?.toLowerCase() || 'system@fit-inn-trier.de',
+      content: `Eine E-Mail konnte nicht automatisch importiert werden und wurde übersprungen (UID ${info.uid}, Kennung ${info.hash}${info.size ? `, ${Math.round(info.size / 1024)} KB` : ''}). Grund: ${info.reason}. Die Mail liegt ungelesen im Postfach.`,
+      priority: 'high',
+      channel: 'email',
+    });
+  } catch (e) {
+    console.error('[IMAP] Could not report skipped message', info.hash);
+  }
 }
 
 function getIMAPConfig(): IMAPConfig {
@@ -48,10 +87,10 @@ async function processAttachments(parsed: ParsedMail): Promise<Attachment[]> {
       }
 
       const filename = att.filename || `attachment-${Date.now()}`;
-      const blob = await put(`attachments/${Date.now()}-${filename}`, att.content, {
+      const blob = await withTimeout(put(`attachments/${Date.now()}-${filename}`, att.content, {
         access: 'public',
         contentType: att.contentType || 'application/octet-stream',
-      });
+      }), OP_TIMEOUT_MS, 'Anhang-Upload');
 
       attachments.push({
         id: crypto.randomUUID(),
@@ -127,18 +166,26 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
     secure: config.secure,
     auth: config.auth,
     logger: false,
+    connectionTimeout: 30_000,
+    greetingTimeout: 15_000,
+    socketTimeout: 60_000,
   });
+  client.on('error', (err: Error) => {
+    console.error('[IMAP] client error:', err.message);
+  });
+  const runStart = Date.now();
+  const deadline = runStart + RUN_BUDGET_MS;
 
   const results = { processed: 0, errors: [] as string[], debug };
 
   try {
     debug.push('Verbinde mit IMAP-Server...');
-    await client.connect();
+    await withTimeout(client.connect(), 40_000, 'IMAP connect');
     debug.push('IMAP-Verbindung hergestellt');
 
     // Open INBOX
     debug.push('Öffne INBOX...');
-    const lock = await client.getMailboxLock('INBOX');
+    const lock = await withTimeout(client.getMailboxLock('INBOX'), OP_TIMEOUT_MS, 'IMAP INBOX');
     debug.push('INBOX geöffnet');
 
     try {
@@ -155,36 +202,59 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
       debug.push(`Suche nach E-Mails seit ${startDate.toISOString()}...`);
 
       // Search for all messages since start date (not just unseen)
-      const messages = await client.search({
+      const messages = await withTimeout(client.search({
         since: startDate
-      });
+      }), OP_TIMEOUT_MS, 'IMAP search');
 
       const messageCount = messages ? (messages as number[]).length : 0;
       debug.push(`Gefunden: ${messageCount} ungelesene E-Mails`);
-      console.log(`IMAP: Found ${messageCount} unseen messages since ${startDate.toISOString()}`);
+      console.log(`IMAP: Found ${messageCount} messages since ${startDate.toISOString()}`);
 
       if (!messages || messages.length === 0) {
         return results;
       }
 
-      for (const uid of messages as number[]) {
+      // Check all processed-markers in one round trip
+      const uids = messages as number[];
+      const processedFlags = await kv.mget<(number | null)[]>(
+        ...uids.map((u) => `email:processed:${config.auth.user}:${u}`)
+      );
+      const pending = uids.filter((_, i) => !processedFlags[i]);
+      debug.push(`Noch zu verarbeiten: ${pending.length} von ${uids.length}`);
+
+      for (const uid of pending) {
+        if (Date.now() > deadline - 15_000) {
+          debug.push('Zeitbudget erreicht – Rest im nächsten Lauf');
+          console.log(`IMAP: time budget reached, ${pending.length - results.processed} left for next run`);
+          break;
+        }
+        const failKey = `email:fail:${config.auth.user}:${uid}`;
+        const emailKey = `email:processed:${config.auth.user}:${uid}`;
         try {
-          // Check if this email was already processed
-          const emailKey = `email:processed:${config.auth.user}:${uid}`;
-          const alreadyProcessed = await kv.get(emailKey);
-          if (alreadyProcessed) {
-            continue;
+          await withTimeout((async () => {
+          const messageSize = await withTimeout(
+            client.fetchOne(uid, { size: true }) as Promise<{ size?: number } | false>,
+            OP_TIMEOUT_MS,
+            'IMAP size'
+          );
+          const size = messageSize && messageSize.size ? messageSize.size : 0;
+          if (size > MAX_MESSAGE_BYTES) {
+            const hash = hashId(`${config.auth.user}:${uid}`);
+            console.warn(`[IMAP] skip too large message hash=${hash} size=${size}`);
+            await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
+            await reportSkippedMessage({ uid, size, hash, reason: 'E-Mail zu groß (> 25 MB)' });
+            return;
           }
 
           // Fetch message
-          const message = await client.fetchOne(uid, { source: true }) as { source?: Buffer } | false;
+          const message = await withTimeout(client.fetchOne(uid, { source: true }) as Promise<{ source?: Buffer } | false>, OP_TIMEOUT_MS, 'IMAP fetch');
 
           if (!message || !message.source) {
-            continue;
+            return;
           }
 
           // Parse email
-          const parsed: ParsedMail = await simpleParser(message.source);
+          const parsed: ParsedMail = await withTimeout(simpleParser(message.source), OP_TIMEOUT_MS, 'Mail parsen');
 
           const fromAddress = Array.isArray(parsed.from?.value)
             ? parsed.from.value[0]
@@ -195,15 +265,15 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
           const supportEmail = process.env.SUPPORT_EMAIL?.toLowerCase();
           if (supportEmail && senderEmail === supportEmail) {
             await client.messageFlagsAdd(uid, ['\\Seen']);
-            continue;
+            return;
           }
 
           // Check if sender is on spam blacklist
           const { isSpamEmail } = await import('./spam');
           if (await isSpamEmail(senderEmail)) {
-            debug.push(`⛔ Spam-Absender übersprungen: ${senderEmail}`);
+            debug.push(`⛔ Spam-Absender übersprungen (hash=${hashId(senderEmail)})`);
             await client.messageFlagsAdd(uid, ['\\Seen']);
-            continue;
+            return;
           }
 
           const subject = parsed.subject || 'Kein Betreff';
@@ -229,7 +299,7 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
 
           if (!content.trim()) {
             await client.messageFlagsAdd(uid, ['\\Seen']);
-            continue;
+            return;
           }
 
           // Process attachments
@@ -237,8 +307,6 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
           debug.push(`Anhänge gefunden: ${attachments.length}`);
 
           // Check if this is a reply to an existing ticket
-          debug.push(`E-Mail Betreff: "${subject}"`);
-          debug.push(`Absender: ${senderEmail}`);
 
           const ticketNumber = parseTicketNumberFromSubject(subject);
           debug.push(`Erkannte Ticket-Nummer: ${ticketNumber || 'KEINE'}`);
@@ -266,7 +334,8 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
                 debug.push(`Ticket ${ticketNumber} wurde wieder geöffnet (Kundenantwort)`);
               }
 
-              // Update contact last activity
+              // Mark as processed right away (idempotent even if later steps time out)
+              await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
               await updateLastContact(senderEmail);
 
               // Create document entries for attachments (for OCR processing)
@@ -286,15 +355,11 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
                 console.error('[Push] New message notification failed:', e);
               }
 
-              console.log(`Added reply to ticket ${ticketNumber} from ${senderEmail}`);
+              console.log(`Added reply to ticket ${ticketNumber}`);
               results.processed++;
 
-              // Mark as processed in KV
-              const replyEmailKey = `email:processed:${config.auth.user}:${uid}`;
-              await kv.set(replyEmailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
-
               await client.messageFlagsAdd(uid, ['\\Seen']);
-              continue;
+              return;
             }
           }
 
@@ -306,22 +371,22 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
 
           // Check if this email was already imported (duplicate check by Message-ID)
           if (messageId) {
-            const existingMessage = await findMessageByExternalId(messageId, 'email');
+            const existingMessage = await findMessageByExternalId(messageId, 'email', { deadline: Date.now() + 30_000 });
             if (existingMessage) {
-              debug.push(`Duplikat erkannt: E-Mail mit Message-ID ${messageId} existiert bereits`);
-              console.log(`Skipping duplicate email with Message-ID: ${messageId}`);
+              debug.push(`Duplikat erkannt (hash=${hashId(messageId)})`);
+              console.log(`Skipping duplicate email (hash=${hashId(messageId)})`);
               // Mark as processed to avoid reprocessing
               await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
               await client.messageFlagsAdd(uid, ['\\Seen']);
-              continue;
+              return;
             }
           }
 
           // Check for spam before creating ticket
           const spamCheck = await checkEmailForSpam(senderEmail, cleanSubject, content);
           if (spamCheck.isSpam) {
-            debug.push(`SPAM erkannt von ${senderEmail}: ${spamCheck.reason}`);
-            console.log(`Blocked spam email from ${senderEmail}: ${spamCheck.reason}`);
+            debug.push(`SPAM erkannt (hash=${hashId(senderEmail)}): ${spamCheck.reason}`);
+            console.log(`Blocked spam email (hash=${hashId(senderEmail)}): ${spamCheck.reason}`);
 
             // Store as spam ticket for admin review
             await createSpamTicket({
@@ -339,7 +404,7 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
             await client.messageFlagsAdd(uid, ['\\Seen']);
             results.processed++;
-            continue;
+            return;
           }
 
           const { ticket } = await createTicket({
@@ -352,6 +417,9 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             channel: 'email',  // Important: This disables AI auto-reply for emails
             emailMessageId: messageId,  // Store for duplicate detection
           });
+
+          // Mark as processed right away (idempotent even if later steps time out)
+          await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
 
           // Ensure contact exists
           await ensureContactFromTicket({
@@ -406,17 +474,23 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
             console.error('[Push] New ticket notification failed:', e);
           }
 
-          console.log(`Created ticket ${ticket.ticketNumber} from email by ${senderEmail}`);
+          console.log(`Created ticket ${ticket.ticketNumber} from email`);
           results.processed++;
-
-          // Mark as processed in KV (expires after 30 days)
-          await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
 
           // Mark as read
           await client.messageFlagsAdd(uid, ['\\Seen']);
 
+          })(), PER_MESSAGE_TIMEOUT_MS, 'Nachricht verarbeiten');
         } catch (msgError: any) {
-          results.errors.push(`Fehler bei Nachricht ${uid}: ${msgError.message}`);
+          const hash = hashId(`${config.auth.user}:${uid}`);
+          const failures = await kv.incr(failKey).catch(() => 1);
+          await kv.expire(failKey, 7 * 24 * 60 * 60).catch(() => undefined);
+          console.error(`[IMAP] message hash=${hash} failed (${failures}/${MAX_FAILURES_PER_MESSAGE}): ${msgError.message}`);
+          results.errors.push(`Fehler bei Nachricht ${hash}: ${msgError.message}`);
+          if (failures >= MAX_FAILURES_PER_MESSAGE) {
+            await kv.set(emailKey, Date.now(), { ex: 30 * 24 * 60 * 60 });
+            await reportSkippedMessage({ uid, hash, reason: `${MAX_FAILURES_PER_MESSAGE}x fehlgeschlagen: ${msgError.message}` });
+          }
         }
       }
     } finally {
@@ -428,8 +502,7 @@ export async function fetchAndProcessEmails(): Promise<{ processed: number; erro
     debug.push('IMAP-Verbindung geschlossen');
   } catch (error: any) {
     debug.push(`IMAP Fehler: ${error.message}`);
-    debug.push(`Stack: ${error.stack}`);
-    results.errors.push(`IMAP Fehler: ${error.message}`);
+        results.errors.push(`IMAP Fehler: ${error.message}`);
   }
 
   return results;

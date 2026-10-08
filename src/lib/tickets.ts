@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { kv } from './kv';
 
 // Types
@@ -344,6 +345,13 @@ export async function createMessage(data: {
   await kv.hmset(`message:${messageId}`, messageForKV);
   await kv.sadd(`ticket:${data.ticketId}:messages`, messageId);
 
+  if (data.emailMessageId) {
+    await kv.set(externalIdKey(data.emailMessageId, 'email'), messageId, { ex: 365 * 24 * 60 * 60 });
+  }
+  if (data.whatsappMessageId) {
+    await kv.set(externalIdKey(data.whatsappMessageId, 'whatsapp'), messageId, { ex: 365 * 24 * 60 * 60 });
+  }
+
   // Update ticket timestamp
   await kv.hset(`ticket:${data.ticketId}`, { updatedAt: now });
 
@@ -382,28 +390,51 @@ export async function updateMessageStatus(
   }
 }
 
-// Find message by email or WhatsApp message ID
+// Lookup index external message ID -> internal message ID (avoids full scans)
+function externalIdKey(externalId: string, type: 'email' | 'whatsapp'): string {
+  const hash = createHash('sha1').update(externalId).digest('hex');
+  return `msgext:${type}:${hash}`;
+}
+
+// Find message by email or WhatsApp message ID.
+// Fast path: index lookup. Fallback: parallel legacy scan (messages created
+// before the index existed), bounded by an optional deadline (epoch ms).
 export async function findMessageByExternalId(
   externalId: string,
-  type: 'email' | 'whatsapp'
+  type: 'email' | 'whatsapp',
+  options?: { deadline?: number }
 ): Promise<TicketMessage | null> {
+  const indexKey = externalIdKey(externalId, type);
+  const indexed = await kv.get<string>(indexKey);
+  if (indexed) {
+    const message = await kv.hgetall(`message:${indexed}`) as unknown as TicketMessage | null;
+    if (message && Object.keys(message).length > 0) return message;
+  }
+
+  const field = type === 'email' ? 'emailMessageId' : 'whatsappMessageId';
   const allTicketIds: string[] = await kv.smembers('tickets:ids');
-  
-  for (const ticketId of allTicketIds) {
-    const messageIds: string[] = await kv.smembers(`ticket:${ticketId}:messages`);
-    
-    for (const messageId of messageIds) {
-      const message = await kv.hgetall(`message:${messageId}`) as unknown as TicketMessage;
-      
-      if (type === 'email' && message.emailMessageId === externalId) {
-        return message;
-      }
-      if (type === 'whatsapp' && message.whatsappMessageId === externalId) {
-        return message;
-      }
+  const CHUNK = 40;
+
+  for (let i = 0; i < allTicketIds.length; i += CHUNK) {
+    if (options?.deadline && Date.now() > options.deadline) return null;
+
+    const found = await Promise.all(
+      allTicketIds.slice(i, i + CHUNK).map(async (ticketId) => {
+        const messageIds: string[] = await kv.smembers(`ticket:${ticketId}:messages`);
+        const messages = await Promise.all(
+          messageIds.map((id) => kv.hgetall(`message:${id}`) as Promise<Record<string, unknown> | null>)
+        );
+        return messages.find((m) => m && m[field] === externalId) as unknown as TicketMessage | undefined;
+      })
+    );
+
+    const hit = found.find(Boolean);
+    if (hit) {
+      await kv.set(indexKey, hit.id, { ex: 365 * 24 * 60 * 60 });
+      return hit;
     }
   }
-  
+
   return null;
 }
 

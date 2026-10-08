@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchAndProcessEmails } from '@/lib/imap';
 
+export const maxDuration = 300;
+
 // This endpoint can be called by a cron job (e.g., Vercel Cron, external service)
 // Recommended: Every 2-5 minutes
 
