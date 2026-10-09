@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchAndProcessEmails } from '@/lib/imap';
+import { backfillMailCategories } from '@/lib/mail-backfill';
+import { kv } from '@/lib/kv';
 
 export const maxDuration = 300;
 
@@ -18,10 +20,23 @@ export async function GET(req: NextRequest) {
   try {
     const result = await fetchAndProcessEmails();
 
+    // Einmalige Nachsortierung alter E-Mail-Tickets: läuft nach dem Abruf mit eigenem Zeitbudget, bis nichts mehr offen ist
+    let backfill: Awaited<ReturnType<typeof backfillMailCategories>> | undefined;
+    try {
+      if (!(await kv.get('mail:backfill:done'))) {
+        backfill = await backfillMailCategories({ deadline: Date.now() + 120_000 });
+        console.log('[Backfill] Einordnung alter Mails:', JSON.stringify(backfill));
+        if (!backfill.timedOut && backfill.remaining === 0) await kv.set('mail:backfill:done', new Date().toISOString());
+      }
+    } catch (e) {
+      console.error('[Backfill] Fehler:', e);
+    }
+
     return NextResponse.json({
       success: true,
       processed: result.processed,
       errors: result.errors,
+      ...(backfill && { backfill }),
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
