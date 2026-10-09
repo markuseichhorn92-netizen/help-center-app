@@ -10,7 +10,9 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/admin';
+  const requested = searchParams.get('redirect') || '';
+  // Nur interne Admin-Ziele erlauben (kein Open Redirect)
+  const redirectTo = /^\/admin(\/|$|\?)/.test(requested) ? requested : '/admin';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

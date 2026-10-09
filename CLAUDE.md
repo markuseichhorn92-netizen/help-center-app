@@ -76,9 +76,10 @@ npm run lint     # ESLint
 ### Authentication
 
 **Cookie-based Session** (primary):
-- Login: `POST /api/admin/auth/login` → Sets `admin_session` cookie (24h)
+- Login: `POST /api/admin/auth/login` → Sets signed `admin_session` cookie (JWT/jose, 7 Tage); Rate-Limit über KV; ohne `ADMIN_USER`/`ADMIN_PASS` ist der Login gesperrt
 - Logout: `POST /api/admin/auth/logout`
-- Middleware checks cookie on `/admin/*` and `/api/admin/*` routes
+- `src/proxy.ts` prüft die Signatur auf `/admin/*` und `/api/admin/*`; jede Admin-Route zusätzlich per `requireAdmin(req)` (`src/lib/admin-auth.ts`)
+- Details/Variablen: `docs/ADMIN-SECURITY.md`
 
 **Basic Auth** (fallback for API compatibility):
 - Header: `Authorization: Basic base64(user:pass)`
@@ -209,10 +210,9 @@ Custom Tailwind theme:
 
 ### Cookie Auth Check (API Routes)
 ```typescript
-const sessionCookie = req.cookies.get('admin_session');
-if (!sessionCookie?.value) {
-  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-}
+import { requireAdmin } from '@/lib/admin-auth';
+const denied = await requireAdmin(req);
+if (denied) return denied;
 ```
 
 ### Message Status Icon Component
