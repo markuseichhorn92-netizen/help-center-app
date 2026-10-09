@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getContact, updateContact, deleteContact, getContactTicketCount } from '@/lib/contacts';
 import { findTicketsByEmail } from '@/lib/tickets';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/admin/contacts/[id] - Get single contact with tickets
 export async function GET(
@@ -8,10 +9,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;
@@ -48,10 +47,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;
@@ -89,10 +86,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;

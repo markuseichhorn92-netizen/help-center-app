@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSLAConfig, saveSLAConfig, getSLAStats, getSLAStatsByPeriod, SLAConfig } from '@/lib/sla';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/admin/sla - Get SLA statistics and config
 export async function GET(req: NextRequest) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -47,10 +46,8 @@ export async function GET(req: NextRequest) {
 // PUT /api/admin/sla - Update SLA config
 export async function PUT(req: NextRequest) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@/lib/kv';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/admin/dashboard - Get dashboard statistics
 export async function GET(req: NextRequest) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     // Get all ticket IDs

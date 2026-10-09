@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTicket, setTicketCategory } from '@/lib/tickets';
 import { rememberSender } from '@/lib/mail-classifier-io';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // Admin sortiert ein Ticket um ("Ist Kundenanfrage" / "Ist Sonstiges"), Absender optional merken
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;

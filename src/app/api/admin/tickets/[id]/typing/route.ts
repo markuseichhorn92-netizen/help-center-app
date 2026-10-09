@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET - Check if customer is typing
 export async function GET(
@@ -7,10 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Check session cookie
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;

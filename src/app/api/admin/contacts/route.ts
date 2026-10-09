@@ -4,14 +4,13 @@ import {
   createContact,
   searchContacts,
 } from '@/lib/contacts';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/admin/contacts - Get all contacts
 export async function GET(req: NextRequest) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -36,10 +35,8 @@ export async function GET(req: NextRequest) {
 // POST /api/admin/contacts - Create new contact
 export async function POST(req: NextRequest) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { getKnowledgeContext } from "@/lib/knowledge-base";
+import { requireAdmin } from '@/lib/admin-auth';
 
 // POST /api/admin/ai - Generate article content with AI
 export async function POST(request: NextRequest) {
-  const sessionCookie = request.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(request);
+  if (denied) return denied;
 
   try {
     const body = await request.json();

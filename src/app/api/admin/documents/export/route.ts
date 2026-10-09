@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentsForExport, createDocumentZip, generateZipFilename, ExportOptions } from '@/lib/export';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export const maxDuration = 60; // Allow up to 60 seconds for large exports
 
 // POST: Export documents as ZIP
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kv } from "@vercel/kv";
+import { requireAdmin } from '@/lib/admin-auth';
 
 interface QuickReply {
   id: string;
@@ -9,10 +10,8 @@ interface QuickReply {
 
 // GET - Get all quick replies
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const replies = await kv.get<QuickReply[]>("admin:quick-replies") || [];
@@ -25,10 +24,8 @@ export async function GET(req: NextRequest) {
 
 // POST - Add a new quick reply
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { title, content } = await req.json();
@@ -57,10 +54,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE - Delete a quick reply
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await req.json();

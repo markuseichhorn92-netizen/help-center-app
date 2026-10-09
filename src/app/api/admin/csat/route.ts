@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRatingStats, getAllRatingsWithContact, TicketRatingWithContact } from '@/lib/ticket-rating';
 import { kv } from '@/lib/kv';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export interface CSATTrendPoint {
   date: string;
@@ -11,10 +12,8 @@ export interface CSATTrendPoint {
 // GET /api/admin/csat - Get CSAT statistics and trends
 export async function GET(req: NextRequest) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);

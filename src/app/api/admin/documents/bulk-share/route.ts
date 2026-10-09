@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createBulkShareLink, getBulkShareLink, deleteBulkShareLink } from '@/lib/share';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // POST: Create a bulk share link for multiple documents
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();
@@ -45,10 +44,8 @@ export async function POST(req: NextRequest) {
 
 // GET: Get a bulk share link info
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -80,10 +77,8 @@ export async function GET(req: NextRequest) {
 
 // DELETE: Delete a bulk share link
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);

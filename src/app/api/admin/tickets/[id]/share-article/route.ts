@@ -4,6 +4,7 @@ import { getTicket, createMessage, getTicketMessages, updateTicket } from "@/lib
 import { sendTicketReply } from "@/lib/resend";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { generatePortalToken, getCustomerPresence } from "@/lib/portal";
+import { requireAdmin } from '@/lib/admin-auth';
 
 interface Article {
   id: string;
@@ -96,10 +97,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;

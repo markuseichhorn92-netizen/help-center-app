@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addToSpamBlacklist, removeFromSpamBlacklist, getSpamBlacklist, markAllTicketsFromEmailAsSpam } from '@/lib/spam';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET /api/admin/spam - Get spam blacklist
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const blacklist = await getSpamBlacklist();
@@ -19,10 +18,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/admin/spam - Add email to spam blacklist
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { email, markExistingTickets } = await req.json();
@@ -53,10 +50,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE /api/admin/spam - Remove email from spam blacklist
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { email } = await req.json();

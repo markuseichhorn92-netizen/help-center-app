@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateAdminPresence } from "@/lib/portal";
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function POST(req: NextRequest) {
   try {
     // Check admin session
-    const sessionCookie = req.cookies.get("admin_session");
-    if (!sessionCookie?.value) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = await requireAdmin(req);
+    if (denied) return denied;
 
     // Update admin presence
     await updateAdminPresence();

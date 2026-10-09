@@ -5,13 +5,12 @@ import {
   permanentlyDeleteTicket,
   moveTicketsToTrash,
 } from '@/lib/tickets';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET: List all deleted tickets
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const tickets = await getDeletedTickets();
@@ -27,10 +26,8 @@ export async function GET(req: NextRequest) {
 
 // POST: Restore ticket(s) from trash
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();
@@ -82,10 +79,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE: Permanently delete ticket(s)
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -139,10 +134,8 @@ export async function DELETE(req: NextRequest) {
 
 // PATCH: Move tickets to trash (soft delete)
 export async function PATCH(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

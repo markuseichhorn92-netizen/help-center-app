@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTicket, getTicketMessages, createMessage, updateTicket } from '@/lib/tickets';
 import { trackFirstResponse } from '@/lib/sla';
 import { kv } from '@/lib/kv';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;
@@ -43,10 +42,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;

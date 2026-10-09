@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ADMIN_COOKIE, checkBasicAuth, verifySessionToken } from '@/lib/admin-auth';
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Alte Kategorie-Adressen (/kategorie/<uuid>) → 301 auf den Slug (Route-Handler).
@@ -17,52 +18,26 @@ export function proxy(req: NextRequest) {
     }
   }
 
-  // Only protect admin routes (except login page and auth API)
+  // Admin-Seiten: signierte Session erforderlich (außer Login)
   if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
-    // Check for session cookie
-    const sessionCookie = req.cookies.get('admin_session');
-
-    if (!sessionCookie?.value) {
-      // Redirect to login page
+    const session = await verifySessionToken(req.cookies.get(ADMIN_COOKIE)?.value);
+    if (!session) {
       const loginUrl = new URL('/admin/login', req.url);
       loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      const res = NextResponse.redirect(loginUrl);
+      if (req.cookies.get(ADMIN_COOKIE)) res.cookies.delete(ADMIN_COOKIE); // altes/ungültiges Cookie entfernen
+      return res;
     }
-
-    // Session exists - allow access
     return NextResponse.next();
   }
 
-  // Protect admin API routes (except auth endpoints)
+  // Admin-API (außer Login/Logout): Session oder Basic Auth. Jede Route prüft zusätzlich per requireAdmin().
   if (pathname.startsWith('/api/admin') && !pathname.startsWith('/api/admin/auth')) {
-    // Check for session cookie first
-    const sessionCookie = req.cookies.get('admin_session');
-
-    if (sessionCookie?.value) {
+    const session = await verifySessionToken(req.cookies.get(ADMIN_COOKIE)?.value);
+    if (session || checkBasicAuth(req.headers.get('authorization'))) {
       return NextResponse.next();
     }
-
-    // Fall back to Basic Auth for API compatibility (e.g., external tools)
-    const basicAuth = req.headers.get('authorization');
-
-    const ADMIN_USER = process.env.ADMIN_USER;
-    const ADMIN_PASS = process.env.ADMIN_PASS;
-
-    // Only allow Basic Auth when credentials are actually configured -
-    // never fall back to default/factory credentials.
-    if (basicAuth && ADMIN_USER && ADMIN_PASS) {
-      const authValue = basicAuth.split(' ')[1];
-      const [user, password] = Buffer.from(authValue, 'base64').toString().split(':');
-
-      if (user === ADMIN_USER && password === ADMIN_PASS) {
-        return NextResponse.next();
-      }
-    }
-
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   // Allow all other requests

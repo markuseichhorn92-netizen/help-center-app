@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllCategories, createCategory, getCategoryArticleCounts } from '@/lib/categories';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET all categories with article counts
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const [categories, articleCounts] = await Promise.all([
@@ -31,10 +30,8 @@ export async function GET(req: NextRequest) {
 
 // POST create new category
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

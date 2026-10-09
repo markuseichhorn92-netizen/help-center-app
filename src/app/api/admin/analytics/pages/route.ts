@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPageStats, getRecentPageViews } from '@/lib/page-analytics';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET: Get page view statistics
 export async function GET(req: NextRequest) {
   // Check authentication
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);

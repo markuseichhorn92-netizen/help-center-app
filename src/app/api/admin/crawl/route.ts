@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { crawlUrls, crawlSitemap, crawlWebsite } from '@/lib/crawler';
 import { getAllKnowledgeEntries, deleteKnowledgeEntry } from '@/lib/knowledge-base';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // POST - Manual crawl
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();
@@ -66,10 +65,8 @@ export async function POST(req: NextRequest) {
 
 // GET - Get all knowledge entries
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const entries = await getAllKnowledgeEntries();
@@ -82,10 +79,8 @@ export async function GET(req: NextRequest) {
 
 // DELETE - Delete knowledge entry
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);

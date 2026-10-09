@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllTickets } from '@/lib/tickets';
+import { requireAdmin } from '@/lib/admin-auth';
 
 interface TicketVolumeData {
   date: string;
@@ -23,10 +24,8 @@ interface TicketStats {
 // GET: Get ticket statistics
 export async function GET(req: NextRequest) {
   // Check authentication
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);

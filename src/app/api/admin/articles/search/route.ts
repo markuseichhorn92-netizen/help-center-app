@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@/lib/kv';
+import { requireAdmin } from '@/lib/admin-auth';
 
 interface Article {
   id: string;
@@ -13,10 +14,8 @@ interface Article {
 // GET: Search articles (Admin version - includes unpublished optionally)
 export async function GET(req: NextRequest) {
   // Check authentication
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);

@@ -4,15 +4,14 @@ import { sendTicketReply } from '@/lib/resend';
 import { sendWhatsAppMessage } from '@/lib/whatsapp';
 import { generatePortalToken, getCustomerPresence } from '@/lib/portal';
 import { trackFirstResponse } from '@/lib/sla';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;

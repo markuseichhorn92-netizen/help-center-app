@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { createDocument, listDocuments, getDocumentStats, searchDocuments, listFolders, getDocumentsInFolder, moveDocumentToFolder } from '@/lib/documents';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET: List documents or search
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -76,10 +75,8 @@ export async function GET(req: NextRequest) {
 
 // POST: Upload new document
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const formData = await req.formData();

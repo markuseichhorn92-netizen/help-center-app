@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createFolder, listFolders } from '@/lib/documents';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET: List folders
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);
@@ -25,10 +24,8 @@ export async function GET(req: NextRequest) {
 
 // POST: Create folder
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

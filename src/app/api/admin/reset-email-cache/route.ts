@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kv } from '@/lib/kv';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function POST(req: NextRequest) {
   // Check admin session
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const imapUser = process.env.IMAP_USER || 'info@fit-inn-trier.de';

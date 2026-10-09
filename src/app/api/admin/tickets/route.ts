@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllTicketsWithUnreadCount } from '@/lib/tickets';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const tickets = await getAllTicketsWithUnreadCount();

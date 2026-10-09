@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { setAdminStatus, getAdminPresence } from "@/lib/portal";
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET: Get current admin status
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const presence = await getAdminPresence();
@@ -19,10 +18,8 @@ export async function GET(req: NextRequest) {
 
 // POST: Set admin online/offline status
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { status } = await req.json();

@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocument } from '@/lib/documents';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET: Download document with Content-Disposition: attachment
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;

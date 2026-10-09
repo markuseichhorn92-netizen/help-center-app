@@ -4,13 +4,12 @@ import {
   restoreSpamTicket,
   deleteSpamTicket,
 } from '@/lib/tickets';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET: List all spam tickets
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const tickets = await getSpamTickets();
@@ -26,10 +25,8 @@ export async function GET(req: NextRequest) {
 
 // POST: Restore ticket(s) from spam (mark as not spam)
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();
@@ -81,10 +78,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE: Permanently delete spam ticket(s)
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { searchParams } = new URL(req.url);

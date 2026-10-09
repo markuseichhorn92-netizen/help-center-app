@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reorderCategories } from '@/lib/categories';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // POST reorder categories
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

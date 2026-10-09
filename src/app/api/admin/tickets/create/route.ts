@@ -4,14 +4,13 @@ import { ensureContactFromTicket } from '@/lib/contacts';
 import { sendTicketReply } from '@/lib/resend';
 import { generatePortalToken } from '@/lib/portal';
 import { kv } from '@/lib/kv';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // POST /api/admin/tickets/create - Create new ticket from admin
 export async function POST(req: NextRequest) {
   // Check session cookie
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTicket } from '@/lib/tickets';
 import { createRatingToken, hasTicketRating } from '@/lib/ticket-rating';
 import { sendRatingRequestEmail } from '@/lib/resend';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Check authentication
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id: ticketId } = await params;

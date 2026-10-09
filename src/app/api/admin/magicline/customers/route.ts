@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { magicline } from '@/lib/magicline';
 import { cookies } from 'next/headers';
+import { verifySessionToken } from '@/lib/admin-auth';
 
-// Verify admin session
+// Verify admin session (signiert)
 async function isAuthenticated(): Promise<boolean> {
   const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('admin_session')?.value;
-  return !!sessionToken;
+  return !!(await verifySessionToken(cookieStore.get('admin_session')?.value));
 }
 
 // GET /api/admin/magicline/customers

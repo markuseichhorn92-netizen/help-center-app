@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllArticleAnalytics, getTotalSiteViews, getPopularArticles } from '@/lib/analytics';
 import { getAllArticleFeedback } from '@/lib/feedback';
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function GET(req: NextRequest) {
   // Check for session cookie (set by login page)
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const [articles, totalViews, popular, feedback] = await Promise.all([

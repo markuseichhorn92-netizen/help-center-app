@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllTags, addCustomTag, removeCustomTag } from "@/lib/tickets";
+import { requireAdmin } from '@/lib/admin-auth';
 
 // GET: Get all available tags
 export async function GET(req: NextRequest) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const tags = await getAllTags();
@@ -19,10 +18,8 @@ export async function GET(req: NextRequest) {
 
 // POST: Add a new custom tag
 export async function POST(req: NextRequest) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { name, color } = await req.json();
@@ -51,10 +48,8 @@ export async function POST(req: NextRequest) {
 
 // DELETE: Remove a custom tag
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { tagId } = await req.json();

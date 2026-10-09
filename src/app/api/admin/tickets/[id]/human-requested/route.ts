@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isHumanRequested } from "@/lib/ai-autoreply";
+import { requireAdmin } from '@/lib/admin-auth';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   // Check session cookie
-  const sessionCookie = req.cookies.get("admin_session");
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const { id } = await params;

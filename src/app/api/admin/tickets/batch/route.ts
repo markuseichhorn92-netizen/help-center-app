@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteTickets, updateTicketsStatus } from '@/lib/tickets';
+import { requireAdmin } from '@/lib/admin-auth';
 
 // Batch status update
 export async function PUT(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();
@@ -44,10 +43,8 @@ export async function PUT(req: NextRequest) {
 
 // Batch delete
 export async function DELETE(req: NextRequest) {
-  const sessionCookie = req.cookies.get('admin_session');
-  if (!sessionCookie?.value) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = await requireAdmin(req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();
