@@ -87,6 +87,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class: "prose prose-sm max-w-none focus:outline-none min-h-[200px] px-4 py-3",
+        "aria-label": placeholder, // barrierefreier Name für Screenreader
       },
     },
   });

@@ -12,7 +12,7 @@ function Card({ title, children, className, id, aside }: { title: string; childr
   return (
     <section id={id} aria-label={title} className={cx("rounded-2xl border border-adm-line bg-adm-surface p-4", className)}>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="adm-mono text-xs font-medium uppercase tracking-[0.08em] text-adm-mut">{title}</h3>
+        <h2 className="adm-mono text-xs font-medium uppercase tracking-[0.08em] text-adm-mut">{title}</h2>
         {aside}
       </div>
       {children}
@@ -98,7 +98,7 @@ export function CustomerCard({ t }: { t: T }) {
 
       <Card title="Magicline-Mitglied">
         {/* Bestehende Komponente mit hellem Eigen-Design → als helle Insel, damit sie im Dunkelmodus lesbar bleibt */}
-        <div className="rounded-xl bg-white p-3 text-[#14252d]" style={{ colorScheme: "light" }}>
+        <div className="adm-light-island rounded-xl bg-white p-3 text-[#14252d]" style={{ colorScheme: "light" }}>
           <MemberSearch initialEmail={ticket.customerEmail} initialPhone={ticket.phone} compact={true} />
         </div>
       </Card>
@@ -135,8 +135,10 @@ export function CustomerCard({ t }: { t: T }) {
   );
 }
 
-const TAG_TONES: Record<string, string> = {
-  red: "#c2410c", yellow: "#a16207", orange: "#c2570c", purple: "#6d28d9", green: "#15803d", blue: "#1d4ed8", teal: "#0f766e", gray: "#4b5563",
+// Tag-Farben: [hell, dunkel] – beide mit ≥ 4,5:1 Kontrast auf der jeweiligen Fläche
+const TAG_TONES: Record<string, [string, string]> = {
+  red: ["#b42318", "#f19a9a"], yellow: ["#8a5a00", "#e8c35a"], orange: ["#a8480a", "#f0a46b"], purple: ["#6d28d9", "#c4a8f5"],
+  green: ["#166534", "#7fd69b"], blue: ["#1d4ed8", "#9cc0f7"], teal: ["#0f766e", "#6fd3c6"], gray: ["#4b5563", "#b8c2c8"],
 };
 
 /** Steuerung: Status, Priorität, KI, Tags, Notizen, passende Artikel */
@@ -192,7 +194,7 @@ export function ControlsPanel({ t, onShare, onSearchArticles }: { t: T; onShare:
         <div className="flex flex-wrap gap-2">
           {t.availableTags.map((tag) => {
             const on = ticket.tags?.includes(tag.id);
-            const color = TAG_TONES[tag.color] || TAG_TONES.gray;
+            const [lightC, darkC] = TAG_TONES[tag.color] || TAG_TONES.gray;
             return (
               <button
                 key={tag.id}
@@ -200,8 +202,11 @@ export function ControlsPanel({ t, onShare, onSearchArticles }: { t: T; onShare:
                 aria-pressed={!!on}
                 onClick={() => t.handleTagToggle(tag.id)}
                 disabled={t.savingTags}
-                style={on ? { background: color, color: "#fff", borderColor: color } : { color }}
-                className="min-h-11 rounded-full border border-current px-4 text-sm font-bold disabled:opacity-50"
+                style={{ "--tag": lightC, "--tag-d": darkC } as React.CSSProperties}
+                className={cx(
+                  "min-h-11 rounded-full border px-4 text-sm font-bold disabled:opacity-50",
+                  on ? "border-[var(--tag)] bg-[var(--tag)] text-white" : "border-current text-[var(--tag)] dark:text-[var(--tag-d)]"
+                )}
               >
                 {tag.name}
               </button>

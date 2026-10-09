@@ -1186,3 +1186,7 @@ html.dark body {
 @media (max-width: 1023px) {
   .adm-composer .ProseMirror { min-height: 56px !important; max-height: 20dvh; }
 }
+
+/* Magicline-Suche (eigene helle Optik) im Dunkelmodus als helle Insel: Grautöne mit ausreichend Kontrast */
+.adm-light-island .text-apple-gray-400 { color: #5e6a70 !important; }
+.adm-light-island .text-apple-gray-300 { color: #6b767c !important; }

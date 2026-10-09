@@ -30,6 +30,7 @@ export function Dialog({
   labelledBy?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -42,6 +43,9 @@ export function Dialog({
     const node = ref.current;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Hintergrund für Screenreader/Tastatur sperren (modal)
+    const inerted = Array.from(document.body.children).filter((el) => el !== overlayRef.current && !el.hasAttribute("inert"));
+    inerted.forEach((el) => el.setAttribute("inert", ""));
     const first = node?.querySelector<HTMLElement>("[data-autofocus]") || node?.querySelector<HTMLElement>(FOCUSABLE);
     first?.focus();
 
@@ -68,6 +72,7 @@ export function Dialog({
     return () => {
       document.removeEventListener("keydown", onKey, true);
       document.body.style.overflow = prevOverflow;
+      inerted.forEach((el) => el.removeAttribute("inert"));
       previous?.focus?.();
     };
   }, [open]);
@@ -75,7 +80,7 @@ export function Dialog({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="adm-root fixed inset-0 z-[100] flex items-end justify-center bg-black/50 sm:items-center sm:p-4 adm-fade-in" style={{ background: "rgba(5,15,18,.55)" }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div ref={overlayRef} className="adm-root fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4 adm-fade-in" style={{ background: "rgba(5,15,18,.55)" }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div
         ref={ref}
         role="dialog"

@@ -59,7 +59,7 @@ export default function TicketHeader({
         {ticket.channel === "email" && ticket.category !== "sonstiges" && <Pill tone="ok">Kundenanfrage{ticket.important ? " · Wichtig/Intern" : ""}</Pill>}
         {ticket.assignedTo && <Pill tone="work"><UserIcon width={14} height={14} />{ticket.assignedTo}</Pill>}
         {active && waitingSince && (
-          <span className="rounded-full bg-white/90 px-2 text-adm-ink lg:bg-transparent lg:px-0"><WaitBadge since={waitingSince} /></span>
+          <span className="rounded-full bg-adm-surface px-2 lg:bg-transparent lg:px-0"><WaitBadge since={waitingSince} /></span>
         )}
         {active && (
           <span className="ml-auto hidden gap-2 lg:flex">

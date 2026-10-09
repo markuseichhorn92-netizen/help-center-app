@@ -137,15 +137,17 @@ export default function InboxList() {
         })}
       </div>
 
-      {inbox.newItems && (
-        <button
-          type="button"
-          onClick={() => { inbox.clearNewItems(); document.getElementById("inbox-scroll")?.scrollTo({ top: 0, behavior: "smooth" }); }}
-          className="mx-4 mt-2 min-h-11 rounded-full bg-adm-apricot px-4 text-sm font-bold text-adm-on-apricot"
-        >
-          Neue Nachrichten – nach oben
-        </button>
-      )}
+      <div role="status" aria-live="polite">
+        {inbox.newItems && (
+          <button
+            type="button"
+            onClick={() => { inbox.clearNewItems(); document.getElementById("inbox-scroll")?.scrollTo({ top: 0, behavior: "smooth" }); }}
+            className="mx-4 mt-2 min-h-11 rounded-full bg-adm-apricot px-4 text-sm font-bold text-adm-on-apricot"
+          >
+            Neue Nachrichten – nach oben
+          </button>
+        )}
+      </div>
 
       {/* Sammelaktionen */}
       {inbox.selectMode && (

@@ -46,6 +46,7 @@ function InboxRowBase({
       )}
       <Link
         href={`/admin/tickets/${ticket.id}`}
+        prefetch={false}
         aria-current={current ? "page" : undefined}
         className="min-w-0 flex-1 after:absolute after:inset-0 after:content-['']"
         onClick={(e) => selectMode && (e.preventDefault(), onToggle())}
@@ -71,6 +72,7 @@ function InboxRowBase({
         <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
           <ChannelLabel channel={ticket.channel} />
           <StatusPill status={ticket.status} unread={unread} snoozed={snoozed} />
+          {ticket.priority === "high" && active && <Pill tone="danger">Hoch</Pill>}
           {ticket.aiStatus === "escalated" && active && <Pill tone="danger">Mitarbeiter gewünscht</Pill>}
           {ticket.aiStatus === "active" && active && <Pill tone="wait">KI bearbeitet</Pill>}
           {ticket.category === "sonstiges" && <Pill tone="mut">Sonstiges</Pill>}

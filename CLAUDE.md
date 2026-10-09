@@ -31,14 +31,18 @@ npm run lint     # ESLint
 - `src/app/portal/` - Customer portal for ticket viewing/creation
 - `src/app/chat/` - Standalone AI chat page
 - `src/lib/` - Service modules (tickets.ts, categories.ts, analytics.ts, feedback.ts, imap.ts, resend.ts, whatsapp.ts, push-notifications.ts)
-- `src/components/` - Reusable React components including AdminHeader
+- `src/components/` - Reusable React components; Teambereich-UI in `src/components/admin/`
 - `src/components/editor/` - TipTap rich text editor with extensions (CalloutExtension, etc.)
 
 ### Admin Layout Structure
-- `src/app/admin/layout.tsx` - Shared layout with AdminHeader (excludes login page)
-- `src/components/AdminHeader.tsx` - Navigation between: Artikel, Tickets, Kategorien, Analytics, Knowledge
-- All admin pages use `max-w-7xl` container for consistent width
-- Public Header/Footer automatically hidden on `/admin/*` routes
+- `src/app/admin/layout.tsx` - Service-Worker/Heartbeat + `AdminShell` (ohne Login-Seite)
+- `src/components/admin/AdminShell.tsx` - Navigation: Seitenleiste (Desktop) / untere Leiste + „Mehr“-Sheet (Handy), ⌘K-Palette, Toasts; Einträge in `nav.ts`
+- Posteingang + Ticket: Route-Gruppe `src/app/admin/tickets/(inbox)/` (Layout = Liste links, Ticket rechts; URLs unverändert)
+  - `components/admin/inbox/` (Liste, Zeilen, Wischen, Später) · `components/admin/ticket/` (Hook `useTicketDetail`, Verlauf, Composer, Kundenkarte, Dialoge)
+  - Reine Logik (Filter, „wartet seit“, Vorschau): `src/lib/admin/inbox.ts` (+ Tests)
+- Design-Tokens: `--adm-*` / `bg-adm-*` in `globals.css` (hell/dunkel über `.dark`); Tipp-Flächen ≥ 44 px, Dialoge über `ui/Dialog.tsx`
+- Andere Admin-Seiten nutzen weiter den `max-w-7xl`-Container der Shell
+- Public Header/Footer, Cookie-Hinweis und Kunden-Chat-Widget sind auf `/admin/*` ausgeblendet
 
 ### Data Layer (Vercel KV)
 
@@ -177,7 +181,7 @@ Web Push notifications for admins when new tickets arrive:
 - `src/lib/push-notifications.ts` - Send notifications, manage subscriptions
 - `src/app/api/admin/push/subscribe/route.ts` - Save subscription
 - `src/app/api/admin/push/unsubscribe/route.ts` - Remove subscription
-- `src/components/AdminHeader.tsx` - Notification bell with subscription toggle
+- `src/components/admin/useAdminControls.ts` + `MoreSheet.tsx` - Push-Schalter, Online-Status, Abmelden
 
 **Data Layer:**
 - `push:subscription:{id}` - Hash with endpoint, keys
@@ -216,7 +220,7 @@ if (denied) return denied;
 ```
 
 ### Message Status Icon Component
-Located in `src/app/admin/tickets/[id]/page.tsx`:
+Located in `src/components/admin/ticket/MessageList.tsx` (`DeliveryStatus`):
 - Shows delivery status for admin messages only
 - Uses SVG checkmarks with different colors/counts
 

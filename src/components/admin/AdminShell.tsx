@@ -84,9 +84,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </button>
       </nav>
 
-      <main className={cx("lg:pl-[84px]", fullBleed ? "" : "px-4 pb-28 pt-5 sm:px-6 lg:pb-10 lg:pt-8")}>
+      <div className={cx("lg:pl-[84px]", fullBleed ? "" : "px-4 pb-28 pt-5 sm:px-6 lg:pb-10 lg:pt-8")}>
         {fullBleed ? children : <div className="mx-auto max-w-7xl">{children}</div>}
-      </main>
+      </div>
 
       {/* Handy: untere Navigation (Daumenzone) */}
       {!hideBottomNav && (
