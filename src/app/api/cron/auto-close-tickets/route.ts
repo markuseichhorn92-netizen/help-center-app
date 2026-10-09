@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { autoCloseResolvedTickets, getTicketsToAutoClose } from '@/lib/tickets';
+import { trashOldSonstiges } from '@/lib/mail-backfill';
 
 // Cron job to auto-close resolved tickets after 1 hour
 // Called by Vercel Cron or external scheduler
@@ -13,6 +14,13 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Optional und standardmäßig AUS: Sonstiges älter als N Tage in den Papierkorb (nur wenn SONSTIGES_RETENTION_DAYS gesetzt)
+    const retentionDays = Number(process.env.SONSTIGES_RETENTION_DAYS) || 0;
+    if (retentionDays > 0) {
+      const r = await trashOldSonstiges(retentionDays);
+      if (r.trashed > 0) console.log(`Sonstiges in Papierkorb verschoben: ${r.trashed}`);
+    }
+
     // Get tickets that will be closed (for logging)
     const ticketsToClose = await getTicketsToAutoClose();
 
