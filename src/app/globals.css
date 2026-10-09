@@ -1065,3 +1065,124 @@ html.dark body {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
+
+
+/* ============================================================
+   Teambereich (/admin) – Design-Tokens „Mix“ (hell + dunkel)
+   Teal #0a4958 · Apricot #E08C53 · Archivo + IBM Plex Mono
+   ============================================================ */
+:root {
+  --adm-bg: #f2f6f7;
+  --adm-surface: #ffffff;
+  --adm-surface-2: #e9f1f3;
+  --adm-line: #d5e2e6;
+  --adm-ink: #14252d;
+  --adm-mut: #4e6068;
+  --adm-teal: #0a4958;
+  --adm-teal-2: #0f6074;
+  --adm-on-teal: #ffffff;
+  --adm-apricot: #e08c53;
+  --adm-apricot-ink: #8a4a14;
+  --adm-on-apricot: #2b1405;
+  --adm-new-bg: #fde6d2;
+  --adm-new-ink: #8a4a14;
+  --adm-work-bg: #d9edf2;
+  --adm-work-ink: #0a4958;
+  --adm-wait-bg: #e9e3f8;
+  --adm-wait-ink: #4a3a8a;
+  --adm-ok-bg: #dcf1e5;
+  --adm-ok-ink: #14543a;
+  --adm-danger-bg: #fde4e4;
+  --adm-danger-ink: #a12a2a;
+  --adm-focus: #0a4958;
+  --adm-shadow: 0 1px 2px rgba(10, 40, 50, 0.06), 0 6px 20px rgba(10, 40, 50, 0.06);
+}
+.dark {
+  --adm-bg: #0a1519;
+  --adm-surface: #11222a;
+  --adm-surface-2: #1a3039;
+  --adm-line: #24404a;
+  --adm-ink: #e8f1f3;
+  --adm-mut: #9db3ba;
+  --adm-teal: #0e5a6c;
+  --adm-teal-2: #146d83;
+  --adm-on-teal: #ffffff;
+  --adm-apricot: #e8975f;
+  --adm-apricot-ink: #f0b48a;
+  --adm-on-apricot: #2b1405;
+  --adm-new-bg: #4a2d17;
+  --adm-new-ink: #f6c9a4;
+  --adm-work-bg: #17414d;
+  --adm-work-ink: #b9e1ea;
+  --adm-wait-bg: #2d2650;
+  --adm-wait-ink: #cdc3f5;
+  --adm-ok-bg: #173b2b;
+  --adm-ok-ink: #a8e3c3;
+  --adm-danger-bg: #4a1f1f;
+  --adm-danger-ink: #f5b5b5;
+  --adm-focus: #f0b48a;
+  --adm-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+@theme inline {
+  --color-adm-bg: var(--adm-bg);
+  --color-adm-surface: var(--adm-surface);
+  --color-adm-surface-2: var(--adm-surface-2);
+  --color-adm-line: var(--adm-line);
+  --color-adm-ink: var(--adm-ink);
+  --color-adm-mut: var(--adm-mut);
+  --color-adm-teal: var(--adm-teal);
+  --color-adm-teal-2: var(--adm-teal-2);
+  --color-adm-on-teal: var(--adm-on-teal);
+  --color-adm-apricot: var(--adm-apricot);
+  --color-adm-apricot-ink: var(--adm-apricot-ink);
+  --color-adm-on-apricot: var(--adm-on-apricot);
+  --color-adm-new-bg: var(--adm-new-bg);
+  --color-adm-new-ink: var(--adm-new-ink);
+  --color-adm-work-bg: var(--adm-work-bg);
+  --color-adm-work-ink: var(--adm-work-ink);
+  --color-adm-wait-bg: var(--adm-wait-bg);
+  --color-adm-wait-ink: var(--adm-wait-ink);
+  --color-adm-ok-bg: var(--adm-ok-bg);
+  --color-adm-ok-ink: var(--adm-ok-ink);
+  --color-adm-danger-bg: var(--adm-danger-bg);
+  --color-adm-danger-ink: var(--adm-danger-ink);
+}
+
+.adm-root {
+  background: var(--adm-bg);
+  color: var(--adm-ink);
+}
+.adm-root :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--adm-focus);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+.adm-mono { font-family: var(--font-plex), ui-monospace, monospace; }
+.adm-scroll-x { scrollbar-width: none; }
+.adm-scroll-x::-webkit-scrollbar { display: none; }
+.adm-safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+@keyframes adm-sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes adm-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.adm-sheet-in { animation: adm-sheet-in .18s ease-out; }
+.adm-fade-in { animation: adm-fade-in .15s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .adm-sheet-in, .adm-fade-in { animation: none; }
+}
+
+/* Antwort-Editor im Teambereich: Farben/Tipp-Flächen an Design-Tokens anpassen */
+.adm-composer [class*="border-apple-gray-200"] { border-color: var(--adm-line) !important; background: var(--adm-surface); border-radius: 18px; }
+.adm-composer [class*="bg-apple-gray-50"] { background: var(--adm-surface-2) !important; }
+.adm-composer .ProseMirror { min-height: 72px !important; max-height: clamp(96px, 17dvh, 170px); overflow-y: auto; color: var(--adm-ink); font-size: 16px; }
+.adm-composer .ProseMirror p.is-editor-empty:first-child::before { color: var(--adm-mut) !important; }
+.adm-composer [class*="border-apple-gray-200"] button { min-width: 44px; min-height: 44px; color: var(--adm-ink); }
+.adm-composer [class*="border-apple-gray-200"] button:hover { background: var(--adm-surface-2); }
+.adm-composer input { background: var(--adm-surface); color: var(--adm-ink); }
+.dark .ticket-message-customer { color: var(--adm-ink); }
+.dark .ticket-message-customer a { color: #f0b48a; }
+.dark .ticket-message-customer a:hover { color: #ffd2b0; }
+.adm-root .ticket-message-admin a { color: #bfe3ee; }
+.adm-composer [class*="bg-apple-gray-50"] { padding: 2px 6px !important; }
+@media (max-width: 1023px) {
+  .adm-composer .ProseMirror { min-height: 56px !important; max-height: 20dvh; }
+}

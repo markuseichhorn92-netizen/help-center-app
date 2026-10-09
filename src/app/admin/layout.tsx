@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import AdminHeader from "@/components/AdminHeader";
+import AdminShell from "@/components/admin/AdminShell";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 export default function AdminLayout({
@@ -16,8 +16,6 @@ export default function AdminLayout({
   // Don't show header on login page
   const isLoginPage = pathname === "/admin/login";
   
-  // Check if on ticket detail page (has its own mobile header)
-  const isTicketDetailPage = pathname?.match(/^\/admin\/tickets\/[^/]+$/);
 
   // Listen for messages from Service Worker (for notification clicks)
   useEffect(() => {
@@ -89,13 +87,8 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-apple-gray-50 dark:bg-dark-bg transition-colors duration-300">
-      <AdminHeader />
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 md:py-8 ${isTicketDetailPage ? 'py-0' : 'py-6'}`}>
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
-      </main>
-    </div>
+    <AdminShell>
+      <ErrorBoundary>{children}</ErrorBoundary>
+    </AdminShell>
   );
 }

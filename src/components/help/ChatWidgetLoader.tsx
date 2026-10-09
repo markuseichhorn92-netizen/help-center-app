@@ -10,6 +10,7 @@ const SRC = 'https://cdn.jexitychat.de/widget/latest/widget.js';
 export default function ChatWidgetLoader() {
   const pathname = usePathname();
   useEffect(() => {
+    if (pathname?.startsWith('/admin')) return; // Teambereich: kein Kunden-Chat-Widget
     if (document.getElementById('jexitychat-widget')) return;
     const load = () => {
       if (document.getElementById('jexitychat-widget')) return;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTicket, updateTicket, updateTicketTags, moveTicketToTrash, permanentlyDeleteTicket } from '@/lib/tickets';
+import { getTicket, updateTicket, updateTicketTags, moveTicketToTrash, permanentlyDeleteTicket, setTicketSnooze } from '@/lib/tickets';
 import { createRatingToken, hasTicketRating } from '@/lib/ticket-rating';
 import { sendRatingRequestEmail } from '@/lib/resend';
 import { requireAdmin } from '@/lib/admin-auth';
@@ -36,7 +36,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await req.json();
-    const { status, priority, assignedTo, tags } = body;
+    const { status, priority, assignedTo, tags, snoozedUntil } = body;
 
     // Get current ticket state before update
     const currentTicket = await getTicket(id);
@@ -47,6 +47,20 @@ export async function PUT(
     // Handle tags separately if provided
     if (tags !== undefined && Array.isArray(tags)) {
       await updateTicketTags(id, tags);
+    }
+
+    // „Später“: ISO-Zeitpunkt oder null (wieder einblenden)
+    if (snoozedUntil !== undefined) {
+      const valid = snoozedUntil === null || (typeof snoozedUntil === 'string' && Number.isFinite(new Date(snoozedUntil).getTime()));
+      if (!valid) {
+        return NextResponse.json({ message: 'Ungültiger Zeitpunkt.' }, { status: 400 });
+      }
+      const snoozed = await setTicketSnooze(id, snoozedUntil);
+      if (status === undefined && priority === undefined && assignedTo === undefined) {
+        return snoozed
+          ? NextResponse.json(snoozed)
+          : NextResponse.json({ message: 'Ticket nicht gefunden.' }, { status: 404 });
+      }
     }
 
     const updatedTicket = await updateTicket(id, { status, priority, assignedTo });

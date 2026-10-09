@@ -25,6 +25,8 @@ export interface Ticket {
   categoryReason?: string; // Grund der Einordnung
   categorySource?: 'rule' | 'ai' | 'learned' | 'default' | 'manual';
   important?: boolean; // Wichtig/intern (z. B. Bewerbung)
+  snoozedUntil?: string; // „Später“: bis dahin im Posteingang ausgeblendet
+  snoozedAt?: string; // updatedAt zum Zeitpunkt des Zurückstellens (neue Aktivität holt das Ticket zurück)
 }
 
 // Internal notes (only visible to admins)
@@ -1019,4 +1021,48 @@ export async function cleanupOldSpamTickets(): Promise<{ deleted: number; failed
     deleted: results.filter(r => r.success).length,
     failed: results.filter(r => !r.success).map(r => r.id),
   };
+}
+
+
+// „Später“: Ticket bis zu einem Zeitpunkt zurückstellen (null = wieder einblenden).
+// updatedAt bleibt unverändert; neue Aktivität (Kundennachricht) holt das Ticket automatisch zurück.
+export async function setTicketSnooze(id: string, until: string | null): Promise<Ticket | null> {
+  const ticket = await getTicket(id);
+  if (!ticket) return null;
+  if (until === null) {
+    await kv.hdel(`ticket:${id}`, 'snoozedUntil', 'snoozedAt');
+    const { snoozedUntil: _u, snoozedAt: _a, ...rest } = ticket;
+    return rest as Ticket;
+  }
+  await kv.hset(`ticket:${id}`, { snoozedUntil: until, snoozedAt: ticket.updatedAt });
+  return { ...ticket, snoozedUntil: until, snoozedAt: ticket.updatedAt };
+}
+
+export interface TicketPreviewData {
+  sender: 'customer' | 'admin';
+  createdAt: string;
+  text: string;
+  waitingSince: string | null;
+}
+
+// Vorschau der letzten Nachricht für eine kleine Menge Tickets (sichtbare Zeilen im Posteingang).
+export async function getTicketPreviews(ids: string[]): Promise<Record<string, TicketPreviewData>> {
+  const { previewText } = await import('./admin/inbox');
+  const out: Record<string, TicketPreviewData> = {};
+  await Promise.all(
+    ids.map(async (id) => {
+      const messages = await getTicketMessages(id);
+      const last = messages[messages.length - 1];
+      if (!last) return;
+      let waitingSince: string | null = null;
+      if (last.sender === 'customer') {
+        // Beginn der unbeantworteten Kundenserie
+        let i = messages.length - 1;
+        while (i > 0 && messages[i - 1].sender === 'customer') i--;
+        waitingSince = messages[i].createdAt;
+      }
+      out[id] = { sender: last.sender, createdAt: last.createdAt, text: previewText(last.content), waitingSince };
+    })
+  );
+  return out;
 }

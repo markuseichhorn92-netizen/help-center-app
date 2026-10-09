@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {  AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 
@@ -16,6 +17,8 @@ const CONSENT_KEY = "cookie_consent";
 
 // Kompakte Leiste unten (kein Vollbild-Overlay). z-index über dem Chat-Widget.
 export default function CookieBanner() {
+  const pathname = usePathname();
+  const isAdmin = pathname?.startsWith("/admin") ?? false; // Teambereich braucht keinen Cookie-Hinweis
   const [showBanner, setShowBanner] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [consent, setConsent] = useState<CookieConsent>({ necessary: true, analytics: false, marketing: false, timestamp: 0 });
@@ -45,7 +48,7 @@ export default function CookieBanner() {
 
   return (
     <AnimatePresence>
-      {showBanner && (
+      {showBanner && !isAdmin && (
         <m.div
           role="region"
           aria-label="Cookie-Hinweis"
