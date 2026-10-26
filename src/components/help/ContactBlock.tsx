@@ -3,8 +3,8 @@ import { PhoneIcon, SparkIcon, WhatsAppIcon, MailIcon } from './icons';
 import { Reveal } from './Reveal';
 
 export const WHATSAPP_URL = 'https://wa.me/4951328533010';
-export const PHONE_DISPLAY = '0651 493 688 19';
-export const PHONE_HREF = 'tel:+4965149368819';
+export const PHONE_DISPLAY = '0651 603 443 42';
+export const PHONE_HREF = 'tel:+4965160344342';
 
 // Kontakt-Fallback: KI-Assistent → WhatsApp → Telefon (Reihenfolge laut Konzept).
 export default function ContactBlock({ title = 'Nichts gefunden?', hint, variant = 'card', idSuffix = 'main' }: {

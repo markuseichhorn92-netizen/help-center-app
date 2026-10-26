@@ -39,7 +39,7 @@ export default function DatenschutzPage() {
             </p>
             <p className="text-apple-gray-500 dark:text-apple-gray-300 mb-1">
               <strong className="text-apple-gray-600 dark:text-dark-text">Telefon:</strong>{" "}
-              <a href="tel:+49651308524" className="text-brand dark:text-brand-light hover:underline">0651 308524</a>
+              <a href="tel:+4965160344342" className="text-brand dark:text-brand-light hover:underline">0651 603 443 42</a>
             </p>
             <p className="text-apple-gray-500 dark:text-apple-gray-300">
               <strong className="text-apple-gray-600 dark:text-dark-text">E-Mail:</strong>{" "}

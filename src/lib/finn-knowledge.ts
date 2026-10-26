@@ -9,7 +9,7 @@ export const FINN_KNOWLEDGE = `
 ## STUDIO-INFO
 - Name: FIT-INN Trier
 - Adresse: Auf Hirtenberg 8, 54296 Trier
-- Telefon: 0651 30 85 24
+- Telefon: 0651 603 443 42
 - E-Mail: info@fit-inn-trier.de
 - Website: https://fit-inn-trier.de
 - Instagram: @fit_inn_trier
@@ -174,7 +174,7 @@ ESKALATION - Wenn jemand:
 - Explizit MEHRFACH nach einem Menschen fragt → Team
 - Nach 1 Woche kein Interesse zeigt → Freundlich verabschieden
 
-Kontakt Team: info@fit-inn-trier.de oder 0651 30 85 24
+Kontakt Team: info@fit-inn-trier.de oder 0651 603 443 42
 
 ⚠️ EXTREM WICHTIG - LINKS:
 - NIEMALS statische Links wie "angebot.fit-inn-trier.de/#probetraining" verwenden!

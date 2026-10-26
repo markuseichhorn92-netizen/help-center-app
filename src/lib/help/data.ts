@@ -3,6 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { getConfig } from '@/lib/dashboard/kv';
 import type { OpeningData } from './hours';
 import { assignSlugs } from './slug';
+import { runPhoneMigration } from '@/lib/phone-migration';
 
 import { SITE, stripHtml } from './text';
 export { SITE, stripHtml };
@@ -38,6 +39,7 @@ async function devJson<T>(path: string): Promise<T> {
 async function loadArticles(): Promise<HelpArticle[]> {
   try {
     if (DEV_ORIGIN) return assignSlugs(await devJson<Omit<HelpArticle, 'slug'>[]>('/api/articles'), (a) => a.title);
+    await runPhoneMigration().catch((e) => console.error('phone migration', e));
     const ids: string[] = await kv.smembers('articles:ids');
     const rows = await Promise.all(
       ids.map(async (id) => ({ id, ...(await kv.hgetall(`article:${id}`)) }) as unknown as HelpArticle & { published?: boolean }),
