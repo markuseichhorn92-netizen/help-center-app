@@ -169,6 +169,31 @@ export default function DatenschutzPage() {
               zwecks Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert.
               Diese Daten geben wir nicht ohne Ihre Einwilligung weiter.
             </p>
+            <h3 className="font-semibold text-apple-gray-600 dark:text-dark-text mb-2">Kontakt per Telefon, E-Mail oder WhatsApp</h3>
+            <p className="text-apple-gray-500 dark:text-apple-gray-300 mb-4">
+              Wenn Sie in einem unserer Kontakt- oder Probetraining-Formulare eingewilligt haben, melden
+              wir uns bei Rückfragen zu Ihrer Anfrage oder Ihrem Termin per Telefon, E-Mail oder WhatsApp
+              bei Ihnen – mit Informationen zu Angeboten nur, wenn Sie dem gesondert zugestimmt haben.
+              Rechtsgrundlage ist Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Sie können sie jederzeit
+              mit Wirkung für die Zukunft widerrufen, z. B. per E-Mail an{" "}
+              <a href="mailto:info@fit-inn-trier.de" className="text-brand dark:text-brand-light hover:underline">info@fit-inn-trier.de</a>,
+              telefonisch oder mit einer kurzen Nachricht (z. B. „STOP“) in WhatsApp.
+            </p>
+            <p className="text-apple-gray-500 dark:text-apple-gray-300 mb-4">
+              Anbieter von WhatsApp ist die WhatsApp Ireland Limited, 4 Grand Canal Square, Grand Canal
+              Harbour, Dublin 2, Irland (Meta-Konzern). Dabei können Daten an die Meta Platforms, Inc. in
+              den USA übermittelt werden. Die Übermittlung stützt sich auf das EU-US Data Privacy Framework,
+              nach dem Meta zertifiziert ist, und zusätzlich auf die EU-Standardvertragsklauseln. Die
+              Nachrichteninhalte überträgt WhatsApp mit Ende-zu-Ende-Verschlüsselung; WhatsApp erhält aber
+              Metadaten wie Telefonnummern, Zeitpunkt der Kommunikation und Geräteinformationen. Weitere
+              Informationen:{" "}
+              <a href="https://www.whatsapp.com/legal/privacy-policy" className="text-brand dark:text-brand-light hover:underline">whatsapp.com/legal/privacy-policy</a>.
+            </p>
+            <p className="text-apple-gray-500 dark:text-apple-gray-300 mb-4">
+              WhatsApp ist freiwillig. Wenn Sie WhatsApp nicht nutzen möchten, erreichen Sie uns genauso
+              per Telefon (0651 603 443 42) oder E-Mail, und wir melden uns auf diesem Weg bei Ihnen. Bitte
+              senden Sie uns über WhatsApp keine Gesundheitsdaten.
+            </p>
             <h3 className="font-semibold text-apple-gray-600 dark:text-dark-text mb-2">Artikel-Feedback</h3>
             <p className="text-apple-gray-500 dark:text-apple-gray-300">
               Bei der Bewertung von Hilfe-Artikeln ("War dieser Artikel hilfreich?") speichern wir
@@ -250,7 +275,7 @@ export default function DatenschutzPage() {
           <h2 className="text-xl font-semibold text-apple-gray-600 dark:text-dark-text mb-4">9. Aktualität und Änderung</h2>
           <div className="bg-white dark:bg-dark-surface rounded-apple-lg p-6 shadow-card border border-apple-gray-100 dark:border-dark-border">
             <p className="text-apple-gray-500 dark:text-apple-gray-300">
-              Diese Datenschutzerklärung ist aktuell gültig und hat den Stand Januar 2025.
+              Diese Datenschutzerklärung ist aktuell gültig und hat den Stand November 2026.
               Durch die Weiterentwicklung unserer Website oder aufgrund geänderter gesetzlicher
               beziehungsweise behördlicher Vorgaben kann es notwendig werden, diese Datenschutzerklärung
               zu ändern.
