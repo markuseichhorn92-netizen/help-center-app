@@ -4,7 +4,6 @@ import type { Metadata } from 'next';
 import ContactBlock from '@/components/help/ContactBlock';
 import ArticleFeedback from '@/components/help/ArticleFeedback';
 import ArticleEffects from '@/components/help/ArticleEffects';
-import { Reveal } from '@/components/help/Reveal';
 import { BackIcon, ChevronIcon, DocIcon } from '@/components/help/icons';
 import { fmtDate, getArticleBySlug, getCategories, getPublishedArticles, readingMinutes, stripHtml } from '@/lib/help/data';
 import { parseArticle } from '@/lib/help/article';
@@ -42,41 +41,39 @@ export default async function ArticlePage({ params }: Props) {
   const minutes = readingMinutes(article.content);
   const sameCat = all.filter((a) => a.id !== id && a.category === article.category);
   const related = [...sameCat, ...all.filter((a) => a.id !== id && a.category !== article.category)].slice(0, 3);
-  const prose = 'hc-prose text-ink dark:text-[#e8f1f3]';
+  const prose = 'hc-prose';
 
   const jsonLd = articleLds(article, cat, shortAnswer(article.content, parsed.kurz));
 
   return (
-    <article className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
+    <article className="lc-wrap lc-narrow pb-6">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(jsonLd) }} />
       <ArticleEffects articleId={id} />
-      <Link href={cat ? `/kategorie/${cat.slug}` : '/'} className="mb-5 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 text-sm font-bold text-p7 transition hover:border-teal dark:border-[#1d4650] dark:bg-transparent dark:text-[#8ccbd9]">
-        <BackIcon /> {cat ? cat.name : 'Zurück'}
-      </Link>
+      <div className="lc-pagehead">
+        <Link href={cat ? `/kategorie/${cat.slug}` : '/'} className="lc-back"><BackIcon /> {cat ? cat.name : 'Zurück'}</Link>
 
-      <nav aria-label="Brotkrumen" className="text-sm text-mut dark:text-[#9fb4ba]">
-        <ol className="flex flex-wrap items-center gap-1.5">
-          <li><Link href="/" className="underline-offset-2 hover:underline">Hilfe-Center</Link></li>
-          {cat && (<><li aria-hidden>›</li><li><Link href={`/kategorie/${cat.slug}`} className="underline-offset-2 hover:underline">{cat.name}</Link></li></>)}
-          <li aria-hidden>›</li><li aria-current="page" className="font-semibold text-ink dark:text-[#e8f1f3]">{article.title}</li>
-        </ol>
-      </nav>
+        <nav aria-label="Brotkrumen" className="lc-crumbs">
+          <ol>
+            <li><Link href="/">Hilfe-Center</Link></li>
+            {cat && (<><li aria-hidden>›</li><li><Link href={`/kategorie/${cat.slug}`}>{cat.name}</Link></li></>)}
+            <li aria-hidden>›</li><li aria-current="page" className="font-bold text-ink">{article.title}</li>
+          </ol>
+        </nav>
 
-      <h1 className="mt-3 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">{article.title}</h1>
-      <p className="mt-2 text-sm text-mut dark:text-[#9fb4ba]">
-        Aktualisiert am <time dateTime={article.updatedAt}>{fmtDate(article.updatedAt)}</time> · ca. {minutes} Min. Lesezeit
-      </p>
+        <h1 className="lc-title" style={{ marginTop: 14 }}>{article.title}</h1>
+        <p className="lc-meta">
+          Aktualisiert am <time dateTime={article.updatedAt}>{fmtDate(article.updatedAt)}</time> · ca. {minutes} Min. Lesezeit
+        </p>
+      </div>
 
       {parsed.kurz && (
-        <p className="mt-6 rounded-2xl border-l-4 border-teal bg-teal-soft p-4 text-base leading-relaxed dark:bg-[#12404b]">
-          <strong>Kurz gesagt:</strong> {parsed.kurz}
-        </p>
+        <p className="lc-kurz"><strong>Kurz gesagt:</strong> {parsed.kurz}</p>
       )}
 
       {parsed.headings.length >= 3 && (
-        <nav aria-label="Inhalt" className="mt-6 flex flex-wrap gap-2">
+        <nav aria-label="Inhalt" className="lc-toc">
           {parsed.headings.map((h) => (
-            <a key={h.id} href={`#${h.id}`} className="inline-flex min-h-11 items-center rounded-full border border-line bg-white px-3.5 text-[13px] font-semibold text-p7 transition hover:border-teal dark:border-[#1d4650] dark:bg-transparent dark:text-[#8ccbd9]">{h.text}</a>
+            <a key={h.id} href={`#${h.id}`}>{h.text}</a>
           ))}
         </nav>
       )}
@@ -84,19 +81,15 @@ export default async function ArticlePage({ params }: Props) {
       {parsed.introHtml && <div className={`${prose} mt-6`} dangerouslySetInnerHTML={{ __html: parsed.introHtml }} />}
 
       {parsed.sections.length > 0 && (
-        <div className="mt-6 grid gap-3">
+        <div className="mt-6 grid gap-4">
           {parsed.sections.map((s, i) => (
-            <Reveal key={s.id}>
-              <section id={s.id} aria-labelledby={`${s.id}-h`} className="hc-card p-5">
-                <h2 id={`${s.id}-h`} className="flex items-center gap-3 text-xl font-extrabold">
-                  {parsed.numbered && (
-                    <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-p7 text-base text-white dark:bg-teal dark:text-[#06323c]">{i + 1}</span>
-                  )}
-                  {s.title}
-                </h2>
-                <div className={`${prose} mt-3`} dangerouslySetInnerHTML={{ __html: s.html }} />
-              </section>
-            </Reveal>
+            <section key={s.id} id={s.id} aria-labelledby={`${s.id}-h`} className="lc-step">
+              <h2 id={`${s.id}-h`}>
+                {parsed.numbered && <span aria-hidden className="lc-num">{i + 1}</span>}
+                {s.title}
+              </h2>
+              <div className={`${prose} mt-4`} dangerouslySetInnerHTML={{ __html: s.html }} />
+            </section>
           ))}
         </div>
       )}
@@ -106,15 +99,15 @@ export default async function ArticlePage({ params }: Props) {
       </div>
 
       {related.length > 0 && (
-        <section aria-labelledby="passt" className="mt-10">
-          <h2 id="passt" className="hc-eyebrow mb-3">Passt dazu</h2>
-          <ul className="hc-card overflow-hidden">
+        <section aria-labelledby="passt" className="mt-12">
+          <h2 id="passt" className="lc-h2">Passt dazu</h2>
+          <ul className="lc-rows">
             {related.map((a) => (
-              <li key={a.id} className="border-b border-line last:border-0 dark:border-[#1d4650]">
-                <Link href={`/artikel/${a.slug}`} className="group flex min-h-14 items-center gap-3 px-4 py-3 font-bold transition-colors hover:bg-teal-soft/60 dark:hover:bg-[#12404b]/60">
-                  <DocIcon className="shrink-0 text-lg text-teal" />
-                  <span className="min-w-0 flex-1 leading-snug">{a.title}</span>
-                  <ChevronIcon className="shrink-0 text-[#9bb0b6] transition group-hover:translate-x-1" />
+              <li key={a.id} className="lc-row">
+                <Link href={`/artikel/${a.slug}`}>
+                  <span className="lc-ic"><DocIcon /></span>
+                  <span><strong>{a.title}</strong></span>
+                  <ChevronIcon className="lc-chev" />
                 </Link>
               </li>
             ))}

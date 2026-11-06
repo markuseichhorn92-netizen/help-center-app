@@ -2,14 +2,17 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import SearchBox from '@/components/help/SearchBox';
 import ContactBlock from '@/components/help/ContactBlock';
-import { Reveal } from '@/components/help/Reveal';
-import { CategoryIcon, ChevronIcon, DocIcon, UserIcon } from '@/components/help/icons';
+import { CategoryIcon, ChevronIcon, DocIcon } from '@/components/help/icons';
 import { getCategories, getOpeningConfig, getPublishedArticles, pickTopArticles } from '@/lib/help/data';
 import { ldJson, organizationLd, websiteLd } from '@/lib/help/seo';
 import { buildSearchDocs } from '@/lib/help/build';
-import HeroTitle from '@/components/help/HeroTitle';
 
 export const revalidate = 60;
+
+const APP_FITINN = 'https://angebot.fit-inn-trier.de/app/fitinn';
+const APP_TECHNOGYM = 'https://angebot.fit-inn-trier.de/app/technogym';
+const FITINN_APP_POINTS = ['Mitgliedschaft verwalten und pausieren', 'Check-in und Check-out', 'Punkte sammeln, Prämien und Partner-Gutscheine', 'Termine buchen, Auslastung sehen'];
+const TECHNOGYM_APP_POINTS = ['Dein Trainingsplan', 'Dein Training', 'Anmeldung an den Geräten'];
 
 export const metadata: Metadata = { alternates: { canonical: '/' } };
 
@@ -33,67 +36,100 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([websiteLd(), organizationLd(opening)]) }} />
-      <section className="hc-hero">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-12 lg:grid-cols-[1.25fr_1fr] lg:items-center lg:gap-12">
+      <section className="lc-hero">
+        <div className="lc-floor" aria-hidden />
+        <div className="lc-wrap lc-hero-grid">
           <div>
-            <HeroTitle />
-            <div className="mt-6">
-              <SearchBox docs={docs} topIds={top.map((a) => a.slug)} chips={chips} />
-            </div>
+            <h1 className="lc-h1">Wie können wir dir <span className="lc-em">helfen?</span></h1>
+            <p className="lc-lead">Frag einfach – die Antwort ist meist nur einen Klick entfernt.</p>
+            <SearchBox docs={docs} topIds={top.map((a) => a.slug)} chips={chips} />
           </div>
-          <div className="hidden lg:block">
-            <ContactBlock variant="hero" title="Lieber direkt fragen?" hint="Drei Wege – du wählst." idSuffix="hero" />
+          <div className="relative hidden lg:block">
+            <img className="lc-glas" src="/glas-hantel.svg" alt="" aria-hidden width={240} height={200} />
+            <ContactBlock title="Lieber direkt fragen?" hint="Drei Wege – du wählst." idSuffix="hero" />
           </div>
         </div>
       </section>
 
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.4fr_1fr] lg:py-14">
-        <section aria-labelledby="themen">
-          <h2 id="themen" className="hc-eyebrow mb-3">Themen</h2>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-            {tiles.map((c, i) => (
-              <Reveal as="li" key={c.id} delay={i * 0.05}>
-                <Link href={`/kategorie/${c.slug}`} className="hc-card group flex h-full min-h-32 flex-col gap-2 p-4 transition duration-200 hover:-translate-y-1 hover:border-teal hover:shadow-[0_10px_28px_rgba(9,75,90,.14)] active:translate-y-0">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-soft text-xl text-p7 transition group-hover:scale-110 dark:bg-[#12404b] dark:text-[#8ccbd9]"><CategoryIcon icon={c.icon} /></span>
-                  <strong className="text-base leading-tight">{c.name}</strong>
-                  <span className="text-xs text-mut dark:text-[#9fb4ba]">{c.description || `${c.count} Artikel`}</span>
+      <section className="lc-section" aria-labelledby="top-fragen">
+        <div className="lc-wrap">
+          <h2 id="top-fragen" className="lc-h2">Häufige Fragen</h2>
+          <ul className="lc-rows">
+            {top.map((a) => (
+              <li key={a.id} className="lc-row">
+                <Link href={`/artikel/${a.slug}`}>
+                  <span className="lc-ic"><DocIcon /></span>
+                  <span><strong>{a.title}</strong></span>
+                  <ChevronIcon className="lc-chev" />
                 </Link>
-              </Reveal>
+              </li>
             ))}
-            <Reveal as="li" delay={tiles.length * 0.05}>
-              <Link href="/portal" className="hc-card group flex h-full min-h-32 flex-col gap-2 p-4 transition duration-200 hover:-translate-y-1 hover:border-teal hover:shadow-[0_10px_28px_rgba(9,75,90,.14)] active:translate-y-0">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-soft text-xl text-p7 transition group-hover:scale-110 dark:bg-[#12404b] dark:text-[#8ccbd9]"><UserIcon /></span>
-                <strong className="text-base leading-tight">Meine Anfragen</strong>
-                <span className="text-xs text-mut dark:text-[#9fb4ba]">Tickets ansehen</span>
-              </Link>
-            </Reveal>
           </ul>
-        </section>
-
-        <section aria-labelledby="top-fragen">
-          <h2 id="top-fragen" className="hc-eyebrow mb-3">Häufige Fragen</h2>
-          <Reveal>
-            <ul className="hc-card overflow-hidden">
-              {top.map((a) => (
-                <li key={a.id} className="border-b border-line last:border-0 dark:border-[#1d4650]">
-                  <Link href={`/artikel/${a.slug}`} className="group flex min-h-14 items-center gap-3 px-4 py-3 font-bold transition-colors hover:bg-teal-soft/60 dark:hover:bg-[#12404b]/60">
-                    <DocIcon className="shrink-0 text-lg text-teal" />
-                    <span className="min-w-0 flex-1 leading-snug">{a.title}</span>
-                    <ChevronIcon className="shrink-0 text-[#9bb0b6] transition group-hover:translate-x-1" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Reveal>
           {catName.size === 0 && articles.length === 0 && (
             <p className="mt-4 text-sm text-mut">Die Artikel konnten gerade nicht geladen werden. Bitte versuche es gleich noch einmal.</p>
           )}
-        </section>
+        </div>
+      </section>
 
-        <div className="lg:hidden">
+      <section className="lc-section" aria-labelledby="themen">
+        <div className="lc-wrap">
+          <h2 id="themen" className="lc-h2">Alle Themen</h2>
+          <ul className="lc-cats">
+            {tiles.map((c) => (
+              <li key={c.id}>
+                <Link href={`/kategorie/${c.slug}`} className="lc-cat">
+                  <span className="lc-ic"><CategoryIcon icon={c.icon} /></span>
+                  <strong>{c.name}</strong>
+                  {c.description && <span className="lc-d">{c.description}</span>}
+                  <span className="lc-n">{c.count} Artikel</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section className="lc-section" aria-labelledby="apps">
+        <div className="lc-wrap">
+          <h2 id="apps" className="lc-h2">Unsere Apps</h2>
+          <p className="lc-sub">Zwei Apps, kostenlos – jede mit eigener Aufgabe.</p>
+          <div className="lc-apps">
+            <div className="lc-app">
+              <div>
+                <h3>Fit-Inn-App</h3>
+                <p>Deine Mitgliedschaft in der Hosentasche.</p>
+              </div>
+              <ul>
+                {FITINN_APP_POINTS.map((t) => <li key={t}>{t}</li>)}
+              </ul>
+              <a className="lc-btn" href={APP_FITINN} rel="noopener">
+                <span>Fit-Inn-App laden<small>iPhone und Android</small></span>
+                <span className="lc-dot" aria-hidden />
+              </a>
+            </div>
+            <div className="lc-app">
+              <div>
+                <h3>Technogym-App</h3>
+                <p>Dein Training an den Geräten.</p>
+              </div>
+              <ul>
+                {TECHNOGYM_APP_POINTS.map((t) => <li key={t}>{t}</li>)}
+              </ul>
+              <a className="lc-btn" href={APP_TECHNOGYM} rel="noopener">
+                <span>Technogym-App laden<small>iPhone und Android</small></span>
+                <span className="lc-dot" aria-hidden />
+              </a>
+            </div>
+          </div>
+          <p className="lc-app-note">Alte Fit-Inn-App noch auf dem Handy? Bitte einmal löschen und die neue laden – ein normales Update ersetzt sie nicht.</p>
+        </div>
+      </section>
+
+      <section className="lc-section lg:hidden">
+        <div className="lc-wrap">
           <ContactBlock idSuffix="page" />
         </div>
-      </div>
+      </section>
     </>
   );
 }

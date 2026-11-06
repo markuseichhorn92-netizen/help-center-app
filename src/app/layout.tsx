@@ -1,15 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, IBM_Plex_Mono } from "next/font/google";
+import { Archivo, IBM_Plex_Mono, Outfit } from "next/font/google";
 import "./globals.css";
+import "./look-c.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieBanner from "@/components/CookieBanner";
 import { PageTracker } from "@/components/PageTracker";
 import ChatWidgetLoader from "@/components/help/ChatWidgetLoader";
 import MotionProvider from "@/components/MotionProvider";
+import LookC from "@/components/help/LookC";
 
 const archivo = Archivo({ subsets: ["latin"], display: "swap", variable: "--font-archivo" });
 const plex = IBM_Plex_Mono({ subsets: ["latin"], display: "swap", weight: ["500"], variable: "--font-plex" });
+
+const outfit = Outfit({ subsets: ["latin"], display: "swap", weight: ["500", "600", "700", "800"], variable: "--font-outfit" });
 
 const SITE = "https://hilfe.fit-inn-trier.de";
 
@@ -28,25 +32,27 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#094b5a",
+  themeColor: "#0A4958",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="de" className={`${archivo.variable} ${plex.variable}`} suppressHydrationWarning>
+    <html lang="de" className={`${archivo.variable} ${plex.variable} ${outfit.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var a=location.pathname.indexOf('/admin')===0;if(t==='dark'||(a&&!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');var a=location.pathname.indexOf('/admin')===0;if(a&&(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))){document.documentElement.classList.add('dark');}}catch(e){}})();`,
           }}
         />
       </head>
       <body className="flex min-h-screen flex-col bg-surface font-sans text-ink antialiased dark:bg-[#07181d] dark:text-[#e8f1f3]">
         <a href="#main" className="hc-skip">Zum Inhalt springen</a>
         <MotionProvider>
-          <Header />
-          <main id="main" className="flex-grow">{children}</main>
-          <Footer />
+          <LookC>
+            <Header />
+            <main id="main" className="flex-grow">{children}</main>
+            <Footer />
+          </LookC>
           <CookieBanner />
         </MotionProvider>
         <PageTracker />

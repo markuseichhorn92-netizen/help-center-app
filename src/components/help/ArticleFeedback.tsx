@@ -37,15 +37,15 @@ export default function ArticleFeedback({ articleId, contact }: { articleId: str
     } catch { /* still: Nutzer nicht stören */ } finally { setBusy(false); }
   };
 
-  const btn = 'inline-flex min-h-12 items-center gap-2 rounded-full border border-line bg-white px-6 font-bold text-ink transition hover:border-teal hover:bg-teal-soft active:scale-95 disabled:opacity-60 dark:border-[#1d4650] dark:bg-transparent dark:text-[#e8f1f3] dark:hover:bg-[#12404b]';
+  const btn = 'lc-vote';
 
   return (
     <div>
-      <div className="hc-card p-5 text-center" aria-live="polite">
+      <div className="lc-feedback" aria-live="polite">
         <AnimatePresence mode="wait" initial={false}>
           {!vote ? (
             <m.div key="ask" exit={reduce ? undefined : { opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
-              <h2 className="text-lg font-extrabold">War das hilfreich?</h2>
+              <h2>War das hilfreich?</h2>
               <div className="mt-3 flex justify-center gap-3">
                 <button type="button" className={btn} disabled={busy} onClick={() => send(true)}><ThumbUpIcon /> Ja</button>
                 <button type="button" className={btn} disabled={busy} onClick={() => send(false)}><ThumbDownIcon /> Nein</button>

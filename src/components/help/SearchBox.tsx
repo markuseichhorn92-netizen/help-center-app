@@ -84,8 +84,8 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
     <div className="relative" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false); }}>
       <form role="search" onSubmit={(e) => { e.preventDefault(); if (items[0]) go(items[0].id); }}>
         <label htmlFor={`${uid}-q`} className="sr-only">Hilfe durchsuchen</label>
-        <div className="flex h-14 items-center gap-3 rounded-2xl bg-white px-4 text-mut shadow-[0_8px_24px_rgba(0,0,0,.18)] ring-0 transition focus-within:ring-4 focus-within:ring-teal/50 sm:h-16">
-          <SearchIcon className="shrink-0 text-xl text-p7" />
+        <div className="lc-search">
+          <SearchIcon />
           <input
             ref={inputRef}
             id={`${uid}-q`}
@@ -102,21 +102,21 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
             onChange={(e) => { setQ(e.target.value); setOpen(true); setActive(-1); }}
             onFocus={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            className="min-w-0 flex-1 bg-transparent text-base font-medium text-ink outline-none focus-visible:outline-none placeholder:text-mut sm:text-lg"
+            
           />
           {q ? (
             <button type="button" onClick={() => { setQ(''); inputRef.current?.focus(); }} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-lg text-mut hover:bg-surface" aria-label="Suche leeren">✕</button>
           ) : (
-            <kbd className="hc-mono hidden rounded-md border border-line px-2 py-0.5 text-sm text-mut sm:block" aria-hidden>/</kbd>
+            <button type="submit" className="lc-search-go" aria-label="Suchen" />
           )}
         </div>
       </form>
 
       {chips.length > 0 && (
-        <ul className="mt-3.5 flex flex-wrap gap-2" aria-label="Schnellzugriff">
+        <ul className="lc-chips" aria-label="Schnellzugriff">
           {chips.map((c) => (
             <li key={c.id}>
-              <button type="button" onClick={() => go(c.id)} className="inline-flex min-h-11 items-center rounded-full border border-white/30 bg-white/10 px-3.5 text-[13px] font-semibold text-white transition hover:bg-white/20 active:scale-95">
+              <button type="button" onClick={() => go(c.id)} className="lc-chip">
                 {c.label}
               </button>
             </li>
@@ -131,7 +131,7 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-            className="absolute inset-x-0 top-[calc(3.5rem+8px)] z-30 overflow-hidden rounded-2xl border border-line bg-white text-ink shadow-[0_18px_50px_rgba(6,50,60,.28)] sm:top-[calc(4rem+8px)] dark:border-[#1d4650] dark:bg-[#0d2b33] dark:text-[#e8f1f3]"
+            className="absolute inset-x-0 top-[calc(3.75rem+8px)] z-30 overflow-hidden rounded-3xl border-0 bg-white text-ink shadow-[0_24px_60px_rgba(16,126,151,.28)] dark:border-[#1d4650] dark:bg-[#0d2b33] dark:text-[#e8f1f3]"
           >
             <p className="hc-eyebrow px-4 pt-3 pb-1">{empty ? 'Häufige Fragen' : noHit ? 'Keine Treffer' : `${hits.length} ${hits.length === 1 ? 'Treffer' : 'Treffer'}`}</p>
             <ul id={listId} role="listbox" aria-label="Suchvorschläge">
