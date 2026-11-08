@@ -11,6 +11,7 @@ export function showsChatWidget(pathname: string | null | undefined): boolean {
 
 // Das Widget liegt in einem Iframe; die Blase wird per Klick geöffnet (Skript ist groß, daher Wiederholungen).
 export function openMagicline(maxTries = 60, delayMs = 150): () => void {
+  (window as unknown as { fiChatOpen?: () => void }).fiChatOpen?.();
   let tries = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const go = () => {
