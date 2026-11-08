@@ -2,29 +2,11 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { openMagicline } from "@/lib/help/magicline-chat";
 
 export default function ChatPage() {
-  useEffect(() => {
-    // Auto-open chat when the jexitychat widget is ready
-    const openChat = () => {
-      if (window.JexityChat?.open) {
-        window.JexityChat.open();
-        return true;
-      }
-      return false;
-    };
-
-    // Try immediately
-    if (openChat()) return;
-
-    // Poll until ready
-    const interval = setInterval(() => {
-      if (openChat()) clearInterval(interval);
-    }, 500);
-
-    // Cleanup
-    return () => clearInterval(interval);
-  }, []);
+  // Das Magicline-Widget (global im Layout geladen) öffnen, sobald es bereit ist.
+  useEffect(() => openMagicline(), []);
 
   return (
     <div className="min-h-[80vh] bg-apple-gray-50 dark:bg-dark-bg flex flex-col items-center justify-center px-4">
@@ -38,12 +20,12 @@ export default function ChatPage() {
           Live-Chat
         </h1>
         <p className="text-apple-gray-500 dark:text-dark-text-secondary">
-          Der Chat öffnet sich gleich unten rechts...
+          Der Chat öffnet sich gleich unten rechts. Falls nicht, tippe auf „Chat öffnen“.
         </p>
       </div>
 
       <button
-        onClick={() => window.JexityChat?.open()}
+        onClick={() => openMagicline()}
         className="px-8 py-4 bg-gradient-to-r from-brand to-brand-dark text-white font-semibold rounded-full shadow-lg hover:shadow-xl transition-all"
       >
         💬 Chat öffnen
