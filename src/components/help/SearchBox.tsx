@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence,  useReducedMotion } from 'motion/react';
 import * as m from 'motion/react-m';
 import { search, type SearchDoc } from '@/lib/help/search';
-import { ChevronIcon, DocIcon, SearchIcon, SparkIcon, WhatsAppIcon } from './icons';
-import { WHATSAPP_URL } from './ContactBlock';
+import { ChevronIcon, DocIcon, PhoneIcon, SearchIcon, SparkIcon } from './icons';
+import { PHONE_DISPLAY, PHONE_HREF } from './ContactBlock';
 
 interface Props {
   docs: SearchDoc[];
@@ -72,7 +72,7 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
     else if (e.key === 'Escape') { setOpen(false); setActive(-1); }
     else if (e.key === 'Enter') {
       if (active >= 0 && active < items.length) { e.preventDefault(); go(items[active].id); }
-      else if (active >= items.length && noHit) { e.preventDefault(); active === items.length ? router.push('/chat') : window.open(WHATSAPP_URL, '_blank'); }
+      else if (active >= items.length && noHit) { e.preventDefault(); active === items.length ? router.push('/chat') : (window.location.href = PHONE_HREF); }
       else if (items.length) { e.preventDefault(); go(items[0].id); }
     }
   };
@@ -157,8 +157,8 @@ export default function SearchBox({ docs, topIds, chips = [] }: Props) {
                     </button>
                   </li>
                   <li role="presentation">
-                    <button type="button" role="option" id={opt(items.length + 1)} aria-selected={active === items.length + 1} onMouseEnter={() => setActive(items.length + 1)} onClick={() => window.open(WHATSAPP_URL, '_blank')} className={rowCls(items.length + 1)}>
-                      <WhatsAppIcon className="shrink-0 text-lg text-[#14543a]" /><span className="font-bold">Per WhatsApp schreiben</span>
+                    <button type="button" role="option" id={opt(items.length + 1)} aria-selected={active === items.length + 1} onMouseEnter={() => setActive(items.length + 1)} onClick={() => { window.location.href = PHONE_HREF; }} className={rowCls(items.length + 1)}>
+                      <PhoneIcon className="shrink-0 text-lg text-teal" /><span className="font-bold">Anrufen: {PHONE_DISPLAY}</span>
                     </button>
                   </li>
                 </>

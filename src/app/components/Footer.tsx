@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import HeaderShell from "./HeaderShell";
-import { PHONE_DISPLAY, PHONE_HREF, WHATSAPP_URL } from "@/components/help/ContactBlock";
+import { PHONE_DISPLAY, PHONE_HREF } from "@/components/help/ContactBlock";
 
 export default function Footer() {
   return (
@@ -15,7 +15,6 @@ export default function Footer() {
           <nav aria-label="Hilfe">
             <h2>Hilfe</h2>
             <Link href="/chat">KI-Assistent fragen</Link>
-            <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">WhatsApp schreiben</a>
             <a href={PHONE_HREF}>Telefon {PHONE_DISPLAY}</a>
             <a href="mailto:info@fit-inn-trier.de">info@fit-inn-trier.de</a>
             <Link href="/portal">Meine Anfragen</Link>

@@ -24,7 +24,6 @@ export async function GET() {
   lines.push(
     '', '## Kontakt', '',
     `- Telefon: 0651 603 443 42`,
-    `- WhatsApp: ${STUDIO.whatsapp}`,
     `- E-Mail: ${STUDIO.email}`,
     `- KI-Assistentin „Lena“: ${SITE}/chat`,
     '',

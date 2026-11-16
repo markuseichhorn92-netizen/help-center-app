@@ -12,7 +12,6 @@ export const STUDIO = {
   url: 'https://fit-inn-trier.de',
   telephone: '+49 651 60344342',
   email: 'info@fit-inn-trier.de',
-  whatsapp: 'https://wa.me/4951328533010',
   sameAs: ['https://www.instagram.com/fit_inn_trier/', 'https://www.facebook.com/FitInnFeyen'],
   address: { '@type': 'PostalAddress', streetAddress: 'Auf Hirtenberg 8', postalCode: '54296', addressLocality: 'Trier', addressCountry: 'DE' },
 } as const;

@@ -20,7 +20,7 @@ const SITE = "https://hilfe.fit-inn-trier.de";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: { default: "Hilfe-Center | Fit-Inn Trier", template: "%s | Hilfe-Center Fit-Inn Trier" },
-  description: "Antworten rund um deine Mitgliedschaft, Öffnungszeiten und das Training im Fit-Inn Trier – oder frag direkt per KI-Assistent, WhatsApp oder Telefon.",
+  description: "Antworten rund um deine Mitgliedschaft, Öffnungszeiten und das Training im Fit-Inn Trier – oder frag direkt per KI-Assistent oder Telefon.",
   manifest: "/manifest.json",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Fit-Inn Hilfe" },
   icons: { icon: "/favicon.png", apple: "/favicon.png" },
