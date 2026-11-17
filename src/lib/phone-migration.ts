@@ -1,15 +1,20 @@
 import { kv } from './kv';
 
-// Einmalige Migration (26.10.2026): neue Kundennummer 0651 603 443 42 statt der alten
-// Kundennummer 0651 493 688 19 und der alten Studionummer 0651 308524 – in allen Inhalten im KV
+// Einmalige Migration (17.11.2026): Kundennummer ist jetzt 0651 308524 (tel:+49651308524) – ersetzt
+// 0651 603 443 42 und die noch möglichen Altnummer 0651 493 688 19 in allen Inhalten im KV
 // (Hilfe-Artikel, Wissensdatenbank der KI, Schnellantworten). Die Geschäftsnummer
 // 0651 603 442 05 und die WhatsApp-Bot-Nummer bleiben unberührt.
-export const PHONE_NEW = '0651 603 443 42';
-export const PHONE_NEW_HREF = 'tel:+4965160344342';
-const PHONE_HREF_PREV = /tel:\+?(?:49|0)651(?:49368819|308524)\b/g;
-const PHONE_PREV = /(?:\+49[\s-]?(?:\(0\)\s?)?|0049[\s-]?|0)651[\s/-]*(?:4\s?9\s?3\s?6\s?8\s?8\s?1\s?9|3\s?0\s?8\s?5\s?2\s?4)\b/g;
+// Frühere Migrationen: mig:nummer26 (26.10.2026, → 0651 603 443 42).
+export const PHONE_NEW = '0651 308524';
+export const PHONE_NEW_HREF = 'tel:+49651308524';
+const PREFIX = String.raw`(?:\+49[\s-]?(?:\(0\)\s?)?|0049[\s-]?|0)651`;
+const PHONE_HREF_PREV = /tel:\+?(?:49|0)651(?:49368819|60344342)\b/g;
+const PHONE_PREV = new RegExp(
+  PREFIX + String.raw`[\s/-]*(?:4\s?9\s?3\s?6\s?8\s?8\s?1\s?9|6\s?0\s?3\s?[\s-]?4\s?4\s?[\s-]?3\s?4\s?2)\b`,
+  'g',
+);
 
-const FLAG = 'mig:nummer26';
+const FLAG = 'mig:nummer1711';
 
 export function replacePhone(text: string): string {
   return text.replace(PHONE_HREF_PREV, PHONE_NEW_HREF).replace(PHONE_PREV, PHONE_NEW);

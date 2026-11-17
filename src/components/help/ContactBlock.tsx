@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { PhoneIcon, SparkIcon, MailIcon } from './icons';
 
-export const PHONE_DISPLAY = '0651 603 443 42';
-export const PHONE_HREF = 'tel:+4965160344342';
+export const PHONE_DISPLAY = '0651 308524';
+export const PHONE_HREF = 'tel:+49651308524';
 
 // Kontakt-Fallback: KI-Assistent → Telefon → E-Mail.
 export default function ContactBlock({ title = 'Nichts gefunden?', hint, idSuffix = 'main' }: {

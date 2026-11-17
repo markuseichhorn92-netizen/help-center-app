@@ -10,7 +10,7 @@ export const categoryUrl = (c: Pick<HelpCategory, 'slug'>) => `${SITE}/kategorie
 export const STUDIO = {
   name: 'Fit-Inn Trier',
   url: 'https://fit-inn-trier.de',
-  telephone: '+49 651 60344342',
+  telephone: '+49651308524',
   email: 'info@fit-inn-trier.de',
   sameAs: ['https://www.instagram.com/fit_inn_trier/', 'https://www.facebook.com/FitInnFeyen'],
   address: { '@type': 'PostalAddress', streetAddress: 'Auf Hirtenberg 8', postalCode: '54296', addressLocality: 'Trier', addressCountry: 'DE' },

@@ -23,7 +23,7 @@ export async function GET() {
   if (rest.length) lines.push('', '## Weitere Themen', '', ...rest.map(line));
   lines.push(
     '', '## Kontakt', '',
-    `- Telefon: 0651 603 443 42`,
+    `- Telefon: 0651 308524`,
     `- E-Mail: ${STUDIO.email}`,
     `- KI-Assistentin „Lena“: ${SITE}/chat`,
     '',

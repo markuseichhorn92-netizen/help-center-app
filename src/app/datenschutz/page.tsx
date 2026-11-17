@@ -39,7 +39,7 @@ export default function DatenschutzPage() {
             </p>
             <p className="text-apple-gray-500 dark:text-apple-gray-300 mb-1">
               <strong className="text-apple-gray-600 dark:text-dark-text">Telefon:</strong>{" "}
-              <a href="tel:+4965160344342" className="text-brand dark:text-brand-light hover:underline">0651 603 443 42</a>
+              <a href="tel:+49651308524" className="text-brand dark:text-brand-light hover:underline">0651 308524</a>
             </p>
             <p className="text-apple-gray-500 dark:text-apple-gray-300">
               <strong className="text-apple-gray-600 dark:text-dark-text">E-Mail:</strong>{" "}
@@ -191,7 +191,7 @@ export default function DatenschutzPage() {
             </p>
             <p className="text-apple-gray-500 dark:text-apple-gray-300 mb-4">
               WhatsApp ist freiwillig. Wenn Sie WhatsApp nicht nutzen möchten, erreichen Sie uns genauso
-              per Telefon (0651 603 443 42) oder E-Mail, und wir melden uns auf diesem Weg bei Ihnen. Bitte
+              per Telefon 0651 308524) oder E-Mail, und wir melden uns auf diesem Weg bei Ihnen. Bitte
               senden Sie uns über WhatsApp keine Gesundheitsdaten.
             </p>
             <h3 className="font-semibold text-apple-gray-600 dark:text-dark-text mb-2">Artikel-Feedback</h3>
